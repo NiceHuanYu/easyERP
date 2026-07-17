@@ -23,6 +23,10 @@
             <span>工作台</span>
           </a>
           <a class="nav-item disabled" href="#" title="开发中">
+            <span class="nav-icon">🗂️</span>
+            <span>基础资料</span>
+          </a>
+          <a class="nav-item disabled" href="#" title="开发中">
             <span class="nav-icon">📦</span>
             <span>销售管理</span>
           </a>
@@ -37,6 +41,22 @@
           <a class="nav-item disabled" href="#" title="开发中">
             <span class="nav-icon">📋</span>
             <span>库存管理</span>
+          </a>
+          <a class="nav-item disabled" href="#" title="开发中">
+            <span class="nav-icon">✅</span>
+            <span>品质管理</span>
+          </a>
+          <a class="nav-item disabled" href="#" title="开发中">
+            <span class="nav-icon">💰</span>
+            <span>财务管理</span>
+          </a>
+          <a class="nav-item disabled" href="#" title="开发中">
+            <span class="nav-icon">👥</span>
+            <span>组织管理</span>
+          </a>
+          <a class="nav-item disabled" href="#" title="开发中">
+            <span class="nav-icon">📈</span>
+            <span>数据分析</span>
           </a>
           <a class="nav-item disabled" href="#" title="开发中">
             <span class="nav-icon">⚙️</span>
