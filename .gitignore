@@ -1,24 +1,6 @@
-# Nuxt dev/build outputs
-.output
-.data
-.nuxt
-.nitro
-.cache
-dist
-
-# Node dependencies
-node_modules
-
-# Logs
-logs
-*.log
-
-# Misc
+# 操作系统及 IDE 通用配置（全局生效）
 .DS_Store
 .fleet
 .idea
 
-# Local env files
-.env
-.env.*
-!.env.example
+# 注：Nuxt 项目相关的 node_modules、.nuxt、.env 等已由 /frontend/.gitignore 管理
