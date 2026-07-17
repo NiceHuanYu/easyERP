@@ -15,6 +15,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  layout: false,
+})
+
 const props = defineProps<{
   error?: { statusCode?: number; message?: string; statusMessage?: string }
 }>()
