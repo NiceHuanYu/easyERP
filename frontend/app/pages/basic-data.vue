@@ -41,6 +41,9 @@
       <!-- 计量单位 -->
       <BasicDataUnitTab v-else-if="activeTab === 'unit'" />
 
+      <!-- 联络列表 -->
+      <BasicDataContactTab v-else-if="activeTab === 'contact'" />
+
       <!-- 其他标签占位（兜底） -->
       <BasicDataTabPlaceholder v-else
         :label="currentTab?.label || ''"
@@ -61,6 +64,7 @@ const tabs = [
   { key: 'customer',    icon: '🤝', label: '客户管理',     description: '管理客户基本信息、联系方式、信用额度及交易记录' },
   { key: 'supplier',    icon: '🚚', label: '供应商管理',   description: '管理供应商基本信息、资质、报价及供货记录' },
   { key: 'warehouse',   icon: '🏗️', label: '仓库管理',     description: '管理仓库/库位信息、存储类型及容量参数' },
+  { key: 'contact',    icon: '📞', label: '联络列表',     description: '集中管理客户、供应商、仓库等业务伙伴的联系人与联系方式' },
   { key: 'unit',        icon: '⚖️', label: '计量单位',     description: '管理计量单位及单位之间的换算关系' },
 ]
 const currentTab = computed(() => tabs.find(t => t.key === activeTab.value))

@@ -6,7 +6,7 @@
       <button class="page-btn" :disabled="modelValue <= 1" @click="$emit('update:modelValue', modelValue - 1)">‹</button>
       <template v-for="p in visiblePages" :key="p">
         <span v-if="p === '...'" class="page-ellipsis">…</span>
-        <span v-else :class="['page-num', { current: p === modelValue }]" @click="$emit('update:modelValue', p)">{{ p }}</span>
+        <span v-else :class="['page-num', { current: p === modelValue }]" @click="typeof p === 'number' && $emit('update:modelValue', p)">{{ p }}</span>
       </template>
       <button class="page-btn" :disabled="modelValue >= totalPages" @click="$emit('update:modelValue', modelValue + 1)">›</button>
       <button class="page-btn" :disabled="modelValue >= totalPages" @click="$emit('update:modelValue', totalPages)">末页</button>

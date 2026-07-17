@@ -13,17 +13,16 @@
         <thead><tr>
           <th @click="sort('code')" class="sortable">供应商编码{{ sf==='code'?(sa?'▲':'▼'):'' }}</th>
           <th @click="sort('name')" class="sortable">供应商名称{{ sf==='name'?(sa?'▲':'▼'):'' }}</th>
-          <th>联系人</th><th>联系电话</th><th>供货类别</th><th>状态</th><th style="text-align:center;">操作</th>
+          <th>供货类别</th><th>状态</th><th style="text-align:center;">操作</th>
         </tr></thead>
         <tbody>
           <tr v-for="row in paged" :key="row.code">
             <td class="code">{{ row.code }}</td><td class="name">{{ row.name }}</td>
-            <td>{{ row.contact }}</td><td>{{ row.phone }}</td>
             <td><span class="tag">{{ row.category }}</span></td>
             <td><span :class="['dot', row.status==='启用'?'on':'']"></span>{{ row.status }}</td>
             <td class="acts"><button class="lnk" @click="openForm(row)">编辑</button><button class="lnk dgr" @click="confirmDel(row)">删除</button></td>
           </tr>
-          <tr v-if="paged.length===0"><td colspan="7" class="empty">暂无数据</td></tr>
+          <tr v-if="paged.length===0"><td colspan="5" class="empty">暂无数据</td></tr>
         </tbody>
       </table>
     </div>
@@ -37,8 +36,6 @@
       <div class="grid">
         <div class="fg"><label>供应商编码 <span class="req">*</span></label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
         <div class="fg"><label>供应商名称 <span class="req">*</span></label><input v-model="f.name" placeholder="请输入供应商名称" /></div>
-        <div class="fg"><label>联系人</label><input v-model="f.contact" placeholder="姓名" /></div>
-        <div class="fg"><label>联系电话</label><input v-model="f.phone" placeholder="手机号/固话" /></div>
         <div class="fg"><label>供货类别 <span class="req">*</span></label><select v-model="f.category"><option value="">请选择</option><option v-for="c in cats" :key="c" :value="c">{{ c }}</option></select></div>
         <div class="fg full"><label>供应商地址</label><input v-model="f.address" placeholder="省/市/区/详细地址" /></div>
         <div class="fg"><label>状态</label><select v-model="f.status"><option value="启用">启用</option><option value="停用">停用</option></select></div>
@@ -55,24 +52,22 @@
 <script setup lang="ts">
 const cats = ['钢材','电气','五金','橡塑','包装','化工','其他']
 const data = ref([
-  { code:'SUP-001',name:'宏远钢铁集团有限公司',contact:'周明',phone:'0755-82888801',category:'钢材',address:'深圳市宝安区',status:'启用',remark:'' },
-  { code:'SUP-002',name:'正泰电气股份有限公司',contact:'吴刚',phone:'0577-62888802',category:'电气',address:'温州市乐清市',status:'启用',remark:'' },
-  { code:'SUP-003',name:'东明标准件有限公司',contact:'郑涛',phone:'0310-69888803',category:'五金',address:'邯郸市永年区',status:'启用',remark:'' },
-  { code:'SUP-004',name:'宏达橡塑制品厂',contact:'钱华',phone:'0519-83888804',category:'橡塑',address:'常州市武进区',status:'启用',remark:'' },
-  { code:'SUP-005',name:'宏达橡塑制品厂',contact:'钱华',phone:'0519-83888804',category:'橡塑',address:'常州市武进区',status:'启用',remark:'' },/* dup for variety */
-  { code:'SUP-006',name:'宏远钢铁集团二分厂',contact:'周明',phone:'0755-82888805',category:'钢材',address:'东莞市塘厦镇',status:'停用',remark:'暂停供货' },
-  { code:'SUP-007',name:'宏远钢铁集团三分厂',contact:'孙伟',phone:'0755-82888806',category:'钢材',address:'广州市增城区',status:'启用',remark:'' },
-].filter((v,i,a)=>a.findIndex(x=>x.code===v.code)===i)) /* dedup */
+  { code:'SUP-001',name:'宏远钢铁集团有限公司',category:'钢材',address:'深圳市宝安区',status:'启用',remark:'' },
+  { code:'SUP-002',name:'正泰电气股份有限公司',category:'电气',address:'温州市乐清市',status:'启用',remark:'' },
+  { code:'SUP-003',name:'东明标准件有限公司',category:'五金',address:'邯郸市永年区',status:'启用',remark:'' },
+  { code:'SUP-004',name:'宏达橡塑制品厂',category:'橡塑',address:'常州市武进区',status:'启用',remark:'' },
+  { code:'SUP-006',name:'宏远钢铁集团二分厂',category:'钢材',address:'东莞市塘厦镇',status:'停用',remark:'暂停供货' },
+  { code:'SUP-007',name:'宏远钢铁集团三分厂',category:'钢材',address:'广州市增城区',status:'启用',remark:'' },
 
 const s=ref('');const fc=ref('');const fs=ref('');const sf=ref('code');const sa=ref(true);const page=ref(1);const ps=ref(10)
 function sort(f:string){if(sf.value===f)sa.value=!sa.value;else{sf.value=f;sa.value=true}}
-const filtered=computed(()=>{let l=[...data.value];const q=s.value.trim().toLowerCase();if(q)l=l.filter(m=>m.code.toLowerCase().includes(q)||m.name.toLowerCase().includes(q)||m.contact.includes(q));if(fc.value)l=l.filter(m=>m.category===fc.value);if(fs.value)l=l.filter(m=>m.status===fs.value);l.sort((a,b)=>{const av=a[sf.value as keyof typeof a],bv=b[sf.value as keyof typeof b];if(typeof av==='number'&&typeof bv==='number')return sa.value?av-bv:bv-av;return sa.value?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av))});return l})
+const filtered=computed(()=>{let l=[...data.value];const q=s.value.trim().toLowerCase();if(q)l=l.filter(m=>m.code.toLowerCase().includes(q)||m.name.toLowerCase().includes(q));if(fc.value)l=l.filter(m=>m.category===fc.value);if(fs.value)l=l.filter(m=>m.status===fs.value);l.sort((a,b)=>{const av=a[sf.value as keyof typeof a],bv=b[sf.value as keyof typeof b];if(typeof av==='number'&&typeof bv==='number')return sa.value?av-bv:bv-av;return sa.value?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av))});return l})
 const paged=computed(()=>{const s2=(page.value-1)*ps.value;return filtered.value.slice(s2,s2+ps.value)})
 watch([s,fc,fs],()=>page.value=1)
 
-const showForm=ref(false);const editing=ref(false);const f=reactive({code:'',name:'',contact:'',phone:'',category:'',address:'',status:'启用',remark:''});let ec=''
+const showForm=ref(false);const editing=ref(false);const f=reactive({code:'',name:'',category:'',address:'',status:'启用',remark:''});let ec=''
 const numberingMode = ref('auto')
-function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`SUP-${String(data.value.length+1).padStart(3,'0')}`;f.name='';f.contact='';f.phone='';f.category='';f.address='';f.status='启用';f.remark=''}showForm.value=true}
+function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`SUP-${String(data.value.length+1).padStart(3,'0')}`;f.name='';f.category='';f.address='';f.status='启用';f.remark=''}showForm.value=true}
 function save(){if(!f.name||!f.category){alert('请填写供应商名称和供货类别');return}if(editing.value){const i=data.value.findIndex(m=>m.code===ec);if(i!==-1)data.value[i]={...f}as any}else data.value.push({...f}as any);showForm.value=false}
 
 const showDel=ref(false);const dt=ref<any>(null)

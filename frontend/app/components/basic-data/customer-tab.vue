@@ -70,7 +70,7 @@ watch([s,fs],()=>page.value=1)
 
 const showForm=ref(false);const editing=ref(false);const f=reactive({code:'',name:'',contact:'',phone:'',address:'',credit:0,status:'启用',remark:''});let ec=''
 const numberingMode = ref('auto')
-function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`CUS-${String(data.value.length+1).padStart(3,'0')}`;f.name='';f.contact='';f.phone='';f.address='';f.credit=0;f.status='启用';f.remark=''}showForm.value=true}
+function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`CUS-${String(data.value.length+1).padStart(3,'0')}`;f.name='';f.address='';f.credit=0;f.status='启用';f.remark=''}showForm.value=true}
 function save(){if(!f.name){alert('请填写客户名称');return}if(editing.value){const i=data.value.findIndex(m=>m.code===ec);if(i!==-1)data.value[i]={...f}as any}else data.value.push({...f}as any);showForm.value=false}
 
 const showDel=ref(false);const dt=ref<any>(null)

@@ -77,7 +77,7 @@
       <div class="page-controls">
         <button class="page-btn" :disabled="page <= 1" @click="page = 1">首页</button>
         <button class="page-btn" :disabled="page <= 1" @click="page--">‹</button>
-        <span class="page-num" v-for="p in visiblePages" :key="p" :class="{ current: p === page }" @click="page = p">{{ p }}</span>
+        <span class="page-num" v-for="p in visiblePages" :key="p" :class="{ current: p === page }" @click="typeof p === 'number' && (page = p)">{{ p }}</span>
         <button class="page-btn" :disabled="page >= totalPages" @click="page++">›</button>
         <button class="page-btn" :disabled="page >= totalPages" @click="page = totalPages">末页</button>
       </div>
