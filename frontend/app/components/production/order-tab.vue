@@ -30,8 +30,12 @@
     <PaginationBar :total="filtered.length" v-model="page" v-model:page-size="ps" />
 
     <FormModal :show="showForm" :title="editing?'编辑工单':'新建工单'" @close="showForm=false" @save="save">
+      <div v-if="!editing" class="numbering-row">
+        <label class="radio-label"><input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span></label>
+        <label class="radio-label"><input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span></label>
+      </div>
       <div class="grid">
-        <div class="fg"><label>工单号</label><input v-model="f.code" :disabled="!editing" /></div>
+        <div class="fg"><label>工单号</label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
         <div class="fg"><label>产品名称 <span class="req">*</span></label><input v-model="f.product" placeholder="产品名称" /></div>
         <div class="fg"><label>关联计划</label><input v-model="f.mpsCode" placeholder="MPS-xxx" /></div>
         <div class="fg"><label>计划数量</label><input v-model.number="f.planQty" type="number" min="1" /></div>
@@ -65,7 +69,8 @@ const filtered=computed(()=>{let l=[...data.value];const q=s.value.trim().toLowe
 const paged=computed(()=>{const s2=(page.value-1)*ps.value;return filtered.value.slice(s2,s2+ps.value)})
 watch([s,fs],()=>page.value=1)
 const showForm=ref(false);const editing=ref(false);const f=reactive({code:'',product:'',mpsCode:'',planQty:1,doneQty:0,startDate:'',endDate:'',status:'草稿',remark:''});let ec=''
-function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;f.code=`MO-${new Date().getFullYear()}-${String(data.value.length+1).padStart(4,'0')}`;f.product='';f.mpsCode='';f.planQty=1;f.doneQty=0;f.startDate='';f.endDate='';f.status='草稿';f.remark=''}showForm.value=true}
+const numberingMode = ref('auto')
+function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`MO-${new Date().getFullYear()}-${String(data.value.length+1).padStart(4,'0')}`;f.product='';f.mpsCode='';f.planQty=1;f.doneQty=0;f.startDate='';f.endDate='';f.status='草稿';f.remark=''}showForm.value=true}
 function save(){if(!f.product){alert('请填写产品名称');return}if(editing.value){const i=data.value.findIndex(m=>m.code===ec);if(i!==-1)data.value[i]={...f}as any}else data.value.push({...f}as any);showForm.value=false}
 const showDel=ref(false);const dt=ref<any>(null)
 function confirmDel(item:any){dt.value=item;showDel.value=true}
@@ -89,4 +94,7 @@ function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.fg{display:flex;flex-direction:column;gap:4px;}.fg.full{grid-column:1/-1;}.fg label{font-size:13px;color:#555;font-weight:500;}.req{color:#d32f2f;}
 .fg input,.fg select,.fg textarea{padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;background:#fafafa;transition:border-color .2s;}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#1a73e8;background:#fff;}.fg input:disabled{background:#f0f0f0;color:#999;cursor:not-allowed;}.fg textarea{resize:vertical;font-family:inherit;}
+.numbering-row{display:flex;gap:24px;margin-bottom:16px;padding:10px 14px;background:#f8faff;border-radius:8px;border:1px solid #e0eeff;}
+.radio-label{display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;}
+.radio-label input[type="radio"]{accent-color:#1a73e8;}
 </style>
