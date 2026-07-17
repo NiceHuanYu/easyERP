@@ -13,29 +13,30 @@
       </button>
     </div>
 
-    <!-- 标签内容 -->
+    <!-- 标签内容（由独立组件渲染） -->
     <div class="tab-content">
       <div class="tab-header">
         <h2>{{ currentTab?.label }}</h2>
         <p class="tab-desc">{{ currentTab?.description }}</p>
       </div>
 
-      <div class="tab-placeholder">
-        <div class="placeholder-icon">📋</div>
-        <p class="placeholder-text">{{ currentTab?.label }}功能开发中</p>
-        <p class="placeholder-hint">后续将在此处实现数据的增删改查与导入导出</p>
-      </div>
+      <!-- 物料档案 -->
+      <BasicDataMaterialTab v-if="activeTab === 'material'" />
+
+      <!-- 其他标签占位 -->
+      <BasicDataTabPlaceholder
+        v-else
+        :label="currentTab?.label || ''"
+        hint="后续将在此处实现数据的增删改查与导入导出"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  middleware: 'auth',
-})
+definePageMeta({ middleware: 'auth' })
 
 const activeTab = ref('material')
-
 const tabs = [
   { key: 'material',    icon: '🔩', label: '物料档案',     description: '管理原材料、半成品、辅料等所有物料的编码、规格、属性和参数' },
   { key: 'product',     icon: '📦', label: '产品档案',     description: '管理成品的编码、规格、售价、图片及相关技术资料' },
@@ -45,7 +46,6 @@ const tabs = [
   { key: 'warehouse',   icon: '🏗️', label: '仓库管理',     description: '管理仓库/库位信息、存储类型及容量参数' },
   { key: 'unit',        icon: '⚖️', label: '计量单位',     description: '管理计量单位及单位之间的换算关系' },
 ]
-
 const currentTab = computed(() => tabs.find(t => t.key === activeTab.value))
 </script>
 
@@ -53,7 +53,6 @@ const currentTab = computed(() => tabs.find(t => t.key === activeTab.value))
 .basic-data-page {
   display: flex;
   flex-direction: column;
-  gap: 0;
   height: 100%;
 }
 
@@ -65,91 +64,36 @@ const currentTab = computed(() => tabs.find(t => t.key === activeTab.value))
   border-radius: 10px;
   padding: 6px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
   flex-wrap: wrap;
 }
-
 .tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: #666;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border: none; border-radius: 8px;
+  background: transparent; color: #666; font-size: 13px;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
 }
+.tab-btn:hover { background: #f5f7fa; color: #333; }
+.tab-btn.active { background: #1a73e8; color: #fff; font-weight: 500; }
+.tab-icon { font-size: 16px; }
 
-.tab-btn:hover {
-  background: #f5f7fa;
-  color: #333;
-}
-
-.tab-btn.active {
-  background: #1a73e8;
-  color: #fff;
-  font-weight: 500;
-}
-
-.tab-icon {
-  font-size: 16px;
-}
-
-/* 标签内容 */
+/* 标签内容容器 */
 .tab-content {
   background: #fff;
   border-radius: 10px;
   padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .tab-header {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
   border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
 }
-
-.tab-header h2 {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.tab-desc {
-  margin: 0;
-  font-size: 13px;
-  color: #999;
-}
-
-/* 占位提示 */
-.tab-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: #bbb;
-}
-
-.placeholder-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.placeholder-text {
-  font-size: 16px;
-  color: #999;
-  margin-bottom: 8px;
-}
-
-.placeholder-hint {
-  font-size: 13px;
-  color: #ccc;
-}
+.tab-header h2 { margin: 0 0 4px 0; font-size: 18px; color: #333; }
+.tab-desc { margin: 0; font-size: 13px; color: #999; }
 </style>
