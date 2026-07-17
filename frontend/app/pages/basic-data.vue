@@ -23,9 +23,26 @@
       <!-- 物料档案 -->
       <BasicDataMaterialTab v-if="activeTab === 'material'" />
 
-      <!-- 其他标签占位 -->
-      <BasicDataTabPlaceholder
-        v-else
+      <!-- 产品档案 -->
+      <BasicDataProductTab v-else-if="activeTab === 'product'" />
+
+      <!-- BOM管理 -->
+      <BasicDataBomTab v-else-if="activeTab === 'bom'" />
+
+      <!-- 客户管理 -->
+      <BasicDataCustomerTab v-else-if="activeTab === 'customer'" />
+
+      <!-- 供应商管理 -->
+      <BasicDataSupplierTab v-else-if="activeTab === 'supplier'" />
+
+      <!-- 仓库管理 -->
+      <BasicDataWarehouseTab v-else-if="activeTab === 'warehouse'" />
+
+      <!-- 计量单位 -->
+      <BasicDataUnitTab v-else-if="activeTab === 'unit'" />
+
+      <!-- 其他标签占位（兜底） -->
+      <BasicDataTabPlaceholder v-else
         :label="currentTab?.label || ''"
         hint="后续将在此处实现数据的增删改查与导入导出"
       />

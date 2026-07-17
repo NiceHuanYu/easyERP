@@ -151,7 +151,7 @@
               </div>
               <div class="form-group">
                 <label>安全库存</label>
-                <input v-model.number="form.safetyStock" type="number" min="0" placeholder="0" />
+                <input v-model.number="form.safetyStock" type="number" min="-1" placeholder="-1" />
               </div>
               <div class="form-group">
                 <label>状态</label>
