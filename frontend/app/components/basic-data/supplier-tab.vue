@@ -58,7 +58,7 @@ const data = ref([
   { code:'SUP-004',name:'宏达橡塑制品厂',category:'橡塑',address:'常州市武进区',status:'启用',remark:'' },
   { code:'SUP-006',name:'宏远钢铁集团二分厂',category:'钢材',address:'东莞市塘厦镇',status:'停用',remark:'暂停供货' },
   { code:'SUP-007',name:'宏远钢铁集团三分厂',category:'钢材',address:'广州市增城区',status:'启用',remark:'' },
-
+])
 const s=ref('');const fc=ref('');const fs=ref('');const sf=ref('code');const sa=ref(true);const page=ref(1);const ps=ref(10)
 function sort(f:string){if(sf.value===f)sa.value=!sa.value;else{sf.value=f;sa.value=true}}
 const filtered=computed(()=>{let l=[...data.value];const q=s.value.trim().toLowerCase();if(q)l=l.filter(m=>m.code.toLowerCase().includes(q)||m.name.toLowerCase().includes(q));if(fc.value)l=l.filter(m=>m.category===fc.value);if(fs.value)l=l.filter(m=>m.status===fs.value);l.sort((a,b)=>{const av=a[sf.value as keyof typeof a],bv=b[sf.value as keyof typeof b];if(typeof av==='number'&&typeof bv==='number')return sa.value?av-bv:bv-av;return sa.value?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av))});return l})

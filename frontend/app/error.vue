@@ -27,7 +27,7 @@ function goHome() {
 
 function goBack() {
   clearError()
-  if (process.client) {
+  if (import.meta.client) {
     window.history.back()
   }
 }

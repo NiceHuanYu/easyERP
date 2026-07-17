@@ -10,7 +10,7 @@ export const useAuth = () => {
   const isLoggedIn = computed(() => user.value !== null)
 
   // 初始化：从 localStorage 恢复登录状态
-  if (process.client) {
+  if (import.meta.client) {
     const saved = localStorage.getItem('easyerp-user')
     if (saved) {
       try {
@@ -29,7 +29,7 @@ export const useAuth = () => {
     const account = ACCOUNTS.find(a => a.username === username && a.password === password)
     if (account) {
       user.value = { username: account.username, name: account.name, role: account.role }
-      if (process.client) {
+      if (import.meta.client) {
         localStorage.setItem('easyerp-user', JSON.stringify(user.value))
       }
       return { ok: true, message: '登录成功' }
@@ -39,7 +39,7 @@ export const useAuth = () => {
 
   function logout() {
     user.value = null
-    if (process.client) {
+    if (import.meta.client) {
       localStorage.removeItem('easyerp-user')
     }
     navigateTo('/login')
