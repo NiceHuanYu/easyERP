@@ -45,7 +45,7 @@ const route = useRoute()
 const navItems = [
   { path: '/dashboard', icon: '📊', label: '工作台', disabled: false },
   { path: '/basic-data', icon: '🗂️', label: '基础资料', disabled: false },
-  { path: '/sales', icon: '📦', label: '销售管理', disabled: true },
+  { path: '/sales', icon: '📦', label: '销售管理', disabled: false },
   { path: '/purchase', icon: '🛒', label: '采购管理', disabled: true },
   { path: '/production', icon: '🏭', label: '生产管理', disabled: true },
   { path: '/inventory', icon: '📋', label: '库存管理', disabled: true },
