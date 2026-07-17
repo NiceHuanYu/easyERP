@@ -12,11 +12,13 @@
         <h2>{{ currentTab?.label }}</h2>
         <p class="tab-desc">{{ currentTab?.description }}</p>
       </div>
-      <div class="tab-placeholder">
-        <div class="placeholder-icon">📋</div>
-        <p class="placeholder-text">{{ currentTab?.label }}功能开发中</p>
-        <p class="placeholder-hint">后续将在此处实现生产相关单据的管理与跟踪</p>
-      </div>
+
+      <ProductionPlanTab v-if="activeTab === 'plan'" />
+      <ProductionOrderTab v-else-if="activeTab === 'order'" />
+      <ProductionScheduleTab v-else-if="activeTab === 'schedule'" />
+      <ProductionMaterialTab v-else-if="activeTab === 'material'" />
+      <ProductionReportTab v-else-if="activeTab === 'report'" />
+      <ProductionCompleteTab v-else-if="activeTab === 'complete'" />
     </div>
   </div>
 </template>
@@ -42,12 +44,8 @@ const currentTab = computed(() => tabs.find(t => t.key === activeTab.value))
 .tab-btn:hover { background:#f5f7fa; color:#333; }
 .tab-btn.active { background:#1a73e8; color:#fff; font-weight:500; }
 .tab-icon { font-size:16px; }
-.tab-content { background:#fff; border-radius:10px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,.06); flex:1; }
-.tab-header { margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid #f0f0f0; }
+.tab-content { background:#fff; border-radius:10px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,.06); flex:1; display:flex; flex-direction:column; }
+.tab-header { margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid #f0f0f0; flex-shrink:0; }
 .tab-header h2 { margin:0 0 4px 0; font-size:18px; color:#333; }
 .tab-desc { margin:0; font-size:13px; color:#999; }
-.tab-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; color:#bbb; }
-.placeholder-icon { font-size:48px; margin-bottom:16px; opacity:.5; }
-.placeholder-text { font-size:16px; color:#999; margin-bottom:8px; }
-.placeholder-hint { font-size:13px; color:#ccc; }
 </style>
