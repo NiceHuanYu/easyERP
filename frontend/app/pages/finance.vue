@@ -1,11 +1,11 @@
-<template><div class="erp-page"><div class="erp-sub-tabs"><button v-for="tab in tabs" :key="tab.key" :class="['erp-tab-btn',{active:activeTab===tab.key}]" @click="activeTab=tab.key"><span class="erp-tab-icon">{{ tab.icon }}</span><span>{{ tab.label }}</span></button></div>
-<div class="erp-tab-content"><div class="erp-tab-header"><h2>{{ currentTab?.label }}</h2><p class="erp-tab-desc">{{ currentTab?.description }}</p></div>
+<template><div class="erp-page"><div class="erp-tab-content"><div class="erp-tab-header"><h2>{{ currentTab?.label }}</h2><p class="erp-tab-desc">{{ currentTab?.description }}</p></div>
 <FinanceArTab v-if="activeTab==='ar'" /><FinanceApTab v-else-if="activeTab==='ap'" />
 <FinanceInvoiceTab v-else-if="activeTab==='invoice'" /><FinancePaymentTab v-else-if="activeTab==='payment'" />
 <FinanceCostTab v-else-if="activeTab==='cost'" /><FinanceProfitTab v-else-if="activeTab==='profit'" /></div></div></template>
 <script setup lang="ts">
 definePageMeta({middleware:'auth'})
-const activeTab=ref('ar')
+const route=useRoute()
+const activeTab=computed(()=>(route.query.tab as string)||'ar')
 const tabs=[{key:'ar',icon:'💰',label:'应收账款',description:'管理销售产生的应收款项、账龄与催收'},{key:'ap',icon:'💳',label:'应付账款',description:'管理采购产生的应付款项与付款计划'},{key:'invoice',icon:'🧾',label:'发票管理',description:'开具销售发票、接收采购发票与进项管理'},{key:'payment',icon:'💵',label:'收付款管理',description:'记录收款与付款流水，核销对应单据'},{key:'cost',icon:'📊',label:'成本核算',description:'按订单/产品核算材料、人工与制造成本'},{key:'profit',icon:'📈',label:'利润分析',description:'按客户、订单、产品维度分析毛利与净利'}]
 const currentTab=computed(()=>tabs.find(t=>t.key===activeTab.value))
 </script>

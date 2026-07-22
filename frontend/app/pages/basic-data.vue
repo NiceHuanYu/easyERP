@@ -1,18 +1,5 @@
 <template>
   <div class="erp-page">
-    <!-- 二级标签栏 -->
-    <div class="erp-sub-tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        :class="['erp-tab-btn', { active: activeTab === tab.key }]"
-        @click="activeTab = tab.key"
-      >
-        <span class="erp-tab-icon">{{ tab.icon }}</span>
-        <span>{{ tab.label }}</span>
-      </button>
-    </div>
-
     <!-- 标签内容（由独立组件渲染） -->
     <div class="erp-tab-content">
       <div class="erp-tab-header">
@@ -56,7 +43,9 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
-const activeTab = ref('material')
+const route = useRoute()
+const activeTab = ref((route.query.tab as string) || 'material')
+watch(() => route.query.tab, (v) => { if (v) activeTab.value = v as string })
 const tabs = [
   { key: 'material',    icon: '🔩', label: '物料档案',     description: '管理原材料、半成品、辅料等所有物料的编码、规格、属性和参数' },
   { key: 'product',     icon: '📦', label: '产品档案',     description: '管理成品的编码、规格、售价、图片及相关技术资料' },

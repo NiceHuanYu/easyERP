@@ -1,13 +1,5 @@
 <template>
   <div class="erp-page">
-    <div class="erp-sub-tabs">
-      <button v-for="tab in tabs" :key="tab.key"
-        :class="['erp-tab-btn', { active: activeTab === tab.key }]"
-        @click="activeTab = tab.key">
-        <span class="erp-tab-icon">{{ tab.icon }}</span><span>{{ tab.label }}</span>
-      </button>
-    </div>
-
     <div class="erp-tab-content">
       <div class="erp-tab-header">
         <h2>{{ currentTab?.label }}</h2>
@@ -27,7 +19,9 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
-const activeTab = ref('order')
+const route = useRoute()
+const activeTab = ref((route.query.tab as string) || 'order')
+watch(() => route.query.tab, (v) => { if (v) activeTab.value = v as string })
 const tabs = [
   { key: 'inquiry',    icon: '📩', label: '客户询价',   description: '管理客户的询价需求，记录询价内容与答复状态' },
   { key: 'quotation',  icon: '📄', label: '销售报价',   description: '创建并管理报价单，支持版本管理与客户确认' },
