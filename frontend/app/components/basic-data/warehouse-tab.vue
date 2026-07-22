@@ -1,15 +1,15 @@
 <template>
-  <div class="tab-body">
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <div class="search-box"><span class="search-icon">🔍</span><input v-model="s" type="text" placeholder="搜索仓库编码、名称..." class="search-input" /></div>
-        <select v-model="ft" class="filter-select"><option value="">全部类型</option><option v-for="t in types" :key="t" :value="t">{{ t }}</option></select>
-        <select v-model="fs" class="filter-select"><option value="">全部状态</option><option value="启用">启用</option><option value="停用">停用</option></select>
+  <div class="erp-tab-body">
+    <div class="erp-toolbar">
+      <div class="erp-toolbar-left">
+        <div class="erp-search-box"><span class="erp-search-icon">🔍</span><input v-model="s" type="text" placeholder="搜索仓库编码、名称..." class="erp-search-input" /></div>
+        <select v-model="ft" class="erp-filter-select"><option value="">全部类型</option><option v-for="t in types" :key="t" :value="t">{{ t }}</option></select>
+        <select v-model="fs" class="erp-filter-select"><option value="">全部状态</option><option value="启用">启用</option><option value="停用">停用</option></select>
       </div>
-      <div class="toolbar-right"><button class="btn btn-primary" @click="openForm()">＋ 新建仓库</button></div>
+      <div class="erp-toolbar-right"><button class="erp-btn erp-btn-primary" @click="openForm()">＋ 新建仓库</button></div>
     </div>
-    <div class="table-wrap">
-      <table class="table">
+    <div class="erp-table-wrap">
+      <table class="erp-table">
         <thead><tr>
           <th @click="sort('code')" class="sortable">仓库编码{{ sf==='code'?(sa?'▲':'▼'):'' }}</th>
           <th @click="sort('name')" class="sortable">仓库名称{{ sf==='name'?(sa?'▲':'▼'):'' }}</th>
@@ -17,33 +17,33 @@
         </tr></thead>
         <tbody>
           <tr v-for="row in paged" :key="row.code">
-            <td class="code">{{ row.code }}</td><td class="name">{{ row.name }}</td>
-            <td><span class="tag">{{ row.type }}</span></td>
+            <td class="erp-cell-code">{{ row.code }}</td><td class="erp-cell-name">{{ row.name }}</td>
+            <td><span class="erp-tag">{{ row.type }}</span></td>
             <td>{{ row.manager }}</td><td>{{ row.phone }}</td>
-            <td class="spec">{{ row.location }}</td>
-            <td><span :class="['dot', row.status==='启用'?'on':'']"></span>{{ row.status }}</td>
-            <td class="acts"><button class="lnk" @click="openForm(row)">编辑</button><button class="lnk dgr" @click="confirmDel(row)">删除</button></td>
+            <td class="erp-cell-spec">{{ row.location }}</td>
+            <td><span :class="['erp-dot', row.status==='启用'?'on':'']"></span>{{ row.status }}</td>
+            <td class="erp-cell-acts"><button class="erp-lnk" @click="openForm(row)">编辑</button><button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button></td>
           </tr>
-          <tr v-if="paged.length===0"><td colspan="8" class="empty">暂无数据</td></tr>
+          <tr v-if="paged.length===0"><td colspan="8" class="erp-cell-empty">暂无数据</td></tr>
         </tbody>
       </table>
     </div>
     <PaginationBar :total="filtered.length" v-model="page" v-model:page-size="ps" />
 
     <FormModal :show="showForm" :title="editing?'编辑仓库':'新建仓库'" @close="showForm=false" @save="save">
-      <div v-if="!editing" class="numbering-row">
-        <label class="radio-label"><input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span></label>
-        <label class="radio-label"><input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span></label>
+      <div v-if="!editing" class="erp-numbering-row">
+        <label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span></label>
+        <label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span></label>
       </div>
-      <div class="grid">
-        <div class="fg"><label>仓库编码 <span class="req">*</span></label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
-        <div class="fg"><label>仓库名称 <span class="req">*</span></label><input v-model="f.name" placeholder="请输入仓库名称" /></div>
-        <div class="fg"><label>仓库类型 <span class="req">*</span></label><select v-model="f.type"><option value="">请选择</option><option v-for="t in types" :key="t" :value="t">{{ t }}</option></select></div>
-        <div class="fg"><label>负责人</label><input v-model="f.manager" placeholder="姓名" /></div>
-        <div class="fg"><label>联系电话</label><input v-model="f.phone" placeholder="手机号/固话" /></div>
-        <div class="fg"><label>仓库位置</label><input v-model="f.location" placeholder="如：1号厂房A区" /></div>
-        <div class="fg"><label>状态</label><select v-model="f.status"><option value="启用">启用</option><option value="停用">停用</option></select></div>
-        <div class="fg full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="可选"></textarea></div>
+      <div class="erp-form-grid">
+        <div class="erp-form-group"><label>仓库编码 <span class="erp-form-req">*</span></label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
+        <div class="erp-form-group"><label>仓库名称 <span class="erp-form-req">*</span></label><input v-model="f.name" placeholder="请输入仓库名称" /></div>
+        <div class="erp-form-group"><label>仓库类型 <span class="erp-form-req">*</span></label><select v-model="f.type"><option value="">请选择</option><option v-for="t in types" :key="t" :value="t">{{ t }}</option></select></div>
+        <div class="erp-form-group"><label>负责人</label><input v-model="f.manager" placeholder="姓名" /></div>
+        <div class="erp-form-group"><label>联系电话</label><input v-model="f.phone" placeholder="手机号/固话" /></div>
+        <div class="erp-form-group"><label>仓库位置</label><input v-model="f.location" placeholder="如：1号厂房A区" /></div>
+        <div class="erp-form-group"><label>状态</label><select v-model="f.status"><option value="启用">启用</option><option value="停用">停用</option></select></div>
+        <div class="erp-form-group full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="可选"></textarea></div>
       </div>
     </FormModal>
 
@@ -81,24 +81,4 @@ function confirmDel(item:any){dt.value=item;showDel.value=true}
 function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.code);showDel.value=false;dt.value=null}
 </script>
 <style scoped>
-.tab-body{display:flex;flex-direction:column;flex:1;}.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}.toolbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}.toolbar-right{flex-shrink:0;}
-.search-box{display:flex;align-items:center;background:#f5f7fa;border-radius:8px;padding:0 12px;border:1px solid #e0e0e0;}.search-box:focus-within{border-color:#1a73e8;}.search-icon{font-size:14px;margin-right:6px;}.search-input{border:none;background:transparent;padding:8px 0;font-size:13px;outline:none;width:200px;color:#333;}.search-input::placeholder{color:#bbb;}
-.filter-select{padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa;font-size:13px;color:#555;outline:none;cursor:pointer;}
-.btn{padding:8px 20px;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;}.btn-primary{background:#1a73e8;color:#fff;}.btn-primary:hover{background:#1557b0;}
-.table-wrap{flex:1;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px;}.table{width:100%;border-collapse:collapse;font-size:13px;}.table thead{position:sticky;top:0;z-index:1;}
-.table th{background:#fafafa;padding:10px 12px;text-align:left;color:#666;font-weight:600;font-size:12px;border-bottom:1px solid #e0e0e0;white-space:nowrap;}
-.table th.sortable{cursor:pointer;user-select:none;}.table th.sortable:hover{background:#f0f4ff;color:#1a73e8;}
-.table td{padding:10px 12px;border-bottom:1px solid #f5f5f5;color:#333;}.table tbody tr:hover{background:#f8faff;}
-.code{font-family:'SFMono','Consolas',monospace;font-size:12px;color:#1a73e8;}.name{font-weight:500;}
-.tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;background:#e8f0fe;color:#1a73e8;}
-.num{text-align:right;font-family:'SFMono','Consolas',monospace;}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:#bbb;}.dot.on{background:#2e7d32;}
-.acts{text-align:center;white-space:nowrap;}.lnk{background:none;border:none;font-size:12px;cursor:pointer;padding:4px 8px;color:#1a73e8;}.lnk:hover{text-decoration:underline;}.lnk.dgr{color:#d32f2f;}.lnk.dgr:hover{color:#b71c1c;}
-.empty{text-align:center;color:#bbb;padding:40px 0!important;}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.fg{display:flex;flex-direction:column;gap:4px;}.fg.full{grid-column:1/-1;}.fg label{font-size:13px;color:#555;font-weight:500;}.req{color:#d32f2f;}
-.fg input,.fg select,.fg textarea{padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;background:#fafafa;transition:border-color .2s;}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#1a73e8;background:#fff;}.fg input:disabled{background:#f0f0f0;color:#999;cursor:not-allowed;}.fg textarea{resize:vertical;font-family:inherit;}
-.numbering-row{display:flex;gap:24px;margin-bottom:16px;padding:10px 14px;background:#f8faff;border-radius:8px;border:1px solid #e0eeff;}
-.radio-label{display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;}
-.radio-label input[type="radio"]{accent-color:#1a73e8;}
 </style>

@@ -1,9 +1,9 @@
-<template><div class="tab-body">
-<div class="toolbar"><div class="toolbar-left"><div class="search-box"><span class="search-icon">🔍</span><input v-model="s" placeholder="搜索物料、单号..." class="search-input"/></div>
-<select v-model="ft" class="filter-select"><option value="">全部类型</option><option v-for="t in types" :key="t" :value="t">{{ t }}</option></select></div></div>
-<div class="table-wrap"><table class="table"><thead><tr><th>时间</th><th>物料</th><th>类型</th><th style="text-align:right;">数量变化</th><th>仓库</th><th>关联单号</th><th>操作人</th></tr></thead>
-<tbody><tr v-for="r in paged" :key="r.id"><td class="spec">{{ r.time }}</td><td>{{ r.material }}</td><td><span :class="['tag',r.typeClass]">{{ r.type }}</span></td><td :class="['num',r.qty>0?'in':'out']">{{ r.qty>0?'+':'' }}{{ r.qty }}</td><td>{{ r.wh }}</td><td class="spec">{{ r.ref }}</td><td>{{ r.op }}</td></tr>
-<tr v-if="paged.length===0"><td colspan="7" class="empty">暂无流水</td></tr></tbody></table></div>
+<template><div class="erp-tab-body">
+<div class="erp-toolbar"><div class="erp-toolbar-left"><div class="erp-search-box"><span class="erp-search-icon">🔍</span><input v-model="s" placeholder="搜索物料、单号..." class="erp-search-input"/></div>
+<select v-model="ft" class="erp-filter-select"><option value="">全部类型</option><option v-for="t in types" :key="t" :value="t">{{ t }}</option></select></div></div>
+<div class="erp-table-wrap"><table class="erp-table"><thead><tr><th>时间</th><th>物料</th><th>类型</th><th style="text-align:right;">数量变化</th><th>仓库</th><th>关联单号</th><th>操作人</th></tr></thead>
+<tbody><tr v-for="r in paged" :key="r.id"><td class="erp-cell-spec">{{ r.time }}</td><td>{{ r.material }}</td><td><span :class="['erp-tag',r.typeClass]">{{ r.type }}</span></td><td :class="['erp-cell-num',r.qty>0?'in':'out']">{{ r.qty>0?'+':'' }}{{ r.qty }}</td><td>{{ r.wh }}</td><td class="erp-cell-spec">{{ r.ref }}</td><td>{{ r.op }}</td></tr>
+<tr v-if="paged.length===0"><td colspan="7" class="erp-cell-empty">暂无流水</td></tr></tbody></table></div>
 <PaginationBar :total="filtered.length" v-model="page" v-model:page-size="ps"/></div></template>
 <script setup lang="ts">
 const types = ['采购入库','生产入库','销售出库','生产领料','调拨入库','调拨出库','盘点调整']
@@ -24,13 +24,4 @@ const filtered=computed(()=>{let l=[...data.value];const q=s.value.trim().toLowe
 const paged=computed(()=>{const s2=(page.value-1)*ps.value;return filtered.value.slice(s2,s2+ps.value)})
 watch([s,ft],()=>page.value=1)
 </script>
-<style scoped>.tab-body{display:flex;flex-direction:column;flex:1;}.toolbar{display:flex;align-items:center;margin-bottom:16px;}.toolbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.search-box{display:flex;align-items:center;background:#f5f7fa;border-radius:8px;padding:0 12px;border:1px solid #e0e0e0;}.search-box:focus-within{border-color:#1a73e8;}.search-icon{font-size:14px;margin-right:6px;}.search-input{border:none;background:transparent;padding:8px 0;font-size:13px;outline:none;width:200px;color:#333;}
-.filter-select{padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa;font-size:13px;color:#555;outline:none;cursor:pointer;}
-.table-wrap{flex:1;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px;}.table{width:100%;border-collapse:collapse;font-size:13px;}.table thead{position:sticky;top:0;z-index:1;}
-.table th{background:#fafafa;padding:10px 12px;text-align:left;color:#666;font-weight:600;font-size:12px;border-bottom:1px solid #e0e0e0;white-space:nowrap;}
-.table td{padding:10px 12px;border-bottom:1px solid #f5f5f5;color:#333;}.table tbody tr:hover{background:#f8faff;}
-.spec{color:#666;font-size:12px;}.num{text-align:right;font-family:'SFMono','Consolas',monospace;font-weight:600;}.num.in{color:#2e7d32;}.num.out{color:#c62828;}
-.tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;}.tag.in{background:#e8f5e9;color:#2e7d32;}.tag.out{background:#fce4ec;color:#c62828;}.tag.adj{background:#fff3e0;color:#e65100;}
-.empty{text-align:center;color:#bbb;padding:40px 0!important;}
-</style>
+<style scoped>.erp-cell-num.in{color:#2e7d32;}.erp-cell-num.out{color:#c62828;}.erp-tag.in{background:#e8f5e9;color:#2e7d32;}.erp-tag.out{background:#fce4ec;color:#c62828;}.erp-tag.adj{background:#fff3e0;color:#e65100;}</style>

@@ -1,16 +1,16 @@
 <template>
-  <div class="tab-body">
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <div class="search-box"><span class="search-icon">🔍</span><input v-model="s" type="text" placeholder="搜索BOM编号、产品名称..." class="search-input" /></div>
-        <select v-model="fs" class="filter-select"><option value="">全部状态</option><option value="启用">启用</option><option value="停用">停用</option></select>
+  <div class="erp-tab-body">
+    <div class="erp-toolbar">
+      <div class="erp-toolbar-left">
+        <div class="erp-search-box"><span class="erp-search-icon">🔍</span><input v-model="s" type="text" placeholder="搜索BOM编号、产品名称..." class="erp-search-input" /></div>
+        <select v-model="fs" class="erp-filter-select"><option value="">全部状态</option><option value="启用">启用</option><option value="停用">停用</option></select>
       </div>
-      <div class="toolbar-right"><button class="btn btn-primary" @click="openForm()">＋ 新建BOM</button></div>
+      <div class="erp-toolbar-right"><button class="erp-btn erp-btn-primary" @click="openForm()">＋ 新建BOM</button></div>
     </div>
 
     <!-- BOM 列表表格 -->
-    <div class="table-wrap">
-      <table class="table">
+    <div class="erp-table-wrap">
+      <table class="erp-table">
         <thead><tr>
           <th @click="sort('code')" class="sortable">BOM编号{{ sf==='code'?(sa?'▲':'▼'):'' }}</th>
           <th @click="sort('productName')" class="sortable">产品名称{{ sf==='productName'?(sa?'▲':'▼'):'' }}</th>
@@ -18,17 +18,17 @@
         </tr></thead>
         <tbody>
           <tr v-for="row in paged" :key="row.code">
-            <td class="code">{{ row.code }}</td><td class="name">{{ row.productName }}</td>
-            <td class="spec">{{ row.productCode }}</td><td>V{{ row.version }}</td>
-            <td class="num">{{ row.qty }}</td><td>{{ row.unit }}</td>
-            <td><span :class="['dot', row.status==='启用'?'on':'']"></span>{{ row.status }}</td>
-            <td class="acts">
-              <button class="lnk" @click="viewItems(row)">明细</button>
-              <button class="lnk" @click="openForm(row)">编辑</button>
-              <button class="lnk dgr" @click="confirmDel(row)">删除</button>
+            <td class="erp-cell-code">{{ row.code }}</td><td class="erp-cell-name">{{ row.productName }}</td>
+            <td class="erp-cell-spec">{{ row.productCode }}</td><td>V{{ row.version }}</td>
+            <td class="erp-cell-num">{{ row.qty }}</td><td>{{ row.unit }}</td>
+            <td><span :class="['erp-dot', row.status==='启用'?'on':'']"></span>{{ row.status }}</td>
+            <td class="erp-cell-acts">
+              <button class="erp-lnk" @click="viewItems(row)">明细</button>
+              <button class="erp-lnk" @click="openForm(row)">编辑</button>
+              <button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button>
             </td>
           </tr>
-          <tr v-if="paged.length===0"><td colspan="8" class="empty">暂无数据</td></tr>
+          <tr v-if="paged.length===0"><td colspan="8" class="erp-cell-empty">暂无数据</td></tr>
         </tbody>
       </table>
     </div>
@@ -37,33 +37,33 @@
     <!-- BOM 明细弹窗 -->
     <FormModal :show="showDetail" :title="'BOM明细 - '+detailTitle" @close="showDetail=false" @save="showDetail=false">
       <div style="margin-bottom:12px;font-size:13px;color:#888;">以下物料组成该产品：</div>
-      <table class="table detail-table">
+      <table class="erp-table detail-table">
         <thead><tr><th>物料编码</th><th>物料名称</th><th>规格型号</th><th style="text-align:right;">用量</th><th>单位</th><th>备注</th></tr></thead>
         <tbody>
           <tr v-for="item in detailItems" :key="item.matCode">
-            <td class="code">{{ item.matCode }}</td><td>{{ item.matName }}</td><td class="spec">{{ item.spec }}</td>
-            <td class="num">{{ item.qty }}</td><td>{{ item.unit }}</td><td class="spec">{{ item.remark||'-' }}</td>
+            <td class="erp-cell-code">{{ item.matCode }}</td><td>{{ item.matName }}</td><td class="erp-cell-spec">{{ item.spec }}</td>
+            <td class="erp-cell-num">{{ item.qty }}</td><td>{{ item.unit }}</td><td class="erp-cell-spec">{{ item.remark||'-' }}</td>
           </tr>
-          <tr v-if="detailItems.length===0"><td colspan="6" class="empty">暂无明细</td></tr>
+          <tr v-if="detailItems.length===0"><td colspan="6" class="erp-cell-empty">暂无明细</td></tr>
         </tbody>
       </table>
     </FormModal>
 
     <!-- BOM 表单弹窗 -->
     <FormModal :show="showForm" :title="editing?'编辑BOM':'新建BOM'" @close="showForm=false" @save="save">
-      <div v-if="!editing" class="numbering-row">
-        <label class="radio-label"><input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span></label>
-        <label class="radio-label"><input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span></label>
+      <div v-if="!editing" class="erp-numbering-row">
+        <label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span></label>
+        <label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span></label>
       </div>
-      <div class="grid">
-        <div class="fg"><label>BOM编号 <span class="req">*</span></label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
-        <div class="fg"><label>产品编码 <span class="req">*</span></label><input v-model="f.productCode" placeholder="如 PRD-001" /></div>
-        <div class="fg full"><label>产品名称 <span class="req">*</span></label><input v-model="f.productName" placeholder="请输入产品名称" /></div>
-        <div class="fg"><label>生产数量</label><input v-model.number="f.qty" type="number" min="1" placeholder="1" /></div>
-        <div class="fg"><label>单位</label><select v-model="f.unit"><option>台</option><option>套</option><option>件</option><option>个</option></select></div>
-        <div class="fg"><label>版本号</label><input v-model="f.version" type="text" placeholder="1.0" /></div>
-        <div class="fg"><label>状态</label><select v-model="f.status"><option value="启用">启用</option><option value="停用">停用</option></select></div>
-        <div class="fg full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="可选"></textarea></div>
+      <div class="erp-form-grid">
+        <div class="erp-form-group"><label>BOM编号 <span class="erp-form-req">*</span></label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
+        <div class="erp-form-group"><label>产品编码 <span class="erp-form-req">*</span></label><input v-model="f.productCode" placeholder="如 PRD-001" /></div>
+        <div class="erp-form-group full"><label>产品名称 <span class="erp-form-req">*</span></label><input v-model="f.productName" placeholder="请输入产品名称" /></div>
+        <div class="erp-form-group"><label>生产数量</label><input v-model.number="f.qty" type="number" min="1" placeholder="1" /></div>
+        <div class="erp-form-group"><label>单位</label><select v-model="f.unit"><option>台</option><option>套</option><option>件</option><option>个</option></select></div>
+        <div class="erp-form-group"><label>版本号</label><input v-model="f.version" type="text" placeholder="1.0" /></div>
+        <div class="erp-form-group"><label>状态</label><select v-model="f.status"><option value="启用">启用</option><option value="停用">停用</option></select></div>
+        <div class="erp-form-group full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="可选"></textarea></div>
       </div>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f0f0f0;">
         <label style="font-size:13px;color:#555;font-weight:500;">物料明细</label>
@@ -73,7 +73,7 @@
           <input v-model="item.spec" placeholder="规格" style="width:100px;" />
           <input v-model.number="item.qty" type="number" step="0.01" placeholder="用量" style="width:70px;" />
           <select v-model="item.unit" style="width:60px;"><option v-for="u in ['个','件','kg','m','张','只','套']" :key="u">{{ u }}</option></select>
-          <button class="lnk dgr" @click="f.items.splice(idx,1)" style="padding:4px;">✕</button>
+          <button class="erp-lnk erp-lnk-danger" @click="f.items.splice(idx,1)" style="padding:4px;">✕</button>
         </div>
         <button class="btn-add" @click="f.items.push({matCode:'',matName:'',spec:'',qty:1,unit:'个',remark:''})">＋ 添加物料</button>
       </div>
@@ -127,26 +127,8 @@ function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.
 </script>
 
 <style scoped>
-.tab-body{display:flex;flex-direction:column;flex:1;}.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}.toolbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}.toolbar-right{flex-shrink:0;}
-.search-box{display:flex;align-items:center;background:#f5f7fa;border-radius:8px;padding:0 12px;border:1px solid #e0e0e0;}.search-box:focus-within{border-color:#1a73e8;}.search-icon{font-size:14px;margin-right:6px;}.search-input{border:none;background:transparent;padding:8px 0;font-size:13px;outline:none;width:200px;color:#333;}.search-input::placeholder{color:#bbb;}
-.filter-select{padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa;font-size:13px;color:#555;outline:none;cursor:pointer;}
-.btn{padding:8px 20px;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;}.btn-primary{background:#1a73e8;color:#fff;}.btn-primary:hover{background:#1557b0;}
+/* === 组件特有样式 === */
 .btn-add{margin-top:8px;padding:6px 14px;border:1px dashed #1a73e8;border-radius:6px;background:transparent;color:#1a73e8;font-size:12px;cursor:pointer;}.btn-add:hover{background:#f0f4ff;}
-.table-wrap{flex:1;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px;margin-bottom:0;}.table{width:100%;border-collapse:collapse;font-size:13px;}.table thead{position:sticky;top:0;z-index:1;}
-.table th{background:#fafafa;padding:10px 12px;text-align:left;color:#666;font-weight:600;font-size:12px;border-bottom:1px solid #e0e0e0;white-space:nowrap;}
-.table th.sortable{cursor:pointer;user-select:none;}.table th.sortable:hover{background:#f0f4ff;color:#1a73e8;}
-.table td{padding:10px 12px;border-bottom:1px solid #f5f5f5;color:#333;}.table tbody tr:hover{background:#f8faff;}
-.code{font-family:'SFMono','Consolas',monospace;font-size:12px;color:#1a73e8;}.name{font-weight:500;}.spec{color:#666;font-size:12px;}
-.num{text-align:right;font-family:'SFMono','Consolas',monospace;}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:#bbb;}.dot.on{background:#2e7d32;}
-.acts{text-align:center;white-space:nowrap;}.lnk{background:none;border:none;font-size:12px;cursor:pointer;padding:4px 6px;color:#1a73e8;}.lnk:hover{text-decoration:underline;}.lnk.dgr{color:#d32f2f;}.lnk.dgr:hover{color:#b71c1c;}
-.empty{text-align:center;color:#bbb;padding:40px 0!important;}
 .detail-table{margin-top:8px;}.detail-table th{background:#f5f7fa;}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.fg{display:flex;flex-direction:column;gap:4px;}.fg.full{grid-column:1/-1;}.fg label{font-size:13px;color:#555;font-weight:500;}.req{color:#d32f2f;}
-.fg input,.fg select,.fg textarea{padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;background:#fafafa;transition:border-color .2s;}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#1a73e8;background:#fff;}.fg input:disabled{background:#f0f0f0;color:#999;cursor:not-allowed;}.fg textarea{resize:vertical;font-family:inherit;}
-.numbering-row{display:flex;gap:24px;margin-bottom:16px;padding:10px 14px;background:#f8faff;border-radius:8px;border:1px solid #e0eeff;}
-.radio-label{display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;}
-.radio-label input[type="radio"]{accent-color:#1a73e8;}
 .item-row{display:flex;align-items:center;gap:6px;margin-top:6px;}.item-row input,.item-row select{padding:6px 8px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;outline:none;background:#fafafa;}.item-row input:focus,.item-row select:focus{border-color:#1a73e8;}
 </style>

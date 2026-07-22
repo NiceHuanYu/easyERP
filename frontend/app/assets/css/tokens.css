@@ -1,0 +1,72 @@
+/* ============================================================
+   easyERP Design Tokens — CSS 变量
+   所有颜色、间距、圆角、阴影、字体等基础变量在此集中定义
+   ============================================================ */
+
+:root {
+  /* ---- 主色 ---- */
+  --erp-primary: #1a73e8;
+  --erp-primary-hover: #1557b0;
+  --erp-primary-light: #e8f0fe;
+  --erp-primary-bg: #f0f4ff;
+  --erp-primary-disabled: #93b8f0;
+
+  /* ---- 功能色 ---- */
+  --erp-danger: #d32f2f;
+  --erp-danger-hover: #b71c1c;
+  --erp-danger-bg: #fce4ec;
+  --erp-success: #2e7d32;
+  --erp-success-bg: #e8f5e9;
+  --erp-warning: #e65100;
+  --erp-warning-bg: #fff3e0;
+  --erp-info: #1565c0;
+  --erp-info-bg: #e3f2fd;
+
+  /* ---- 中性色 ---- */
+  --erp-bg: #f5f7fa;
+  --erp-white: #fff;
+  --erp-text: #333;
+  --erp-text-secondary: #555;
+  --erp-text-muted: #666;
+  --erp-text-light: #888;
+  --erp-text-hint: #999;
+  --erp-text-placeholder: #bbb;
+  --erp-text-disabled: #ccc;
+  --erp-border: #e0e0e0;
+  --erp-border-light: #f0f0f0;
+  --erp-border-lighter: #f5f5f5;
+  --erp-border-input: #ddd;
+  --erp-border-eee: #eee;
+  --erp-input-bg: #fafafa;
+  --erp-input-bg-disabled: #f0f0f0;
+  --erp-overlay: rgba(0, 0, 0, 0.4);
+
+  /* ---- 圆角 ---- */
+  --erp-radius-sm: 4px;
+  --erp-radius-md: 6px;
+  --erp-radius-lg: 8px;
+  --erp-radius-xl: 10px;
+  --erp-radius-2xl: 12px;
+  --erp-radius-full: 50%;
+
+  /* ---- 阴影 ---- */
+  --erp-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --erp-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --erp-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --erp-shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+  --erp-shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+
+  /* ---- 字体 ---- */
+  --erp-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
+  --erp-font-mono: 'SFMono', 'Consolas', monospace;
+
+  /* ---- 过渡 ---- */
+  --erp-transition: all 0.15s;
+  --erp-transition-slow: all 0.2s;
+
+  /* ---- 尺寸 ---- */
+  --erp-header-height: 60px;
+  --erp-sidebar-width: 200px;
+  --erp-content-padding: 24px;
+}

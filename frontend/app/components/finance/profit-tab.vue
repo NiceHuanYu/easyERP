@@ -1,7 +1,7 @@
-<template><div class="tab-body"><div class="toolbar"><h3 style="font-size:15px;color:#333;margin:0;">订单利润分析</h3></div>
-<div class="table-wrap"><table class="table"><thead><tr><th @click="sort('code')" class="sortable">订单号{{ sf==='code'?(sa?'▲':'▼'):'' }}</th><th>客户</th><th>产品</th><th style="text-align:right;">销售收入</th><th style="text-align:right;">销售成本</th><th style="text-align:right;">毛利</th><th>毛利率</th></tr></thead>
-<tbody><tr v-for="r in paged" :key="r.code"><td class="code">{{ r.code }}</td><td>{{ r.customer }}</td><td class="spec">{{ r.product }}</td><td class="num">{{ r.revenue.toFixed(2) }}</td><td class="num">{{ r.cost.toFixed(2) }}</td><td class="num" :class="r.profit>=0?'profit':'loss'">{{ r.profit.toFixed(2) }}</td><td :class="r.margin>=0?'profit':'loss'">{{ (r.margin*100).toFixed(1) }}%</td></tr>
-<tr v-if="paged.length===0"><td colspan="7" class="empty">暂无数据</td></tr></tbody></table></div>
+<template><div class="erp-tab-body"><div class="erp-toolbar"><h3 style="font-size:15px;color:#333;margin:0;">订单利润分析</h3></div>
+<div class="erp-table-wrap"><table class="erp-table"><thead><tr><th @click="sort('code')" class="sortable">订单号{{ sf==='code'?(sa?'▲':'▼'):'' }}</th><th>客户</th><th>产品</th><th style="text-align:right;">销售收入</th><th style="text-align:right;">销售成本</th><th style="text-align:right;">毛利</th><th>毛利率</th></tr></thead>
+<tbody><tr v-for="r in paged" :key="r.code"><td class="erp-cell-code">{{ r.code }}</td><td>{{ r.customer }}</td><td class="erp-cell-spec">{{ r.product }}</td><td class="erp-cell-num">{{ r.revenue.toFixed(2) }}</td><td class="erp-cell-num">{{ r.cost.toFixed(2) }}</td><td class="erp-cell-num" :class="r.profit>=0?'profit':'loss'">{{ r.profit.toFixed(2) }}</td><td :class="r.margin>=0?'profit':'loss'">{{ (r.margin*100).toFixed(1) }}%</td></tr>
+<tr v-if="paged.length===0"><td colspan="7" class="erp-cell-empty">暂无数据</td></tr></tbody></table></div>
 <PaginationBar :total="filtered.length" v-model="page" v-model:page-size="ps"/></div></template>
 <script setup lang="ts">
 const data = ref([
@@ -16,11 +16,4 @@ function sort(f:string){if(sf.value===f)sa.value=!sa.value;else{sf.value=f;sa.va
 const filtered=computed(()=>{let l=[...data.value];l.sort((a,b)=>{const av=a[sf.value as keyof typeof a],bv=b[sf.value as keyof typeof b];if(typeof av==='number'&&typeof bv==='number')return sa.value?av-bv:bv-av;return sa.value?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av))});return l})
 const paged=computed(()=>{const s2=(page.value-1)*ps.value;return filtered.value.slice(s2,s2+ps.value)})
 </script>
-<style scoped>.tab-body{display:flex;flex-direction:column;flex:1;}.toolbar{display:flex;align-items:center;margin-bottom:16px;}
-.table-wrap{flex:1;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px;}.table{width:100%;border-collapse:collapse;font-size:13px;}.table thead{position:sticky;top:0;z-index:1;}
-.table th{background:#fafafa;padding:10px 12px;text-align:left;color:#666;font-weight:600;font-size:12px;border-bottom:1px solid #e0e0e0;white-space:nowrap;}.table th.sortable{cursor:pointer;user-select:none;}.table th.sortable:hover{background:#f0f4ff;color:#1a73e8;}
-.table td{padding:10px 12px;border-bottom:1px solid #f5f5f5;color:#333;}.table tbody tr:hover{background:#f8faff;}
-.code{font-family:'SFMono','Consolas',monospace;font-size:12px;color:#1a73e8;}.spec{color:#666;font-size:12px;}.num{text-align:right;font-family:'SFMono','Consolas',monospace;font-weight:600;}
-.profit{color:#2e7d32;}.loss{color:#c62828;}
-.empty{text-align:center;color:#bbb;padding:40px 0!important;}
-</style>
+<style scoped>.erp-toolbar{justify-content:flex-start;flex-wrap:nowrap;gap:0;}.erp-cell-num{font-weight:600;}.profit{color:#2e7d32;}.loss{color:#c62828;}</style>

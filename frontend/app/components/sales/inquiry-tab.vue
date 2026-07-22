@@ -1,14 +1,14 @@
 <template>
-  <div class="tab-body">
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <div class="search-box"><span class="search-icon">🔍</span><input v-model="s" type="text" placeholder="搜索询价编号、客户..." class="search-input" /></div>
-        <select v-model="fs" class="filter-select"><option value="">全部状态</option><option v-for="st in statuses" :key="st" :value="st">{{ st }}</option></select>
+  <div class="erp-tab-body">
+    <div class="erp-toolbar">
+      <div class="erp-toolbar-left">
+        <div class="erp-search-box"><span class="erp-search-icon">🔍</span><input v-model="s" type="text" placeholder="搜索询价编号、客户..." class="erp-search-input" /></div>
+        <select v-model="fs" class="erp-filter-select"><option value="">全部状态</option><option v-for="st in statuses" :key="st" :value="st">{{ st }}</option></select>
       </div>
-      <div class="toolbar-right"><button class="btn btn-primary" @click="openForm()">＋ 新建询价</button></div>
+      <div class="erp-toolbar-right"><button class="erp-btn erp-btn-primary" @click="openForm()">＋ 新建询价</button></div>
     </div>
-    <div class="table-wrap">
-      <table class="table">
+    <div class="erp-table-wrap">
+      <table class="erp-table">
         <thead><tr>
           <th @click="sort('code')" class="sortable">询价编号{{ sf==='code'?(sa?'▲':'▼'):'' }}</th>
           <th @click="sort('customer')" class="sortable">客户名称{{ sf==='customer'?(sa?'▲':'▼'):'' }}</th>
@@ -17,28 +17,28 @@
         </tr></thead>
         <tbody>
           <tr v-for="row in paged" :key="row.code">
-            <td class="code">{{ row.code }}</td><td>{{ row.customer }}</td>
-            <td>{{ row.contact }}</td><td class="spec">{{ row.material }}</td>
-            <td class="num">{{ row.qty }} {{ row.unit }}</td>
-            <td><span :class="['tag', row.statusClass]">{{ row.status }}</span></td>
-            <td class="acts"><button class="lnk" @click="openForm(row)">编辑</button><button class="lnk dgr" @click="confirmDel(row)">删除</button></td>
+            <td class="erp-cell-code">{{ row.code }}</td><td>{{ row.customer }}</td>
+            <td>{{ row.contact }}</td><td class="erp-cell-spec">{{ row.material }}</td>
+            <td class="erp-cell-num">{{ row.qty }} {{ row.unit }}</td>
+            <td><span :class="['erp-tag', row.statusClass]">{{ row.status }}</span></td>
+            <td class="erp-cell-acts"><button class="erp-lnk" @click="openForm(row)">编辑</button><button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button></td>
           </tr>
-          <tr v-if="paged.length===0"><td colspan="7" class="empty">暂无数据</td></tr>
+          <tr v-if="paged.length===0"><td colspan="7" class="erp-cell-empty">暂无数据</td></tr>
         </tbody>
       </table>
     </div>
     <PaginationBar :total="filtered.length" v-model="page" v-model:page-size="ps" />
 
     <FormModal :show="showForm" :title="editing?'编辑询价':'新建询价'" @close="showForm=false" @save="save">
-      <div class="grid">
-        <div class="fg"><label>询价编号</label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
-        <div class="fg"><label>客户名称 <span class="req">*</span></label><input v-model="f.customer" placeholder="客户名称" /></div>
-        <div class="fg"><label>联系人</label><input v-model="f.contact" placeholder="姓名" /></div>
-        <div class="fg"><label>物料名称 <span class="req">*</span></label><input v-model="f.material" placeholder="如 减速器SA67" /></div>
-        <div class="fg"><label>数量</label><input v-model.number="f.qty" type="number" min="1" placeholder="1" /></div>
-        <div class="fg"><label>单位</label><select v-model="f.unit"><option>台</option><option>套</option><option>件</option><option>个</option><option>kg</option></select></div>
-        <div class="fg"><label>状态</label><select v-model="f.status"><option v-for="st in statuses" :key="st" :value="st">{{ st }}</option></select></div>
-        <div class="fg full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="客户特殊要求等"></textarea></div>
+      <div class="erp-form-grid">
+        <div class="erp-form-group"><label>询价编号</label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
+        <div class="erp-form-group"><label>客户名称 <span class="erp-form-req">*</span></label><input v-model="f.customer" placeholder="客户名称" /></div>
+        <div class="erp-form-group"><label>联系人</label><input v-model="f.contact" placeholder="姓名" /></div>
+        <div class="erp-form-group"><label>物料名称 <span class="erp-form-req">*</span></label><input v-model="f.material" placeholder="如 减速器SA67" /></div>
+        <div class="erp-form-group"><label>数量</label><input v-model.number="f.qty" type="number" min="1" placeholder="1" /></div>
+        <div class="erp-form-group"><label>单位</label><select v-model="f.unit"><option>台</option><option>套</option><option>件</option><option>个</option><option>kg</option></select></div>
+        <div class="erp-form-group"><label>状态</label><select v-model="f.status"><option v-for="st in statuses" :key="st" :value="st">{{ st }}</option></select></div>
+        <div class="erp-form-group full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="客户特殊要求等"></textarea></div>
       </div>
     </FormModal>
 
@@ -70,22 +70,7 @@ function confirmDel(item:any){dt.value=item;showDel.value=true}
 function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.code);showDel.value=false;dt.value=null}
 </script>
 <style scoped>
-.tab-body{display:flex;flex-direction:column;flex:1;}.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}.toolbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}.toolbar-right{flex-shrink:0;}
-.search-box{display:flex;align-items:center;background:#f5f7fa;border-radius:8px;padding:0 12px;border:1px solid #e0e0e0;}.search-box:focus-within{border-color:#1a73e8;}.search-icon{font-size:14px;margin-right:6px;}.search-input{border:none;background:transparent;padding:8px 0;font-size:13px;outline:none;width:200px;color:#333;}.search-input::placeholder{color:#bbb;}
-.filter-select{padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa;font-size:13px;color:#555;outline:none;cursor:pointer;}
-.btn{padding:8px 20px;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;}.btn-primary{background:#1a73e8;color:#fff;}.btn-primary:hover{background:#1557b0;}
-.table-wrap{flex:1;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px;}.table{width:100%;border-collapse:collapse;font-size:13px;}.table thead{position:sticky;top:0;z-index:1;}
-.table th{background:#fafafa;padding:10px 12px;text-align:left;color:#666;font-weight:600;font-size:12px;border-bottom:1px solid #e0e0e0;white-space:nowrap;}
-.table th.sortable{cursor:pointer;user-select:none;}.table th.sortable:hover{background:#f0f4ff;color:#1a73e8;}
-.table td{padding:10px 12px;border-bottom:1px solid #f5f5f5;color:#333;}.table tbody tr:hover{background:#f8faff;}
-.code{font-family:'SFMono','Consolas',monospace;font-size:12px;color:#1a73e8;}.spec{color:#666;font-size:12px;}.num{text-align:right;font-family:'SFMono','Consolas',monospace;}
-.tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;background:#e8f0fe;color:#1a73e8;}.tag.quoted{background:#e8f5e9;color:#2e7d32;}.tag.closed{background:#f5f5f5;color:#999;}.tag.pending{background:#fff3e0;color:#e65100;}
-.acts{text-align:center;white-space:nowrap;}.lnk{background:none;border:none;font-size:12px;cursor:pointer;padding:4px 8px;color:#1a73e8;}.lnk:hover{text-decoration:underline;}.lnk.dgr{color:#d32f2f;}.lnk.dgr:hover{color:#b71c1c;}
-.empty{text-align:center;color:#bbb;padding:40px 0!important;}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.fg{display:flex;flex-direction:column;gap:4px;}.fg.full{grid-column:1/-1;}.fg label{font-size:13px;color:#555;font-weight:500;}.req{color:#d32f2f;}
-.fg input,.fg select,.fg textarea{padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;background:#fafafa;transition:border-color .2s;}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#1a73e8;background:#fff;}.fg input:disabled{background:#f0f0f0;color:#999;cursor:not-allowed;}.fg textarea{resize:vertical;font-family:inherit;}
-.numbering-row{display:flex;gap:24px;margin-bottom:16px;padding:10px 14px;background:#f8faff;border-radius:8px;border:1px solid #e0eeff;}
-.radio-label{display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;}
-.radio-label input[type="radio"]{accent-color:#1a73e8;}
+.erp-tag.pending{background:#fff3e0;color:#e65100;}
+.erp-tag.quoted{background:#e8f5e9;color:#2e7d32;}
+.erp-tag.closed{background:#f5f5f5;color:#999;}
 </style>

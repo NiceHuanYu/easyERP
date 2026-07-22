@@ -1,0 +1,23 @@
+/* ============================================================
+   easyERP Utilities — 全局工具类
+   ============================================================ */
+
+/* ---- 通用重置 ---- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--erp-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#easyerp-app {
+  height: 100%;
+}

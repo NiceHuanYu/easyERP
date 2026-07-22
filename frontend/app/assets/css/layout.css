@@ -1,0 +1,83 @@
+/* ============================================================
+   easyERP Layout — 页面级布局样式
+   适用于所有带二级标签页（sub-tabs）的页面
+   ============================================================ */
+
+/* ---- 页面容器 ---- */
+.erp-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---- 二级标签栏 ---- */
+.erp-sub-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--erp-white);
+  border-radius: var(--erp-radius-xl);
+  padding: 6px;
+  margin-bottom: 20px;
+  box-shadow: var(--erp-shadow-sm);
+  flex-wrap: wrap;
+}
+
+.erp-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--erp-radius-lg);
+  background: transparent;
+  color: var(--erp-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--erp-transition);
+  white-space: nowrap;
+}
+
+.erp-tab-btn:hover {
+  background: var(--erp-bg);
+  color: var(--erp-text);
+}
+
+.erp-tab-btn.active {
+  background: var(--erp-primary);
+  color: var(--erp-white);
+  font-weight: 500;
+}
+
+.erp-tab-icon {
+  font-size: 16px;
+}
+
+/* ---- 标签内容容器 ---- */
+.erp-tab-content {
+  background: var(--erp-white);
+  border-radius: var(--erp-radius-xl);
+  padding: var(--erp-content-padding);
+  box-shadow: var(--erp-shadow-sm);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-tab-header {
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--erp-border-light);
+  flex-shrink: 0;
+}
+
+.erp-tab-header h2 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  color: var(--erp-text);
+}
+
+.erp-tab-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--erp-text-hint);
+}
