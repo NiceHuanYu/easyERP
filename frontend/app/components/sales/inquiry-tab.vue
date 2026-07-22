@@ -30,6 +30,10 @@
     <PaginationBar :total="filtered.length" v-model="page" v-model:page-size="ps" />
 
     <FormModal :show="showForm" :title="editing?'编辑询价':'新建询价'" @close="showForm=false" @save="save">
+      <div v-if="!editing" class="erp-numbering-row">
+        <label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span></label>
+        <label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span></label>
+      </div>
       <div class="erp-form-grid">
         <div class="erp-form-group"><label>询价编号</label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
         <div class="erp-form-group"><label>客户名称 <span class="erp-form-req">*</span></label><input v-model="f.customer" placeholder="客户名称" /></div>
@@ -62,7 +66,7 @@ function sort(f:string){if(sf.value===f)sa.value=!sa.value;else{sf.value=f;sa.va
 const filtered=computed(()=>{let l=[...data.value];const q=s.value.trim().toLowerCase();if(q)l=l.filter(m=>m.code.toLowerCase().includes(q)||m.customer.includes(q));if(fs.value)l=l.filter(m=>m.status===fs.value);l.sort((a,b)=>{const av=a[sf.value as keyof typeof a],bv=b[sf.value as keyof typeof b];if(typeof av==='number'&&typeof bv==='number')return sa.value?av-bv:bv-av;return sa.value?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av))});return l})
 const paged=computed(()=>{const s2=(page.value-1)*ps.value;return filtered.value.slice(s2,s2+ps.value)})
 watch([s,fs],()=>page.value=1)
-const showForm=ref(false);const editing=ref(false);const f=reactive({code:'',customer:'',contact:'',material:'',qty:1,unit:'台',status:'待回复',remark:''});let ec=''
+const showForm=ref(false);const editing=ref(false);const numberingMode=ref('auto');const f=reactive({code:'',customer:'',contact:'',material:'',qty:1,unit:'台',status:'待回复',remark:''});let ec=''
 function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`INQ-${String(data.value.length+1).padStart(3,'0')}`;f.customer='';f.contact='';f.material='';f.qty=1;f.unit='台';f.status='待回复';f.remark=''}showForm.value=true}
 function save(){if(!f.customer||!f.material){alert('请填写客户和物料');return}if(editing.value){const i=data.value.findIndex(m=>m.code===ec);if(i!==-1)data.value[i]={...f}as any}else data.value.push({...f}as any);showForm.value=false}
 const showDel=ref(false);const dt=ref<any>(null)
