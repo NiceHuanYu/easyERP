@@ -12,4 +12,5 @@ export default defineNuxtConfig({
     '@/assets/css/layout.css',
     '@/assets/css/components.css',
   ],
+  modules: ['@pinia/nuxt'],
 })

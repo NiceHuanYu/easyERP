@@ -7,11 +7,32 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"app/**/*.{vue,ts,css}\"",
+    "format:check": "prettier --check \"app/**/*.{vue,ts,css}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "nuxi typecheck"
   },
   "dependencies": {
+    "@pinia/nuxt": "^0.11.3",
     "nuxt": "^4.4.8",
+    "pinia": "^3.0.4",
+    "vee-validate": "^4.15.0",
     "vue": "^3.5.39",
-    "vue-router": "^5.1.0"
+    "vue-router": "^5.1.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.9.0",
+    "@types/node": "^22.0.0",
+    "@vue/test-utils": "^2.4.6",
+    "eslint": "^9.0.0",
+    "happy-dom": "^17.0.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
   }
 }

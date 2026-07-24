@@ -20,6 +20,7 @@
 definePageMeta({ middleware: 'auth' })
 const route = useRoute()
 const activeTab = ref((route.query.tab as string) || 'order')
+watch(() => route.query.tab, (v) => { if (v) activeTab.value = v as string })
 const tabs = [
   { key: 'plan',    icon: '📅', label: '生产计划',   description: '主生产计划（MPS）的编制、排程与调整' },
   { key: 'order',   icon: '📋', label: '生产工单',   description: '工单创建、审核、下达与完工关闭' },

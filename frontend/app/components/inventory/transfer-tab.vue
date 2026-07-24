@@ -4,7 +4,7 @@
 <tbody><tr v-for="r in paged" :key="r.code"><td class="erp-cell-code">{{ r.code }}</td><td class="erp-cell-spec">{{ r.material }}</td><td class="erp-cell-num">{{ r.qty }}{{ r.unit }}</td><td>{{ r.from }}</td><td>{{ r.to }}</td><td class="erp-cell-spec">{{ r.date }}</td><td><span :class="['erp-tag',r.sc]">{{ r.status }}</span></td><td class="erp-cell-acts"><button v-if="r.status==='草稿'" class="erp-lnk" style="color:#2e7d32;" @click="submit(r)">提交</button><button class="erp-lnk" @click="openForm(r)">编辑</button><button class="erp-lnk erp-lnk-danger" @click="del(r)">删除</button></td></tr>
 <tr v-if="paged.length===0"><td colspan="8" class="erp-cell-empty">暂无数据</td></tr></tbody></table></div>
 <PaginationBar :total="filtered.length" v-model="page" v-model:page-size="ps"/>
-<FormModal :show="showForm" title="新建调拨" @close="showForm=false" @save="save"><div v-if="!editing" class="erp-numbering-row"><label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span></label><label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span></label></div><div class="erp-form-grid">
+<FormModal :show="showForm" :title="editing?'编辑调拨':'新建调拨'" @close="showForm=false" @save="save"><div v-if="!editing" class="erp-numbering-row"><label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span></label><label class="erp-radio-label"><input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span></label></div><div class="erp-form-grid">
 <div class="erp-form-group"><label>调拨单号</label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'"/></div>
 <div class="erp-form-group"><label>物料 <span class="erp-form-req">*</span></label><input v-model="f.material"/></div>
 <div class="erp-form-group"><label>数量</label><input v-model.number="f.qty" type="number" min="1"/></div>
@@ -30,7 +30,7 @@ const showForm=ref(false);const editing=ref(false);const f=reactive({code:'',mat
 const numberingMode = ref('auto')
 function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`TRF-${String(data.value.length+1).padStart(3,'0')}`;f.material='';f.qty=1;f.unit='个';f.from='';f.to='';f.date='';f.status='草稿';f.remark=''}showForm.value=true}
 function save(){if(!f.material){alert('请填写物料');return}if(editing.value){const i=data.value.findIndex(m=>m.code===ec);if(i!==-1)data.value[i]={...f}as any}else data.value.push({...f}as any);showForm.value=false}
-function submit(row:any){const i=data.value.findIndex(m=>m.code===row.code);if(i!==-1){data.value[i].status='待审核';data.value[i].sc='pending-review'}}
+function submit(row:any){const i=data.value.findIndex(m=>m.code===row.code);if(i!==-1){data.value[i].status='待审核';data.value[i].sc='pending'}}
 const showDel=ref(false);const dt=ref<any>(null);function del(item:any){dt.value=item;showDel.value=true};function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.code);showDel.value=false;dt.value=null}
 </script>
-<style scoped>.erp-search-input::placeholder{color:#bbb;}.erp-tag.done{background:#e8f5e9;color:#2e7d32;}.erp-tag.approved{background:#e3f2fd;color:#1565c0;}.erp-tag.draft{background:#f5f5f5;color:#999;}.erp-tag.pending-review{background:#fff3e0;color:#e65100;}</style>
+<style scoped>.erp-search-input::placeholder{color:#bbb;}.erp-tag.done{background:#e8f5e9;color:#2e7d32;}.erp-tag.approved{background:#e3f2fd;color:#1565c0;}.erp-tag.draft{background:#f5f5f5;color:#999;}.erp-tag.pending{background:#fff3e0;color:#e65100;}</style>

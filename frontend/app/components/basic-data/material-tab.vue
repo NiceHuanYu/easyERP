@@ -46,7 +46,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in pagedData" :key="item.code">
+          <tr v-for="item in paged" :key="item.code">
             <td class="erp-cell-code">{{ item.code }}</td>
             <td class="erp-cell-name">{{ item.name }}</td>
             <td><span class="erp-tag">{{ item.category }}</span></td>
@@ -64,7 +64,7 @@
               <button class="erp-lnk erp-lnk-danger" @click="confirmDelete(item)">删除</button>
             </td>
           </tr>
-          <tr v-if="pagedData.length === 0">
+          <tr v-if="paged.length === 0">
             <td colspan="10" class="erp-cell-empty">暂无匹配的物料数据</td>
           </tr>
         </tbody>
@@ -72,27 +72,9 @@
     </div>
 
     <!-- 分页 -->
-    <div class="erp-pagination">
-      <span class="erp-page-info">共 {{ filteredData.length }} 条，第 {{ page }} / {{ totalPages }} 页</span>
-      <div class="erp-page-controls">
-        <button class="erp-page-btn" :disabled="page <= 1" @click="page = 1">首页</button>
-        <button class="erp-page-btn" :disabled="page <= 1" @click="page--">‹</button>
-        <span class="erp-page-num" v-for="p in visiblePages" :key="p" :class="{ current: p === page }" @click="typeof p === 'number' && (page = p)">{{ p }}</span>
-        <button class="erp-page-btn" :disabled="page >= totalPages" @click="page++">›</button>
-        <button class="erp-page-btn" :disabled="page >= totalPages" @click="page = totalPages">末页</button>
-      </div>
-      <label class="erp-page-size-label">
-        每页
-        <select v-model.number="pageSize" class="erp-page-size-select">
-          <option :value="10">10</option>
-          <option :value="20">20</option>
-          <option :value="50">50</option>
-        </select>
-        条
-      </label>
-    </div>
+    <PaginationBar :total="filtered.length" v-model="page" v-model:page-size="pageSize" />
 
-    <!-- ===== 物料表单弹窗 ===== -->
+    <!-- 物料表单弹窗 -->
     <Teleport to="body">
       <div v-if="showForm" class="erp-modal-overlay" @click.self="closeForm">
         <div class="erp-modal-panel">
@@ -101,27 +83,21 @@
             <button class="erp-modal-close" @click="closeForm">✕</button>
           </div>
           <div class="erp-modal-body">
-            <!-- 编号方式（仅新建时可选） -->
             <div v-if="!isEditing" class="erp-numbering-row">
               <label class="erp-radio-label">
-                <input type="radio" v-model="numberingMode" value="auto" />
-                <span>自动编号</span>
+                <input type="radio" v-model="numberingMode" value="auto" /><span>自动编号</span>
               </label>
               <label class="erp-radio-label">
-                <input type="radio" v-model="numberingMode" value="manual" />
-                <span>手动编号</span>
+                <input type="radio" v-model="numberingMode" value="manual" /><span>手动编号</span>
               </label>
             </div>
 
             <div class="erp-form-grid">
               <div class="erp-form-group">
                 <label>物料编码 <span class="erp-form-req">*</span></label>
-                <input
-                  v-model="form.code"
-                  type="text"
+                <input v-model="form.code" type="text"
                   :disabled="!isEditing && numberingMode === 'auto'"
-                  :placeholder="!isEditing && numberingMode === 'auto' ? '系统自动生成' : '请输入物料编码'"
-                />
+                  :placeholder="!isEditing && numberingMode === 'auto' ? '系统自动生成' : '请输入物料编码'" />
               </div>
               <div class="erp-form-group">
                 <label>物料名称 <span class="erp-form-req">*</span></label>
@@ -174,33 +150,25 @@
       </div>
     </Teleport>
 
-    <!-- ===== 删除确认弹窗 ===== -->
-    <Teleport to="body">
-      <div v-if="showDelete" class="erp-modal-overlay" @click.self="showDelete = false">
-        <div class="erp-modal-panel confirm-panel">
-          <div class="erp-modal-header"><h3>确认删除</h3></div>
-          <div class="erp-modal-body">
-            <p>确定要删除物料 <strong>{{ deleteTarget?.code }} - {{ deleteTarget?.name }}</strong> 吗？</p>
-            <p class="warn-text">此操作不可恢复。</p>
-          </div>
-          <div class="erp-modal-footer">
-            <button class="erp-btn btn-cancel" @click="showDelete = false">取消</button>
-            <button class="erp-btn btn-danger" @click="doDelete">确认删除</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- 删除确认弹窗 -->
+    <ConfirmDialog :show="showDelete" title="确认删除" @confirm="doDelete" @cancel="showDelete = false">
+      <p>确定要删除物料 <strong>{{ deleteTarget?.code }} - {{ deleteTarget?.name }}</strong> 吗？</p>
+      <p class="warn-text">此操作不可恢复。</p>
+    </ConfirmDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-// ========== 常量 ==========
+interface Material {
+  code: string; name: string; category: string; spec: string
+  unit: string; stock: number; safetyStock: number; price: number
+  status: string; remark: string
+}
+
 const materialCategories = ['原材料', '半成品', '辅料', '包装物', '低值易耗品']
 const units = ['个', '件', '只', '套', 'kg', 'g', 'm', 'cm', 'L', 'ml', '箱', '卷', '张', '片', '条']
-const PAGE_SIZE_OPTIONS = [10, 20, 50]
 
-// ========== 物料数据 ==========
-const materials = ref([
+const materials = ref<Material[]>([
   { code: 'MAT-001', name: '45#圆钢 Φ20',      category: '原材料',  spec: 'Φ20×6000mm', unit: 'kg',  stock: 520,  safetyStock: 200, price: 4.80,  status: '启用', remark: '' },
   { code: 'MAT-002', name: '304不锈钢板 2mm',   category: '原材料',  spec: '2×1200×2400mm', unit: '张', stock: 85,   safetyStock: 50,  price: 68.50, status: '启用', remark: '' },
   { code: 'MAT-003', name: 'Q235槽钢 10#',      category: '原材料',  spec: '10# 6m/根', unit: '根',  stock: 120,  safetyStock: 80,  price: 35.20, status: '启用', remark: '' },
@@ -218,59 +186,28 @@ const materials = ref([
   { code: 'MAT-015', name: '焊丝 ER50-6 Φ1.2', category: '辅料',    spec: 'Φ1.2mm 15kg/盘', unit: '盘', stock: 18,   safetyStock: 10,  price: 95.00, status: '启用', remark: '' },
 ])
 
-// ========== 搜索 / 筛选 / 排序 ==========
-const search = ref('')
+// ---- 使用 composables ----
+const { search, sortField, sortAsc, page, pageSize, sortBy, filteredWith, pagedFrom } = useTable({
+  data: materials,
+  searchFields: ['code', 'name', 'spec'],
+  initialSort: 'code',
+})
+
 const filterCategory = ref('')
 const filterStatus = ref('')
-const sortField = ref('code')
-const sortAsc = ref(true)
 
-function sortBy(field: string) {
-  if (sortField.value === field) { sortAsc.value = !sortAsc.value }
-  else { sortField.value = field; sortAsc.value = true }
-}
-
-const filteredData = computed(() => {
-  let list = [...materials.value]
-  const q = search.value.trim().toLowerCase()
-  if (q) list = list.filter(m => m.code.toLowerCase().includes(q) || m.name.toLowerCase().includes(q) || m.spec.toLowerCase().includes(q))
-  if (filterCategory.value) list = list.filter(m => m.category === filterCategory.value)
-  if (filterStatus.value) list = list.filter(m => m.status === filterStatus.value)
-
-  list.sort((a, b) => {
-    const aVal = a[sortField.value as keyof typeof a]
-    const bVal = b[sortField.value as keyof typeof b]
-    if (typeof aVal === 'number' && typeof bVal === 'number') {
-      return sortAsc.value ? aVal - bVal : bVal - aVal
-    }
-    return sortAsc.value ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal))
-  })
-  return list
+const filtered = filteredWith(item => {
+  if (filterCategory.value && item.category !== filterCategory.value) return false
+  if (filterStatus.value && item.status !== filterStatus.value) return false
+  return true
 })
+const paged = pagedFrom(filtered)
 
-// ========== 分页 ==========
-const page = ref(1)
-const pageSize = ref(10)
+watch([filterCategory, filterStatus], () => { page.value = 1 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredData.value.length / pageSize.value)))
-const pagedData = computed(() => {
-  const start = (page.value - 1) * pageSize.value
-  return filteredData.value.slice(start, start + pageSize.value)
-})
+const { showDelete, deleteTarget, confirmDelete, doDelete } = useDelete(materials, 'code')
 
-const visiblePages = computed(() => {
-  const total = totalPages.value
-  const cur = page.value
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-  if (cur <= 4) return [1, 2, 3, 4, 5, '...', total]
-  if (cur >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
-  return [1, '...', cur - 1, cur, cur + 1, '...', total]
-})
-
-// 筛选条件变化时重置到第一页
-watch([search, filterCategory, filterStatus], () => { page.value = 1 })
-
-// ========== 表单 ==========
+// ---- 表单 ----
 const showForm = ref(false)
 const isEditing = ref(false)
 const numberingMode = ref('auto')
@@ -284,7 +221,7 @@ function resetForm() {
   editingCode = ''; numberingMode.value = 'auto'
 }
 
-function openForm(item?: typeof materials.value[0]) {
+function openForm(item?: Material) {
   if (item) {
     isEditing.value = true; editingCode = item.code
     Object.assign(form, { ...item })
@@ -301,51 +238,24 @@ function save() {
   if (!form.name || !form.category || !form.unit) { alert('请填写物料名称、类别和计量单位'); return }
   if (isEditing.value) {
     const idx = materials.value.findIndex(m => m.code === editingCode)
-    if (idx !== -1) materials.value[idx] = { ...form } as typeof materials.value[0]
+    if (idx !== -1) materials.value[idx] = { ...form } as Material
   } else {
-    if (numberingMode.value === 'auto') {
-      // 自动编号时使用表单当前显示的编码
-    }
-    materials.value.push({ ...form } as typeof materials.value[0])
+    materials.value.push({ ...form } as Material)
   }
   closeForm()
-}
-
-// ========== 删除 ==========
-const showDelete = ref(false)
-const deleteTarget = ref<typeof materials.value[0] | null>(null)
-
-function confirmDelete(item: typeof materials.value[0]) {
-  deleteTarget.value = item; showDelete.value = true
-}
-
-function doDelete() {
-  if (deleteTarget.value) {
-    materials.value = materials.value.filter(m => m.code !== deleteTarget.value!.code)
-  }
-  showDelete.value = false; deleteTarget.value = null
 }
 </script>
 
 <style scoped>
-/* === 组件特有样式 === */
 .material-tab { display: flex; flex-direction: column; flex: 1; }
 
-/* 特有按钮 */
 .btn-cancel { background: #f5f5f5; color: #666; }
 .btn-cancel:hover { background: #eee; }
 .btn-danger { background: #d32f2f; color: #fff; }
 .btn-danger:hover { background: #b71c1c; }
 
-/* 表格最后一行去底边框 */
 .erp-table tbody tr:last-child td { border-bottom: none; }
-
-/* 低库存高亮 */
 .erp-cell-num.low-stock { color: #d32f2f; font-weight: 600; }
 
-/* 确认弹窗宽度 */
-.confirm-panel { width: 420px; }
-
-/* 删除警告文字 */
 .warn-text { color: #d32f2f; font-size: 13px; margin-top: 8px; }
 </style>
