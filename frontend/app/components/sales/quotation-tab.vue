@@ -70,29 +70,12 @@
         <div class="erp-form-group full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="可选"></textarea></div>
       </div>
 
-      <FormSection title="产品明细" hint="添加报价中的产品，金额将自动汇总">
-        <div class="erp-table-wrap">
-          <table class="erp-table">
-            <thead><tr>
-              <th>物料/产品 <span class="erp-form-req">*</span></th><th style="text-align:right;">数量</th><th>单位</th><th style="text-align:right;">金额(元)</th><th style="text-align:center;">操作</th>
-            </tr></thead>
-            <tbody>
-              <tr v-for="(item,idx) in f.items" :key="idx">
-                <td><input v-model="item.material" placeholder="产品名称" class="erp-tbl-input" /></td>
-                <td><input v-model.number="item.qty" type="number" min="1" placeholder="1" class="erp-tbl-input erp-tbl-input-num" /></td>
-                <td><select v-model="item.unit" class="erp-tbl-select"><option>台</option><option>套</option><option>件</option><option>个</option></select></td>
-                <td><input v-model.number="item.amount" type="number" step="0.01" placeholder="0.00" class="erp-tbl-input erp-tbl-input-num" /></td>
-                <td class="erp-cell-acts"><button class="erp-lnk erp-lnk-danger" @click="f.items.splice(idx,1)">删除</button></td>
-              </tr>
-              <tr v-if="f.items.length===0"><td colspan="5" class="erp-cell-empty">暂无产品，请添加</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
-          <button class="erp-btn erp-btn-primary" style="padding:6px 16px;font-size:12px;" @click="addItem()">＋ 添加产品</button>
-          <span style="font-size:13px;color:#555;">合计金额：<strong style="color:#1a73e8;">¥{{ totalAmount(f.items).toFixed(2) }}</strong></span>
-        </div>
-      </FormSection>
+      <ErpItemTable
+        v-model:items="f.items"
+        :columns="itemColumns"
+        empty-text="暂无产品，请添加"
+        add-label="＋ 添加产品"
+      />
     </FormModal>
 
     <ConfirmDialog :show="showDel" title="确认删除" @confirm="doDel" @cancel="showDel=false">
@@ -140,13 +123,19 @@ function viewItems(row:Quote){detailCode.value=row.code;detailCustomer.value=row
 const numberingMode=ref('auto')
 const showForm=ref(false);const editing=ref(false)
 const f=reactive<{code:string;customer:string;items:QuoteItem[];version:number;validUntil:string;status:string;remark:string}>({code:'',customer:'',items:[],version:1,validUntil:'',status:'草稿',remark:''})
-let ec=''
+// ---- 物品表格列配置 ----
+const itemColumns = [
+  { key: 'material', label: '物料/产品', type: 'autocomplete' as const, required: true, placeholder: '搜索或输入产品名' },
+  { key: 'qty', label: '数量', type: 'number' as const, align: 'right' as const, min: 1, total: true },
+  { key: 'unit', label: '单位', type: 'select' as const, options: ['台', '套', '件', '个'] },
+  { key: 'amount', label: '金额(元)', type: 'number' as const, align: 'right' as const, step: 0.01, total: true, totalLabel: '合计金额' },
+]
 
-function addItem(){f.items.push({material:'',qty:1,unit:'台',amount:0})}
+let ec=''
 
 function openForm(item?:Quote){
   if(item){editing.value=true;ec=item.code;Object.assign(f,{...item,items:item.items.map(i=>({...i}))})}
-  else{editing.value=false;numberingMode.value='auto';f.code=`QTN-${String(data.value.length+1).padStart(3,'0')}`;f.customer='';f.items=[{material:'',qty:1,unit:'台',amount:0}];f.version=1;f.validUntil='';f.status='草稿';f.remark=''}
+  else{editing.value=false;numberingMode.value='auto';f.code=`QTN-${String(data.value.length+1).padStart(3,'0')}`;f.customer='';f.items=[];f.version=1;f.validUntil='';f.status='草稿';f.remark=''}
   showForm.value=true
 }
 
@@ -169,9 +158,4 @@ function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.
 .erp-tag.sent{background:#fff3e0;color:#e65100;}
 .erp-tag.confirmed{background:#e8f5e9;color:#2e7d32;}
 .erp-tag.expired{background:#fce4ec;color:#c62828;}
-
-.erp-tbl-input{width:100%;padding:6px 8px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;outline:none;background:#fafafa;font-family:inherit;}
-.erp-tbl-input:focus{border-color:#1a73e8;background:#fff;}
-.erp-tbl-input-num{text-align:right;}
-.erp-tbl-select{padding:6px 4px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;outline:none;background:#fafafa;}
 </style>

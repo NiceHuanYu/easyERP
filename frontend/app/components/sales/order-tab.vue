@@ -125,43 +125,12 @@
         </div>
       </div>
 
-      <FormSection title="产品明细" hint="添加订单中的产品，金额将自动汇总">
-        <div class="erp-table-wrap">
-          <table class="erp-table">
-            <thead>
-              <tr>
-                <th>物料/产品 <span class="erp-form-req">*</span></th>
-                <th style="text-align:right;">数量</th>
-                <th>单位</th>
-                <th style="text-align:right;">金额(元)</th>
-                <th style="text-align:center;">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(item, idx) in f.items" :key="idx">
-                <td><input v-model="item.material" placeholder="产品名称" class="erp-tbl-input" /></td>
-                <td><input v-model.number="item.qty" type="number" min="1" placeholder="1" class="erp-tbl-input erp-tbl-input-num" /></td>
-                <td>
-                  <select v-model="item.unit" class="erp-tbl-select">
-                    <option>台</option><option>套</option><option>件</option><option>个</option>
-                  </select>
-                </td>
-                <td><input v-model.number="item.amount" type="number" step="0.01" placeholder="0.00" class="erp-tbl-input erp-tbl-input-num" /></td>
-                <td class="erp-cell-acts"><button class="erp-lnk erp-lnk-danger" @click="f.items.splice(idx, 1)">删除</button></td>
-              </tr>
-              <tr v-if="f.items.length === 0">
-                <td colspan="5" class="erp-cell-empty">暂无产品，请添加</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
-          <button class="erp-btn erp-btn-primary" style="padding:6px 16px;font-size:12px;" @click="addItem()">＋ 添加产品</button>
-          <span style="font-size:13px;color:#555;">
-            合计金额：<strong style="color:#1a73e8;">¥{{ totalAmount(f.items).toFixed(2) }}</strong>
-          </span>
-        </div>
-      </FormSection>
+      <ErpItemTable
+        v-model:items="f.items"
+        :columns="itemColumns"
+        empty-text="暂无产品，请添加"
+        add-label="＋ 添加产品"
+      />
     </FormModal>
 
     <ConfirmDialog :show="showDelete" title="确认删除" @confirm="doDelete" @cancel="showDelete = false">
@@ -204,11 +173,19 @@ const filtered = filteredWith(item => {
   if (filterStatus.value && item.status !== filterStatus.value) return false
   return true
 })
-const paged = pagedFrom(filtered)
+const paged: ComputedRef<Order[]> = pagedFrom(filtered)
 
 watch(filterStatus, () => { page.value = 1 })
 
 const { showDelete, deleteTarget, confirmDelete, doDelete } = useDelete(data, 'code')
+
+function totalQty(items: OrderItem[]) { return items.reduce((s, i) => s + (i.qty || 0), 0) }
+function totalAmount(items: OrderItem[]) { return items.reduce((s, i) => s + (i.amount || 0), 0) }
+function summary(items: OrderItem[]) {
+  if (!items.length) return '-'
+  const first = items[0]!
+  return items.length === 1 ? first.material : `${first.material} 等${items.length}项`
+}
 
 // ---- 明细查看 ----
 const showDetail = ref(false)
@@ -225,6 +202,14 @@ function viewItems(row: Order) {
   showDetail.value = true
 }
 
+// ---- 物品表格列配置 ----
+const itemColumns = [
+  { key: 'material', label: '物料/产品', type: 'autocomplete' as const, required: true, placeholder: '搜索或输入产品名' },
+  { key: 'qty', label: '数量', type: 'number' as const, align: 'right' as const, min: 1, total: true },
+  { key: 'unit', label: '单位', type: 'select' as const, options: ['台', '套', '件', '个'] },
+  { key: 'amount', label: '金额(元)', type: 'number' as const, align: 'right' as const, step: 0.01, total: true, totalLabel: '合计金额' },
+]
+
 // ---- 表单 ----
 const numberingMode = ref('auto')
 const showForm = ref(false)
@@ -234,8 +219,6 @@ const f = reactive<{ code: string; customer: string; items: OrderItem[]; deliver
 })
 let ec = ''
 
-function addItem() { f.items.push({ material: '', qty: 1, unit: '台', amount: 0 }) }
-
 function openForm(item?: Order) {
   if (item) {
     editing.value = true; ec = item.code
@@ -243,8 +226,7 @@ function openForm(item?: Order) {
   } else {
     editing.value = false; numberingMode.value = 'auto'
     f.code = `SO-${new Date().getFullYear()}-${String(data.value.filter(m => m.code.startsWith('SO-')).length + 1).padStart(4, '0')}`
-    f.customer = ''; f.items = [{ material: '', qty: 1, unit: '台', amount: 0 }]
-    f.delivery = ''; f.status = '草稿'; f.remark = ''
+    f.customer = ''; f.items = []; f.delivery = ''; f.status = '草稿'; f.remark = ''
   }
   showForm.value = true
 }
@@ -273,9 +255,4 @@ function submit(item: Order) { item.status = '待审核'; item.sc = 'pending' }
 .erp-tag.shipped { background: #e0f2f1; color: #00695c; }
 .erp-tag.completed { background: #f3e5f5; color: #6a1b9a; }
 .erp-tag.cancelled { background: #fce4ec; color: #c62828; }
-
-.erp-tbl-input { width: 100%; padding: 6px 8px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px; outline: none; background: #fafafa; font-family: inherit; }
-.erp-tbl-input:focus { border-color: #1a73e8; background: #fff; }
-.erp-tbl-input-num { text-align: right; }
-.erp-tbl-select { padding: 6px 4px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px; outline: none; background: #fafafa; }
 </style>

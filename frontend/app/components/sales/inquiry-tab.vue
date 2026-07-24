@@ -76,28 +76,12 @@
       </div>
 
       <!-- 产品明细区 -->
-      <FormSection title="询价产品明细" hint="添加询价产品，数量将自动汇总">
-        <div class="erp-table-wrap">
-          <table class="erp-table">
-            <thead><tr>
-              <th>物料/产品 <span class="erp-form-req">*</span></th><th style="text-align:right;">数量</th><th>单位</th><th style="text-align:center;">操作</th>
-            </tr></thead>
-            <tbody>
-              <tr v-for="(item,idx) in f.items" :key="idx">
-                <td><input v-model="item.material" placeholder="产品名称" class="erp-tbl-input" /></td>
-                <td><input v-model.number="item.qty" type="number" min="1" placeholder="1" class="erp-tbl-input erp-tbl-input-num" /></td>
-                <td><select v-model="item.unit" class="erp-tbl-select"><option>台</option><option>套</option><option>件</option><option>个</option><option>kg</option></select></td>
-                <td class="erp-cell-acts"><button class="erp-lnk erp-lnk-danger" @click="f.items.splice(idx,1)">删除</button></td>
-              </tr>
-              <tr v-if="f.items.length===0"><td colspan="4" class="erp-cell-empty">暂无产品，请添加</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
-          <button class="erp-btn erp-btn-primary" style="padding:6px 16px;font-size:12px;" @click="addItem()">＋ 添加产品</button>
-          <span style="font-size:13px;color:#555;">合计数量：<strong style="color:#1a73e8;">{{ totalQty(f.items) }}</strong></span>
-        </div>
-      </FormSection>
+      <ErpItemTable
+        v-model:items="f.items"
+        :columns="itemColumns"
+        empty-text="暂无产品，请添加"
+        add-label="＋ 添加产品"
+      />
     </FormModal>
 
     <ConfirmDialog :show="showReject" title="确认拒绝" @confirm="doReject" @cancel="showReject=false">
@@ -187,12 +171,17 @@ watch([s,fs,progressFilter],()=>page.value=1)
 const showDetail=ref(false);const detailCode=ref('');const detailCustomer=ref('');const detailContact=ref('');const detailSalesman=ref('');const detailItems=ref<InquiryItem[]>([])
 function viewItems(row:Inquiry){detailCode.value=row.code;detailCustomer.value=row.customer;detailContact.value=row.contact;detailSalesman.value=row.salesman;detailItems.value=[...row.items];showDetail.value=true}
 
+// ---- 物品表格列配置 ----
+const itemColumns = [
+  { key: 'material', label: '物料/产品', type: 'autocomplete' as const, required: true, placeholder: '搜索或输入产品名' },
+  { key: 'qty', label: '数量', type: 'number' as const, align: 'right' as const, min: 1, total: true },
+  { key: 'unit', label: '单位', type: 'select' as const, options: ['台', '套', '件', '个', 'kg'] },
+]
+
 // 表单
 const showForm=ref(false);const editing=ref(false);const numberingMode=ref('auto')
 const f=reactive<{code:string;customer:string;contact:string;salesman:string;items:InquiryItem[];status:string;remark:string}>({code:'',customer:'',contact:'',salesman:'',items:[],status:'待回复',remark:''})
 let ec=''
-
-function addItem() { f.items.push({material:'',qty:1,unit:'台'}) }
 
 function openForm(item?:Inquiry){
   if(item){
@@ -201,7 +190,7 @@ function openForm(item?:Inquiry){
   }else{
     editing.value=false;numberingMode.value='auto'
     f.code=`INQ-${String(data.value.length+1).padStart(3,'0')}`
-    f.customer='';f.contact='';f.salesman='';f.items=[{material:'',qty:1,unit:'台'}];f.status='待回复';f.remark=''
+    f.customer='';f.contact='';f.salesman='';f.items=[];f.status='待回复';f.remark=''
   }
   showForm.value=true
 }

@@ -69,27 +69,12 @@
       </div>
 
       <!-- 物料明细区 -->
-      <FormSection title="物料明细" hint="定义该产品的物料组成与用量">
-        <div class="erp-table-wrap">
-          <table class="erp-table">
-            <thead><tr>
-              <th>物料编码</th><th>物料名称</th><th>规格型号</th><th style="text-align:right;">用量</th><th>单位</th><th style="text-align:center;">操作</th>
-            </tr></thead>
-            <tbody>
-              <tr v-for="(item,idx) in f.items" :key="idx">
-                <td><input v-model="item.matCode" placeholder="编码" class="erp-tbl-input" /></td>
-                <td><input v-model="item.matName" placeholder="名称" class="erp-tbl-input" /></td>
-                <td><input v-model="item.spec" placeholder="规格" class="erp-tbl-input" /></td>
-                <td><input v-model.number="item.qty" type="number" step="0.01" placeholder="1" class="erp-tbl-input erp-tbl-input-num" /></td>
-                <td><select v-model="item.unit" class="erp-tbl-select"><option v-for="u in units" :key="u">{{ u }}</option></select></td>
-                <td class="erp-cell-acts"><button class="erp-lnk erp-lnk-danger" @click="f.items.splice(idx,1)">删除</button></td>
-              </tr>
-              <tr v-if="f.items.length===0"><td colspan="6" class="erp-cell-empty">暂无明细，请添加物料</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <button class="erp-btn erp-btn-primary" style="margin-top:10px;padding:6px 16px;font-size:12px;" @click="f.items.push({matCode:'',matName:'',spec:'',qty:1,unit:'个',remark:''})">＋ 添加物料</button>
-      </FormSection>
+      <ErpItemTable
+        v-model:items="f.items"
+        :columns="bomItemColumns"
+        empty-text="暂无明细，请添加物料"
+        add-label="＋ 添加物料"
+      />
     </FormModal>
 
     <ConfirmDialog :show="showDel" title="确认删除" @confirm="doDel" @cancel="showDel=false">
@@ -115,6 +100,15 @@ watch([s,fs],()=>page.value=1)
 // 明细查看
 const showDetail=ref(false);const detailTitle=ref('');const detailItems=ref<any[]>([])
 function viewItems(row:any){detailTitle.value=row.productName;detailItems.value=row.items||[];showDetail.value=true}
+
+// ---- BOM 物品表格列配置 ----
+const bomItemColumns = [
+  { key: 'matCode', label: '物料编码', placeholder: '编码' },
+  { key: 'matName', label: '物料名称', type: 'autocomplete' as const, required: true, placeholder: '搜索或输入物料名' },
+  { key: 'spec', label: '规格型号', placeholder: '规格' },
+  { key: 'qty', label: '用量', type: 'number' as const, align: 'right' as const, step: 0.01, total: true },
+  { key: 'unit', label: '单位', type: 'select' as const, options: units },
+]
 
 // 表单
 const numberingMode = ref('auto')

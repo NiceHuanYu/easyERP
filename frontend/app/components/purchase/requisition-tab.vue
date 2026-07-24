@@ -70,28 +70,12 @@
       </div>
 
       <!-- 物料明细区 -->
-      <FormSection title="物料明细" hint="添加申请物料">
-        <div class="erp-table-wrap">
-          <table class="erp-table">
-            <thead><tr>
-              <th>物料名称 <span class="erp-form-req">*</span></th><th style="text-align:right;">数量</th><th>单位</th><th style="text-align:center;">操作</th>
-            </tr></thead>
-            <tbody>
-              <tr v-for="(item,idx) in f.items" :key="idx">
-                <td><input v-model="item.material" placeholder="物料名称" class="erp-tbl-input" /></td>
-                <td><input v-model.number="item.qty" type="number" min="1" placeholder="1" class="erp-tbl-input erp-tbl-input-num" /></td>
-                <td><select v-model="item.unit" class="erp-tbl-select"><option>个</option><option>件</option><option>kg</option><option>张</option><option>根</option><option>桶</option></select></td>
-                <td class="erp-cell-acts"><button class="erp-lnk erp-lnk-danger" @click="f.items.splice(idx,1)">删除</button></td>
-              </tr>
-              <tr v-if="f.items.length===0"><td colspan="4" class="erp-cell-empty">暂无物料，请添加</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
-          <button class="erp-btn erp-btn-primary" style="padding:6px 16px;font-size:12px;" @click="addItem()">＋ 添加物料</button>
-          <span style="font-size:13px;color:#555;">合计数量：<strong style="color:#1a73e8;">{{ totalQty(f.items) }}</strong></span>
-        </div>
-      </FormSection>
+      <ErpItemTable
+        v-model:items="f.items"
+        :columns="itemColumns"
+        empty-text="暂无物料，请添加"
+        add-label="＋ 添加物料"
+      />
     </FormModal>
 
     <ConfirmDialog :show="showDel" title="确认删除" @confirm="doDel" @cancel="showDel=false">
@@ -145,12 +129,17 @@ const showDetail=ref(false);const detailCode=ref('');const detailDept=ref('');co
 function viewItems(row:Requisition){detailCode.value=row.code;detailDept.value=row.dept;detailExpectDate.value=row.expectDate;detailItems.value=[...row.items];showDetail.value=true}
 
 // 表单
+// ---- 物品表格列配置 ----
+const itemColumns = [
+  { key: 'material', label: '物料名称', type: 'autocomplete' as const, required: true, placeholder: '搜索或输入物料名' },
+  { key: 'qty', label: '数量', type: 'number' as const, align: 'right' as const, min: 1, total: true },
+  { key: 'unit', label: '单位', type: 'select' as const, options: ['个', '件', 'kg', '张', '根', '桶'] },
+]
+
 const numberingMode=ref('auto')
 const showForm=ref(false);const editing=ref(false)
 const f=reactive<{code:string;items:RequisitionItem[];dept:string;expectDate:string;status:string;remark:string}>({code:'',items:[],dept:'生产部',expectDate:'',status:'草稿',remark:''})
 let ec=''
-
-function addItem() { f.items.push({material:'',qty:1,unit:'个'}) }
 
 function openForm(item?:Requisition){
   if(item){
@@ -159,7 +148,7 @@ function openForm(item?:Requisition){
   }else{
     editing.value=false;numberingMode.value='auto'
     f.code=`PR-${String(data.value.length+1).padStart(3,'0')}`
-    f.items=[{material:'',qty:1,unit:'个'}];f.dept='生产部';f.expectDate='';f.status='草稿';f.remark=''
+    f.items=[];f.dept='生产部';f.expectDate='';f.status='草稿';f.remark=''
   }
   showForm.value=true
 }

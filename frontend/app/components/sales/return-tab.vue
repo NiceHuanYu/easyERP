@@ -69,28 +69,12 @@
       </div>
 
       <!-- 产品明细区 -->
-      <FormSection title="退货产品明细" hint="添加退货产品，数量将自动汇总">
-        <div class="erp-table-wrap">
-          <table class="erp-table">
-            <thead><tr>
-              <th>物料/产品 <span class="erp-form-req">*</span></th><th style="text-align:right;">数量</th><th>单位</th><th style="text-align:center;">操作</th>
-            </tr></thead>
-            <tbody>
-              <tr v-for="(item,idx) in f.items" :key="idx">
-                <td><input v-model="item.material" placeholder="产品名称" class="erp-tbl-input" /></td>
-                <td><input v-model.number="item.qty" type="number" min="1" placeholder="1" class="erp-tbl-input erp-tbl-input-num" /></td>
-                <td><select v-model="item.unit" class="erp-tbl-select"><option>台</option><option>套</option><option>件</option><option>个</option></select></td>
-                <td class="erp-cell-acts"><button class="erp-lnk erp-lnk-danger" @click="f.items.splice(idx,1)">删除</button></td>
-              </tr>
-              <tr v-if="f.items.length===0"><td colspan="4" class="erp-cell-empty">暂无产品，请添加</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
-          <button class="erp-btn erp-btn-primary" style="padding:6px 16px;font-size:12px;" @click="addItem()">＋ 添加产品</button>
-          <span style="font-size:13px;color:#555;">合计数量：<strong style="color:#1a73e8;">{{ totalQty(f.items) }}</strong></span>
-        </div>
-      </FormSection>
+      <ErpItemTable
+        v-model:items="f.items"
+        :columns="itemColumns"
+        empty-text="暂无产品，请添加"
+        add-label="＋ 添加产品"
+      />
     </FormModal>
 
     <ConfirmDialog :show="showDel" title="确认删除" @confirm="doDel" @cancel="showDel=false">
@@ -142,12 +126,17 @@ const showDetail=ref(false);const detailCode=ref('');const detailCustomer=ref(''
 function viewItems(row:ReturnOrder){detailCode.value=row.code;detailCustomer.value=row.customer;detailReason.value=row.reason;detailItems.value=[...row.items];showDetail.value=true}
 
 // 表单
+// ---- 物品表格列配置 ----
+const itemColumns = [
+  { key: 'material', label: '物料/产品', type: 'autocomplete' as const, required: true, placeholder: '搜索或输入产品名' },
+  { key: 'qty', label: '数量', type: 'number' as const, align: 'right' as const, min: 1, total: true },
+  { key: 'unit', label: '单位', type: 'select' as const, options: ['台', '套', '件', '个'] },
+]
+
 const numberingMode=ref('auto')
 const showForm=ref(false);const editing=ref(false)
 const f=reactive<{code:string;soCode:string;customer:string;items:ReturnItem[];reason:string;status:string;remark:string}>({code:'',soCode:'',customer:'',items:[],reason:'',status:'待检验',remark:''})
 let ec=''
-
-function addItem() { f.items.push({material:'',qty:1,unit:'台'}) }
 
 function openForm(item?:ReturnOrder){
   if(item){
@@ -156,7 +145,7 @@ function openForm(item?:ReturnOrder){
   }else{
     editing.value=false;numberingMode.value='auto'
     f.code=`RMA-${String(data.value.length+1).padStart(3,'0')}`
-    f.soCode='';f.customer='';f.items=[{material:'',qty:1,unit:'台'}];f.reason='';f.status='待检验';f.remark=''
+    f.soCode='';f.customer='';f.items=[];f.reason='';f.status='待检验';f.remark=''
   }
   showForm.value=true
 }
