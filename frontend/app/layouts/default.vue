@@ -85,7 +85,6 @@ const navItems = [
   {
     path: '/sales', icon: '📦', label: '销售管理',
     children: [
-      { key: 'inquiry', label: '客户询价' },
       { key: 'quotation', label: '销售报价' },
       { key: 'order', label: '销售订单' },
       { key: 'shipment', label: '销售发货' },
