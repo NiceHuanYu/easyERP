@@ -23,7 +23,7 @@
             <td class="erp-cell-num">{{ row.qty }}{{ row.unit }}</td><td>{{ row.warehouse }}</td>
             <td>{{ row.applicant }}</td><td class="erp-cell-spec">{{ row.date }}</td>
             <td><span :class="['erp-tag', row.sc]">{{ row.status }}</span></td>
-            <td class="erp-cell-acts"><button class="erp-lnk" @click="openForm(row)">编辑</button><button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button></td>
+            <td class="erp-cell-acts"><button v-if="row.status==='草稿'" class="erp-lnk" style="color:#2e7d32;" @click="submit(row)">提交</button><button class="erp-lnk" @click="openForm(row)">编辑</button><button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button></td>
           </tr>
           <tr v-if="paged.length===0"><td colspan="10" class="erp-cell-empty">暂无数据</td></tr>
         </tbody>
@@ -46,7 +46,7 @@
         <div class="erp-form-group"><label>仓库</label><input v-model="f.warehouse" placeholder="如 原材料库" /></div>
         <div class="erp-form-group"><label>申请人</label><input v-model="f.applicant" placeholder="姓名" /></div>
         <div class="erp-form-group"><label>日期</label><input v-model="f.date" type="text" placeholder="2025-08-01" /></div>
-        <div class="erp-form-group"><label>状态</label><select v-model="f.status"><option v-for="st in ss" :key="st" :value="st">{{ st }}</option></select></div>
+        <div class="erp-form-group" v-if="editing"><label>状态</label><select v-model="f.status"><option v-for="st in ss" :key="st" :value="st">{{ st }}</option></select></div>
         <div class="erp-form-group full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="可选"></textarea></div>
       </div>
     </FormModal>
@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-const ss = ['草稿','已审核','已领用','已退回']
+const ss = ['草稿','待审核','已审核','已领用','已退回']
 const data = ref([
   { code:'MTL-001',type:'领料',moCode:'MO-2025-0045',material:'45#圆钢 Φ20',qty:120,unit:'kg',warehouse:'原材料库',applicant:'张工',date:'2025-08-01',status:'已领用',remark:'',sc:'done'},
   { code:'MTL-002',type:'领料',moCode:'MO-2025-0045',material:'M8×30六角螺栓',qty:200,unit:'个',warehouse:'辅料库',applicant:'张工',date:'2025-08-01',status:'已审核',remark:'',sc:'approved'},
@@ -75,11 +75,12 @@ const showForm=ref(false);const editing=ref(false);const f=reactive({code:'',typ
 const numberingMode = ref('auto')
 function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`MTL-${String(data.value.length+1).padStart(3,'0')}`;f.type='领料';f.moCode='';f.material='';f.qty=1;f.unit='个';f.warehouse='';f.applicant='';f.date='';f.status='草稿';f.remark=''}showForm.value=true}
 function save(){if(!f.material){alert('请填写物料');return}if(editing.value){const i=data.value.findIndex(m=>m.code===ec);if(i!==-1)data.value[i]={...f}as any}else data.value.push({...f}as any);showForm.value=false}
+function submit(row:any){const i=data.value.findIndex(m=>m.code===row.code);if(i!==-1){data.value[i].status='待审核';data.value[i].sc='pending-review'}}
 const showDel=ref(false);const dt=ref<any>(null)
 function confirmDel(item:any){dt.value=item;showDel.value=true}
 function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.code);showDel.value=false;dt.value=null}
 </script>
 <style scoped>
 .erp-tag.pick{background:#e3f2fd;color:#1565c0;}.erp-tag.return{background:#fff3e0;color:#e65100;}
-.erp-tag.draft{background:#f5f5f5;color:#999;}.erp-tag.approved{background:#e8f5e9;color:#2e7d32;}.erp-tag.done{background:#e8f5e9;color:#2e7d32;}.erp-tag.returned{background:#fce4ec;color:#c62828;}
+.erp-tag.draft{background:#f5f5f5;color:#999;}.erp-tag.pending-review{background:#fff3e0;color:#e65100;}.erp-tag.approved{background:#e8f5e9;color:#2e7d32;}.erp-tag.done{background:#e8f5e9;color:#2e7d32;}.erp-tag.returned{background:#fce4ec;color:#c62828;}
 </style>

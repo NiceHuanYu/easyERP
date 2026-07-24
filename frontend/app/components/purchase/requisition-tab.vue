@@ -18,7 +18,7 @@
             <td class="erp-cell-code">{{ row.code }}</td><td class="erp-cell-spec">{{ row.material }}</td><td class="erp-cell-num">{{ row.qty }}{{ row.unit }}</td>
             <td>{{ row.dept }}</td><td class="erp-cell-spec">{{ row.expectDate }}</td>
             <td><span :class="['erp-tag', row.sc]">{{ row.status }}</span></td>
-            <td class="erp-cell-acts"><button class="erp-lnk" @click="openForm(row)">编辑</button><button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button></td>
+            <td class="erp-cell-acts"><button class="erp-lnk" @click="openForm(row)">编辑</button><button class="erp-lnk" style="color:#2e7d32;" v-if="row.status==='草稿'" @click="submit(row)">提交</button><button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button></td>
           </tr>
           <tr v-if="paged.length===0"><td colspan="7" class="erp-cell-empty">暂无数据</td></tr>
         </tbody>
@@ -38,7 +38,7 @@
         <div class="erp-form-group"><label>单位</label><select v-model="f.unit"><option>个</option><option>件</option><option>kg</option><option>张</option><option>根</option><option>桶</option></select></div>
         <div class="erp-form-group"><label>需求部门 <span class="erp-form-req">*</span></label><select v-model="f.dept"><option>生产部</option><option>品质部</option><option>设备部</option><option>仓库</option></select></div>
         <div class="erp-form-group"><label>期望交期</label><input v-model="f.expectDate" type="text" placeholder="2025-08-15" /></div>
-        <div class="erp-form-group"><label>状态</label><select v-model="f.status"><option v-for="st in ss" :key="st" :value="st">{{ st }}</option></select></div>
+        <div class="erp-form-group" v-if="editing"><label>状态</label><select v-model="f.status"><option v-for="st in ss" :key="st" :value="st">{{ st }}</option></select></div>
         <div class="erp-form-group full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="用途说明等"></textarea></div>
       </div>
     </FormModal>
@@ -70,6 +70,7 @@ function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.ass
 function save(){if(!f.material||!f.dept){alert('请填写物料和部门');return}if(editing.value){const i=data.value.findIndex(m=>m.code===ec);if(i!==-1)data.value[i]={...f}as any}else data.value.push({...f}as any);showForm.value=false}
 const showDel=ref(false);const dt=ref<any>(null)
 function confirmDel(item:any){dt.value=item;showDel.value=true}
+function submit(item:any){item.status='待审批';item.sc='pending'}
 function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.code);showDel.value=false;dt.value=null}
 </script>
 <style scoped>

@@ -146,6 +146,15 @@ const navItems = [
     ],
   },
   {
+    path: '/approval', icon: '📋', label: '审批管理',
+    children: [
+      { key: 'sales', label: '销售审批' },
+      { key: 'purchase', label: '采购审批' },
+      { key: 'production', label: '生产审批' },
+      { key: 'inventory', label: '库存审批' },
+    ],
+  },
+  {
     path: '/organization', icon: '👥', label: '组织管理',
     children: [
       { key: 'user', label: '用户管理' },
@@ -165,7 +174,13 @@ const navItems = [
       { key: 'quality', label: '品质分析' },
     ],
   },
-  { path: '/settings', icon: '⚙️', label: '系统设置', disabled: true },
+  {
+    path: '/settings', icon: '⚙️', label: '系统设置',
+    children: [
+      { key: 'coding', label: '编号规则' },
+      { key: 'params', label: '系统参数' },
+    ],
+  },
 ]
 
 // 当前展开的一级菜单

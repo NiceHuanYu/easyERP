@@ -26,6 +26,7 @@
             <td class="erp-cell-acts">
               <button class="erp-lnk" @click="viewItems(row)">明细</button>
               <button class="erp-lnk" @click="openForm(row)">编辑</button>
+              <button class="erp-lnk" style="color:#2e7d32;" v-if="row.status==='草稿'" @click="submit(row)">提交</button>
               <button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button>
             </td>
           </tr>
@@ -68,7 +69,7 @@
         <div class="erp-form-group"><label>订单号</label><input v-model="f.code" :disabled="!editing && numberingMode === 'auto'" /></div>
         <div class="erp-form-group"><label>客户 <span class="erp-form-req">*</span></label><input v-model="f.customer" placeholder="客户名称" /></div>
         <div class="erp-form-group"><label>交货日期</label><input v-model="f.delivery" type="text" placeholder="2025-08-15" /></div>
-        <div class="erp-form-group"><label>状态</label><select v-model="f.status"><option v-for="st in ss" :key="st" :value="st">{{ st }}</option></select></div>
+        <div class="erp-form-group" v-if="editing"><label>状态</label><select v-model="f.status"><option v-for="st in ss" :key="st" :value="st">{{ st }}</option></select></div>
         <div class="erp-form-group full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="可选"></textarea></div>
       </div>
 
@@ -182,6 +183,7 @@ function save(){
 
 const showDel=ref(false);const dt=ref<Order|null>(null)
 function confirmDel(item:Order){dt.value=item;showDel.value=true}
+function submit(item:Order){item.status='待审核';item.sc='pending'}
 function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.code);showDel.value=false;dt.value=null}
 </script>
 

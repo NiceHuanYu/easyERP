@@ -20,7 +20,7 @@
             <td class="erp-cell-spec">{{ row.stmtCode }}</td><td class="erp-cell-num">{{ row.amount.toFixed(2) }}</td>
             <td>{{ row.method }}</td><td class="erp-cell-spec">{{ row.payDate }}</td>
             <td><span :class="['erp-tag', row.sc]">{{ row.status }}</span></td>
-            <td class="erp-cell-acts"><button class="erp-lnk" @click="openForm(row)">编辑</button><button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button></td>
+            <td class="erp-cell-acts"><button v-if="row.status==='草稿'" class="erp-lnk" style="color:#2e7d32;" @click="submit(row)">提交</button><button class="erp-lnk" @click="openForm(row)">编辑</button><button class="erp-lnk erp-lnk-danger" @click="confirmDel(row)">删除</button></td>
           </tr>
           <tr v-if="paged.length===0"><td colspan="8" class="erp-cell-empty">暂无数据</td></tr>
         </tbody>
@@ -40,7 +40,7 @@
         <div class="erp-form-group"><label>付款金额 (元)</label><input v-model.number="f.amount" type="number" step="0.01" min="0" /></div>
         <div class="erp-form-group"><label>付款方式</label><select v-model="f.method"><option>银行转账</option><option>银行承兑</option><option>现金</option><option>支票</option></select></div>
         <div class="erp-form-group"><label>付款日期</label><input v-model="f.payDate" type="text" placeholder="2025-07-30" /></div>
-        <div class="erp-form-group"><label>状态</label><select v-model="f.status"><option v-for="st in ss" :key="st" :value="st">{{ st }}</option></select></div>
+        <div class="erp-form-group" v-if="editing"><label>状态</label><select v-model="f.status"><option v-for="st in ss" :key="st" :value="st">{{ st }}</option></select></div>
         <div class="erp-form-group full"><label>备注</label><textarea v-model="f.remark" rows="2" placeholder="可选"></textarea></div>
       </div>
     </FormModal>
@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-const ss = ['待审批','已批准','已付款','已退回']
+const ss = ['草稿','待审批','已批准','已付款','已退回']
 const data = ref([
   { code:'PAY-001',supplier:'宏远钢铁',stmtCode:'STMT-001',amount:704,method:'银行转账',payDate:'2025-08-05',status:'待审批',remark:'',sc:'pending'},
   { code:'PAY-002',supplier:'宏远钢铁',stmtCode:'STMT-005',amount:9800,method:'银行承兑',payDate:'2025-07-20',status:'已付款',remark:'6月货款',sc:'paid'},
@@ -69,11 +69,12 @@ const showForm=ref(false);const editing=ref(false);const f=reactive({code:'',sup
 const numberingMode = ref('auto')
 function openForm(item?:any){if(item){editing.value=true;ec=item.code;Object.assign(f,{...item})}else{editing.value=false;numberingMode.value='auto';f.code=`PAY-${String(data.value.length+1).padStart(3,'0')}`;f.supplier='';f.stmtCode='';f.amount=0;f.method='银行转账';f.payDate='';f.status='待审批';f.remark=''}showForm.value=true}
 function save(){if(!f.supplier||f.amount<=0){alert('请填写供应商和付款金额');return}if(editing.value){const i=data.value.findIndex(m=>m.code===ec);if(i!==-1)data.value[i]={...f}as any}else data.value.push({...f}as any);showForm.value=false}
+function submit(row:any){const i=data.value.findIndex(m=>m.code===row.code);if(i!==-1){data.value[i].status='待审批';data.value[i].sc='pending'}}
 const showDel=ref(false);const dt=ref<any>(null)
 function confirmDel(item:any){dt.value=item;showDel.value=true}
 function doDel(){if(dt.value)data.value=data.value.filter(m=>m.code!==dt.value!.code);showDel.value=false;dt.value=null}
 </script>
 <style scoped>
 .erp-tag.pending{background:#fff3e0;color:#e65100;}.erp-tag.approved{background:#e3f2fd;color:#1565c0;}
-.erp-tag.paid{background:#e8f5e9;color:#2e7d32;}.erp-tag.refunded{background:#fce4ec;color:#c62828;}
+.erp-tag.paid{background:#e8f5e9;color:#2e7d32;}.erp-tag.refunded{background:#fce4ec;color:#c62828;}.erp-tag.draft{background:#f5f5f5;color:#999;}
 </style>
