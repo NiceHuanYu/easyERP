@@ -1,5 +1,5 @@
 <template>
-  <div class="erp-page">
+  <div class="erp-page" :key="route.fullPath">
     <!-- 标签内容（由独立组件渲染） -->
     <div class="erp-tab-content">
       <div class="erp-tab-header">
@@ -8,31 +8,31 @@
       </div>
 
       <!-- 物料档案 -->
-      <BasicDataMaterialTab v-if="activeTab === 'material'" />
+      <LazyBasicDataMaterialTab v-if="activeTab === 'material'" />
 
       <!-- 产品档案 -->
-      <BasicDataProductTab v-else-if="activeTab === 'product'" />
+      <LazyBasicDataProductTab v-else-if="activeTab === 'product'" />
 
       <!-- BOM管理 -->
-      <BasicDataBomTab v-else-if="activeTab === 'bom'" />
+      <LazyBasicDataBomTab v-else-if="activeTab === 'bom'" />
 
       <!-- 客户管理 -->
-      <BasicDataCustomerTab v-else-if="activeTab === 'customer'" />
+      <LazyBasicDataCustomerTab v-else-if="activeTab === 'customer'" />
 
       <!-- 供应商管理 -->
-      <BasicDataSupplierTab v-else-if="activeTab === 'supplier'" />
+      <LazyBasicDataSupplierTab v-else-if="activeTab === 'supplier'" />
 
       <!-- 仓库管理 -->
-      <BasicDataWarehouseTab v-else-if="activeTab === 'warehouse'" />
+      <LazyBasicDataWarehouseTab v-else-if="activeTab === 'warehouse'" />
 
       <!-- 计量单位 -->
-      <BasicDataUnitTab v-else-if="activeTab === 'unit'" />
+      <LazyBasicDataUnitTab v-else-if="activeTab === 'unit'" />
 
       <!-- 联络列表 -->
-      <BasicDataContactTab v-else-if="activeTab === 'contact'" />
+      <LazyBasicDataContactTab v-else-if="activeTab === 'contact'" />
 
       <!-- 其他标签占位（兜底） -->
-      <BasicDataTabPlaceholder v-else
+      <LazyBasicDataTabPlaceholder v-else
         :label="currentTab?.label || ''"
         hint="后续将在此处实现数据的增删改查与导入导出"
       />
@@ -44,8 +44,7 @@
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
-const activeTab = ref((route.query.tab as string) || 'material')
-watch(() => route.query.tab, (v) => { if (v) activeTab.value = v as string })
+const activeTab = computed(() => (route.query.tab as string) || 'material')
 const tabs = [
   { key: 'material',    icon: '🔩', label: '物料档案',     description: '管理原材料、半成品、辅料等所有物料的编码、规格、属性和参数' },
   { key: 'product',     icon: '📦', label: '产品档案',     description: '管理成品的编码、规格、售价、图片及相关技术资料' },

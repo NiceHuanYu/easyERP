@@ -1,5 +1,5 @@
 <template>
-  <div class="erp-page">
+  <div class="erp-page" :key="route.fullPath">
     <div class="erp-tab-content">
       <div class="erp-tab-header">
         <h2>{{ currentTab?.label }}</h2>
@@ -9,11 +9,11 @@
       <!-- 销售流程导航条（退货页不显示） -->
       <SalesFlowBar v-if="activeTab !== 'return'" :currentTab="activeTab" />
 
-      <SalesQuotationTab v-if="activeTab === 'quotation'" />
-      <SalesOrderTab v-else-if="activeTab === 'order'" />
-      <SalesShipmentTab v-else-if="activeTab === 'shipment'" />
-      <SalesReturnTab v-else-if="activeTab === 'return'" />
-      <SalesTrackingTab v-else-if="activeTab === 'tracking'" />
+      <LazySalesQuotationTab v-if="activeTab === 'quotation'" />
+      <LazySalesOrderTab v-else-if="activeTab === 'order'" />
+      <LazySalesShipmentTab v-else-if="activeTab === 'shipment'" />
+      <LazySalesReturnTab v-else-if="activeTab === 'return'" />
+      <LazySalesTrackingTab v-else-if="activeTab === 'tracking'" />
     </div>
   </div>
 </template>
@@ -22,8 +22,7 @@
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
-const activeTab = ref((route.query.tab as string) || 'order')
-watch(() => route.query.tab, (v) => { if (v) activeTab.value = v as string })
+const activeTab = computed(() => (route.query.tab as string) || 'order')
 const tabs = [
   { key: 'quotation',  icon: '📄', label: '销售报价',   description: '创建并管理报价单，支持版本管理与客户确认' },
   { key: 'order',      icon: '📦', label: '销售订单',   description: '销售订单的录入、审核、变更与进度跟踪' },

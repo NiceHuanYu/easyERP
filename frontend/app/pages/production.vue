@@ -1,17 +1,17 @@
 <template>
-  <div class="erp-page">
+  <div class="erp-page" :key="route.fullPath">
     <div class="erp-tab-content">
       <div class="erp-tab-header">
         <h2>{{ currentTab?.label }}</h2>
         <p class="erp-tab-desc">{{ currentTab?.description }}</p>
       </div>
 
-      <ProductionPlanTab v-if="activeTab === 'plan'" />
-      <ProductionOrderTab v-else-if="activeTab === 'order'" />
-      <ProductionScheduleTab v-else-if="activeTab === 'schedule'" />
-      <ProductionMaterialTab v-else-if="activeTab === 'material'" />
-      <ProductionReportTab v-else-if="activeTab === 'report'" />
-      <ProductionCompleteTab v-else-if="activeTab === 'complete'" />
+      <LazyProductionPlanTab v-if="activeTab === 'plan'" />
+      <LazyProductionOrderTab v-else-if="activeTab === 'order'" />
+      <LazyProductionScheduleTab v-else-if="activeTab === 'schedule'" />
+      <LazyProductionMaterialTab v-else-if="activeTab === 'material'" />
+      <LazyProductionReportTab v-else-if="activeTab === 'report'" />
+      <LazyProductionCompleteTab v-else-if="activeTab === 'complete'" />
     </div>
   </div>
 </template>
@@ -19,8 +19,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 const route = useRoute()
-const activeTab = ref((route.query.tab as string) || 'order')
-watch(() => route.query.tab, (v) => { if (v) activeTab.value = v as string })
+const activeTab = computed(() => (route.query.tab as string) || 'order')
 const tabs = [
   { key: 'plan',    icon: '📅', label: '生产计划',   description: '主生产计划（MPS）的编制、排程与调整' },
   { key: 'order',   icon: '📋', label: '生产工单',   description: '工单创建、审核、下达与完工关闭' },

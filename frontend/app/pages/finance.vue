@@ -1,7 +1,7 @@
-<template><div class="erp-page"><div class="erp-tab-content"><div class="erp-tab-header"><h2>{{ currentTab?.label }}</h2><p class="erp-tab-desc">{{ currentTab?.description }}</p></div>
-<FinanceArTab v-if="activeTab==='ar'" /><FinanceApTab v-else-if="activeTab==='ap'" />
-<FinanceInvoiceTab v-else-if="activeTab==='invoice'" /><FinancePaymentTab v-else-if="activeTab==='payment'" />
-<FinanceCostTab v-else-if="activeTab==='cost'" /><FinanceProfitTab v-else-if="activeTab==='profit'" /></div></div></template>
+<template><div class="erp-page" :key="route.fullPath"><div class="erp-tab-content"><div class="erp-tab-header"><h2>{{ currentTab?.label }}</h2><p class="erp-tab-desc">{{ currentTab?.description }}</p></div>
+<LazyFinanceArTab v-if="activeTab==='ar'" /><LazyFinanceApTab v-else-if="activeTab==='ap'" />
+<LazyFinanceInvoiceTab v-else-if="activeTab==='invoice'" /><LazyFinancePaymentTab v-else-if="activeTab==='payment'" />
+<LazyFinanceCostTab v-else-if="activeTab==='cost'" /><LazyFinanceProfitTab v-else-if="activeTab==='profit'" /></div></div></template>
 <script setup lang="ts">
 definePageMeta({middleware:'auth'})
 const route=useRoute()

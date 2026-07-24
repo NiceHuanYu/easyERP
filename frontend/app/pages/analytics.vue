@@ -1,7 +1,7 @@
-<template><div class="erp-page"><div class="erp-tab-content"><div class="erp-tab-header"><h2>{{ currentTab?.label }}</h2><p class="erp-tab-desc">{{ currentTab?.description }}</p></div>
-<AnalyticsDashboardTab v-if="activeTab==='dashboard'" /><AnalyticsSalesTab v-else-if="activeTab==='sales'" />
-<AnalyticsPurchaseTab v-else-if="activeTab==='purchase'" /><AnalyticsInventoryTab v-else-if="activeTab==='inventory'" />
-<AnalyticsProductionTab v-else-if="activeTab==='production'" /><AnalyticsQualityTab v-else-if="activeTab==='quality'" /></div></div></template>
+<template><div class="erp-page" :key="route.fullPath"><div class="erp-tab-content"><div class="erp-tab-header"><h2>{{ currentTab?.label }}</h2><p class="erp-tab-desc">{{ currentTab?.description }}</p></div>
+<LazyAnalyticsDashboardTab v-if="activeTab==='dashboard'" /><LazyAnalyticsSalesTab v-else-if="activeTab==='sales'" />
+<LazyAnalyticsPurchaseTab v-else-if="activeTab==='purchase'" /><LazyAnalyticsInventoryTab v-else-if="activeTab==='inventory'" />
+<LazyAnalyticsProductionTab v-else-if="activeTab==='production'" /><LazyAnalyticsQualityTab v-else-if="activeTab==='quality'" /></div></div></template>
 <script setup lang="ts">
 definePageMeta({middleware:'auth'})
 const route=useRoute()

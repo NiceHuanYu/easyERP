@@ -1,12 +1,12 @@
 <template>
-  <div class="erp-page">
+  <div class="erp-page" :key="route.fullPath">
     <div class="erp-tab-content">
       <div class="erp-tab-header">
         <h2>{{ currentTab?.label }}</h2>
         <p class="erp-tab-desc">{{ currentTab?.description }}</p>
       </div>
-      <SettingsCodingTab v-if="activeTab === 'coding'" />
-      <SettingsParamsTab v-else-if="activeTab === 'params'" />
+      <LazySettingsCodingTab v-if="activeTab === 'coding'" />
+      <LazySettingsParamsTab v-else-if="activeTab === 'params'" />
     </div>
   </div>
 </template>

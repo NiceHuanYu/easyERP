@@ -25,6 +25,7 @@
               :to="item.disabled ? undefined : item.path"
               :class="['nav-item', { active: isActive(item.path), disabled: item.disabled }]"
               :title="item.disabled ? '开发中' : ''"
+              prefetch="false"
             >
               <span class="nav-icon">{{ item.icon }}</span>
               <span>{{ item.label }}</span>
@@ -47,6 +48,7 @@
                   :key="child.key"
                   :to="`${item.path}?tab=${child.key}`"
                   :class="['nav-child', { active: isChildActive(item.path, child.key) }]"
+                  prefetch="false"
                 >
                   {{ child.label }}
                 </NuxtLink>

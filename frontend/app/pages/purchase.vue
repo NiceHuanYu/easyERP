@@ -1,17 +1,17 @@
 <template>
-  <div class="erp-page">
+  <div class="erp-page" :key="route.fullPath">
     <div class="erp-tab-content">
       <div class="erp-tab-header">
         <h2>{{ currentTab?.label }}</h2>
         <p class="erp-tab-desc">{{ currentTab?.description }}</p>
       </div>
 
-      <PurchaseRequisitionTab v-if="activeTab === 'requisition'" />
-      <PurchaseOrderTab v-else-if="activeTab === 'order'" />
-      <PurchaseArrivalTab v-else-if="activeTab === 'arrival'" />
-      <PurchaseReturnTab v-else-if="activeTab === 'return'" />
-      <PurchaseReconcileTab v-else-if="activeTab === 'reconcile'" />
-      <PurchasePaymentTab v-else-if="activeTab === 'payment'" />
+      <LazyPurchaseRequisitionTab v-if="activeTab === 'requisition'" />
+      <LazyPurchaseOrderTab v-else-if="activeTab === 'order'" />
+      <LazyPurchaseArrivalTab v-else-if="activeTab === 'arrival'" />
+      <LazyPurchaseReturnTab v-else-if="activeTab === 'return'" />
+      <LazyPurchaseReconcileTab v-else-if="activeTab === 'reconcile'" />
+      <LazyPurchasePaymentTab v-else-if="activeTab === 'payment'" />
     </div>
   </div>
 </template>
@@ -20,8 +20,7 @@
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
-const activeTab = ref((route.query.tab as string) || 'requisition')
-watch(() => route.query.tab, (v) => { if (v) activeTab.value = v as string })
+const activeTab = computed(() => (route.query.tab as string) || 'requisition')
 const tabs = [
   { key: 'requisition', icon: '📝', label: '采购申请',   description: '创建并管理采购申请单，记录需求物料、数量与期望交期' },
   { key: 'order',       icon: '📋', label: '采购订单',   description: '采购订单的生成、审核、变更与供应商确认跟踪' },

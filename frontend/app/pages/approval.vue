@@ -1,15 +1,15 @@
 <template>
-  <div class="erp-page">
+  <div class="erp-page" :key="route.fullPath">
     <div class="erp-tab-content">
       <div class="erp-tab-header">
         <h2>{{ currentTab?.label }}</h2>
         <p class="erp-tab-desc">{{ currentTab?.description }}</p>
       </div>
 
-      <ApprovalSalesApproval v-if="activeTab === 'sales'" />
-      <ApprovalPurchaseApproval v-else-if="activeTab === 'purchase'" />
-      <ApprovalProductionApproval v-else-if="activeTab === 'production'" />
-      <ApprovalInventoryApproval v-else-if="activeTab === 'inventory'" />
+      <LazyApprovalSalesApproval v-if="activeTab === 'sales'" />
+      <LazyApprovalPurchaseApproval v-else-if="activeTab === 'purchase'" />
+      <LazyApprovalProductionApproval v-else-if="activeTab === 'production'" />
+      <LazyApprovalInventoryApproval v-else-if="activeTab === 'inventory'" />
     </div>
   </div>
 </template>
@@ -18,8 +18,7 @@
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
-const activeTab = ref((route.query.tab as string) || 'sales')
-watch(() => route.query.tab, (v) => { if (v) activeTab.value = v as string })
+const activeTab = computed(() => (route.query.tab as string) || 'sales')
 const tabs = [
   { key: 'sales',      label: '销售审批',   description: '待审核的销售订单，确认后流转至生产环节' },
   { key: 'purchase',   label: '采购审批',   description: '待审批的采购申请与付款单，通过后执行采购' },

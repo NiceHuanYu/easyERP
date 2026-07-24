@@ -1,6 +1,6 @@
-<template><div class="erp-page"><div class="erp-tab-content"><div class="erp-tab-header"><h2>{{ currentTab?.label }}</h2><p class="erp-tab-desc">{{ currentTab?.description }}</p></div>
-<OrganizationUserTab v-if="activeTab==='user'" /><OrganizationRoleTab v-else-if="activeTab==='role'" />
-<OrganizationPermTab v-else-if="activeTab==='perm'" /><OrganizationAuditTab v-else-if="activeTab==='audit'" /></div></div></template>
+<template><div class="erp-page" :key="route.fullPath"><div class="erp-tab-content"><div class="erp-tab-header"><h2>{{ currentTab?.label }}</h2><p class="erp-tab-desc">{{ currentTab?.description }}</p></div>
+<LazyOrganizationUserTab v-if="activeTab==='user'" /><LazyOrganizationRoleTab v-else-if="activeTab==='role'" />
+<LazyOrganizationPermTab v-else-if="activeTab==='perm'" /><LazyOrganizationAuditTab v-else-if="activeTab==='audit'" /></div></div></template>
 <script setup lang="ts">
 definePageMeta({middleware:'auth'})
 const route=useRoute()
