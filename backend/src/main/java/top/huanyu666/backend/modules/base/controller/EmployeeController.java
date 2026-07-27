@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import top.huanyu666.backend.modules.base.entity.Employee;
 import top.huanyu666.backend.modules.base.mapper.EmployeeMapper;
 
@@ -21,6 +22,7 @@ public class EmployeeController {
 
     private final EmployeeMapper employeeMapper;
 
+    @SaCheckPermission("base:employee:list")
     @GetMapping
     public ApiResponse<PageResult<Employee>> list(PageParam param,
                                                    @RequestParam(required = false) String keyword) {
@@ -36,17 +38,20 @@ public class EmployeeController {
                 page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("base:employee:list")
     @GetMapping("/{id}")
     public ApiResponse<Employee> getById(@PathVariable Long id) {
         return ApiResponse.ok(employeeMapper.selectById(id));
     }
 
+    @SaCheckPermission("base:employee:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Employee employee) {
         employeeMapper.insert(employee);
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:employee:update")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Employee employee) {
         employee.setId(id);
@@ -54,6 +59,7 @@ public class EmployeeController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:employee:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         employeeMapper.deleteById(id);

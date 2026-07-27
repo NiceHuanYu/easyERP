@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.huanyu666.backend.common.exception.BusinessException;
+import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.modules.sales.entity.SalesOrder;
 import top.huanyu666.backend.modules.sales.entity.SalesOrderItem;
 import top.huanyu666.backend.modules.sales.mapper.SalesOrderItemMapper;
@@ -43,6 +44,20 @@ public class SalesOrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         order.setTotalAmount(totalAmount);
         order.setStatus("DRAFT");
+
+        // 自动生成订单号
+        if (order.getOrderNo() == null || order.getOrderNo().isBlank()) {
+            order.setOrderNo(CodeGenerator.generate("SO", () -> {
+                SalesOrder last = orderMapper.selectOne(
+                        new LambdaQueryWrapper<SalesOrder>()
+                                .select(SalesOrder::getOrderNo)
+                                .orderByDesc(SalesOrder::getOrderNo)
+                                .last("LIMIT 1")
+                );
+                return last != null ? last.getOrderNo() : null;
+            }));
+        }
+
         orderMapper.insert(order);
 
         for (SalesOrderItem item : items) {

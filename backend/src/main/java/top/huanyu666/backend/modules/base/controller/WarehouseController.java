@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import top.huanyu666.backend.modules.base.entity.Warehouse;
 import top.huanyu666.backend.modules.base.mapper.WarehouseMapper;
 
@@ -21,6 +22,7 @@ public class WarehouseController {
 
     private final WarehouseMapper warehouseMapper;
 
+    @SaCheckPermission("base:warehouse:list")
     @GetMapping
     public ApiResponse<PageResult<Warehouse>> list(PageParam param,
                                                     @RequestParam(required = false) String keyword) {
@@ -36,17 +38,20 @@ public class WarehouseController {
                 page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("base:warehouse:list")
     @GetMapping("/{id}")
     public ApiResponse<Warehouse> getById(@PathVariable Long id) {
         return ApiResponse.ok(warehouseMapper.selectById(id));
     }
 
+    @SaCheckPermission("base:warehouse:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Warehouse warehouse) {
         warehouseMapper.insert(warehouse);
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:warehouse:update")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Warehouse warehouse) {
         warehouse.setId(id);
@@ -54,6 +59,7 @@ public class WarehouseController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:warehouse:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         warehouseMapper.deleteById(id);

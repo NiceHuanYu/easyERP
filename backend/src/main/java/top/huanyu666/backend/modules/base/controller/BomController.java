@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import top.huanyu666.backend.modules.base.entity.Bom;
 import top.huanyu666.backend.modules.base.mapper.BomMapper;
 
@@ -20,6 +21,7 @@ public class BomController {
 
     private final BomMapper bomMapper;
 
+    @SaCheckPermission("base:bom:list")
     @GetMapping
     public ApiResponse<PageResult<Bom>> list(PageParam param,
                                               @RequestParam(required = false) Long parentMaterialId) {
@@ -34,17 +36,20 @@ public class BomController {
                 page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("base:bom:list")
     @GetMapping("/{id}")
     public ApiResponse<Bom> getById(@PathVariable Long id) {
         return ApiResponse.ok(bomMapper.selectById(id));
     }
 
+    @SaCheckPermission("base:material:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Bom bom) {
         bomMapper.insert(bom);
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:material:update")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Bom bom) {
         bom.setId(id);
@@ -52,6 +57,7 @@ public class BomController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:material:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         bomMapper.deleteById(id);

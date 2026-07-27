@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import top.huanyu666.backend.modules.base.entity.Material;
 import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 
@@ -21,6 +22,7 @@ public class MaterialController {
 
     private final MaterialMapper materialMapper;
 
+    @SaCheckPermission("base:material:list")
     @GetMapping
     public ApiResponse<PageResult<Material>> list(PageParam param,
                                                    @RequestParam(required = false) String keyword) {
@@ -36,17 +38,20 @@ public class MaterialController {
                 page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("base:material:list")
     @GetMapping("/{id}")
     public ApiResponse<Material> getById(@PathVariable Long id) {
         return ApiResponse.ok(materialMapper.selectById(id));
     }
 
+    @SaCheckPermission("base:material:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Material material) {
         materialMapper.insert(material);
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:material:update")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Material material) {
         material.setId(id);
@@ -54,6 +59,7 @@ public class MaterialController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:material:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         materialMapper.deleteById(id);

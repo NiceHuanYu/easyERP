@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import top.huanyu666.backend.modules.base.entity.Supplier;
 import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
 
@@ -21,6 +22,7 @@ public class SupplierController {
 
     private final SupplierMapper supplierMapper;
 
+    @SaCheckPermission("base:supplier:list")
     @GetMapping
     public ApiResponse<PageResult<Supplier>> list(PageParam param,
                                                    @RequestParam(required = false) String keyword) {
@@ -36,17 +38,20 @@ public class SupplierController {
                 page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("base:supplier:list")
     @GetMapping("/{id}")
     public ApiResponse<Supplier> getById(@PathVariable Long id) {
         return ApiResponse.ok(supplierMapper.selectById(id));
     }
 
+    @SaCheckPermission("base:supplier:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Supplier supplier) {
         supplierMapper.insert(supplier);
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:supplier:update")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Supplier supplier) {
         supplier.setId(id);
@@ -54,6 +59,7 @@ public class SupplierController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:supplier:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         supplierMapper.deleteById(id);

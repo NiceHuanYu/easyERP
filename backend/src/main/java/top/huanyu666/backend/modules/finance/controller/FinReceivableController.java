@@ -10,6 +10,7 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.finance.entity.FinReceivable;
 import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 
 /**
  * 应收台账管理
@@ -22,6 +23,7 @@ public class FinReceivableController {
 
     private final FinReceivableMapper receivableMapper;
 
+    @SaCheckPermission("finance:receivable:list")
     @GetMapping
     public ApiResponse<PageResult<FinReceivable>> list(PageParam param,
                                                         @RequestParam(required = false) Long customerId,

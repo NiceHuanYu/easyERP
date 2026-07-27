@@ -22,6 +22,7 @@ import top.huanyu666.backend.modules.purchase.mapper.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 
 /**
  * 收货单管理
@@ -42,6 +43,7 @@ public class PurReceivingController {
 
     // ==================== 基础 CRUD ====================
 
+    @SaCheckPermission("purchase:receiving:list")
     @GetMapping
     public ApiResponse<PageResult<PurReceiving>> list(PageParam param,
                                                        @RequestParam(required = false) Long orderId,
@@ -59,6 +61,7 @@ public class PurReceivingController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("purchase:order:create")
     @PostMapping
     public ApiResponse<PurReceiving> create(@RequestBody PurReceiving receiving) {
         receiving.setStatus("DRAFT");
@@ -66,6 +69,7 @@ public class PurReceivingController {
         return ApiResponse.ok(receiving);
     }
 
+    @SaCheckPermission("purchase:order:create")
     @PutMapping("/{id}")
     public ApiResponse<PurReceiving> update(@PathVariable Long id, @RequestBody PurReceiving receiving) {
         PurReceiving exist = receivingMapper.selectById(id);
@@ -85,6 +89,7 @@ public class PurReceivingController {
     /**
      * 确认收货：DRAFT → CONFIRMED，增加库存，记录流水，创建应付
      */
+    @SaCheckPermission("purchase:receiving:confirm")
     @PostMapping("/confirm/{id}")
     @Transactional
     public ApiResponse<String> confirm(@PathVariable Long id) {

@@ -2,6 +2,7 @@ package top.huanyu666.backend.modules.sales.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +40,7 @@ public class SalesOrderController {
     /**
      * 分页列表
      */
+    @SaCheckPermission("sales:order:list")
     @GetMapping
     public ApiResponse<PageResult<SalesOrder>> list(PageParam param) {
         Page<SalesOrder> page = orderMapper.selectPage(
@@ -51,6 +53,7 @@ public class SalesOrderController {
     /**
      * 详情（含明细）
      */
+    @SaCheckPermission("sales:order:list")
     @GetMapping("/{id}")
     public ApiResponse<SalesOrder> getById(@PathVariable Long id) {
         SalesOrder order = orderMapper.selectById(id);
@@ -69,6 +72,7 @@ public class SalesOrderController {
     /**
      * 详情（含明细），返回 Map 包装
      */
+    @SaCheckPermission("sales:order:list")
     @GetMapping("/{id}/detail")
     public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
         SalesOrder order = orderMapper.selectById(id);
@@ -89,6 +93,7 @@ public class SalesOrderController {
     /**
      * 创建订单 + 明细
      */
+    @SaCheckPermission("sales:order:create")
     @PostMapping
     public ApiResponse<SalesOrder> create(@RequestBody Map<String, Object> body) {
         @SuppressWarnings("unchecked")
@@ -108,6 +113,7 @@ public class SalesOrderController {
     /**
      * 修改（校验 DRAFT 状态）
      */
+    @SaCheckPermission("sales:order:update")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SalesOrder order) {
         SalesOrder existing = orderMapper.selectById(id);
@@ -125,6 +131,7 @@ public class SalesOrderController {
     /**
      * 提交
      */
+    @SaCheckPermission("sales:order:submit")
     @PostMapping("/{id}/submit")
     public ApiResponse<Void> submit(@PathVariable Long id) {
         orderService.submit(id);
@@ -134,6 +141,7 @@ public class SalesOrderController {
     /**
      * 审核
      */
+    @SaCheckPermission("sales:order:approve")
     @PostMapping("/{id}/approve")
     public ApiResponse<Void> approve(@PathVariable Long id) {
         orderService.approve(id);
@@ -143,6 +151,7 @@ public class SalesOrderController {
     /**
      * 驳回
      */
+    @SaCheckPermission("sales:order:approve")
     @PostMapping("/{id}/reject")
     public ApiResponse<Void> reject(@PathVariable Long id) {
         orderService.reject(id);
@@ -152,6 +161,7 @@ public class SalesOrderController {
     /**
      * 关闭
      */
+    @SaCheckPermission("sales:order:approve")
     @PostMapping("/{id}/close")
     public ApiResponse<Void> close(@PathVariable Long id) {
         orderService.close(id);
@@ -161,6 +171,7 @@ public class SalesOrderController {
     /**
      * 可发货明细
      */
+    @SaCheckPermission("sales:order:list")
     @GetMapping("/{id}/deliverable-items")
     public ApiResponse<List<SalesOrderItem>> deliverableItems(@PathVariable Long id) {
         return ApiResponse.ok(orderService.getDeliverableItems(id));
@@ -169,6 +180,7 @@ public class SalesOrderController {
     /**
      * 下推发货单
      */
+    @SaCheckPermission("sales:delivery:create")
     @PostMapping("/{id}/create-delivery")
     public ApiResponse<Map<String, Object>> createDelivery(@PathVariable Long id, @RequestBody SalesDelivery delivery) {
         List<SalesOrderItem> deliverableItems = orderService.getDeliverableItems(id);

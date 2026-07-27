@@ -1,5 +1,6 @@
 package top.huanyu666.backend.modules.production.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ public class ProdOrderController {
 
     // ==================== 基础 CRUD ====================
 
+    @SaCheckPermission("production:order:list")
     @GetMapping
     public ApiResponse<PageResult<ProdOrder>> list(PageParam param,
                                                    @RequestParam(required = false) Long materialId,
@@ -57,6 +59,7 @@ public class ProdOrderController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("production:order:list")
     @GetMapping("/{id}")
     public ApiResponse<ProdOrder> detail(@PathVariable Long id) {
         ProdOrder order = orderMapper.selectById(id);
@@ -66,6 +69,7 @@ public class ProdOrderController {
         return ApiResponse.ok(order);
     }
 
+    @SaCheckPermission("production:order:create")
     @PostMapping
     public ApiResponse<ProdOrder> create(@RequestBody ProdOrder order) {
         order.setStatus("DRAFT");
@@ -78,6 +82,7 @@ public class ProdOrderController {
     /**
      * 下达工单：DRAFT → RELEASED，从 t_base_bom 生成工单物料需求
      */
+    @SaCheckPermission("production:order:release")
     @PostMapping("/release/{id}")
     @Transactional
     public ApiResponse<String> release(@PathVariable Long id) {
@@ -127,6 +132,7 @@ public class ProdOrderController {
     /**
      * 查询工单物料需求
      */
+    @SaCheckPermission("production:order:list")
     @GetMapping("/material-requirements/{id}")
     public ApiResponse<List<ProdOrderBom>> materialRequirements(@PathVariable Long id) {
         ProdOrder order = orderMapper.selectById(id);
@@ -141,6 +147,7 @@ public class ProdOrderController {
     /**
      * 创建领料单：查工单需求（未领数量 > 0）
      */
+    @SaCheckPermission("production:order:create")
     @PostMapping("/create-picking/{id}")
     @Transactional
     public ApiResponse<ProdPicking> createPicking(@PathVariable Long id,
@@ -186,6 +193,7 @@ public class ProdOrderController {
     /**
      * 创建完工入库单
      */
+    @SaCheckPermission("production:order:create")
     @PostMapping("/create-finish/{id}")
     @Transactional
     public ApiResponse<ProdFinish> createFinish(@PathVariable Long id,

@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 
 /**
  * 采购订单管理
@@ -34,6 +35,7 @@ public class PurOrderController {
 
     // ==================== 基础 CRUD ====================
 
+    @SaCheckPermission("purchase:order:list")
     @GetMapping
     public ApiResponse<PageResult<PurOrder>> list(PageParam param,
                                                    @RequestParam(required = false) Long supplierId,
@@ -51,6 +53,7 @@ public class PurOrderController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("purchase:order:list")
     @GetMapping("/{id}")
     public ApiResponse<PurOrder> detail(@PathVariable Long id) {
         PurOrder order = orderMapper.selectById(id);
@@ -60,6 +63,7 @@ public class PurOrderController {
         return ApiResponse.ok(order);
     }
 
+    @SaCheckPermission("purchase:order:create")
     @PostMapping
     public ApiResponse<PurOrder> create(@RequestBody PurOrder order) {
         order.setStatus("DRAFT");
@@ -72,6 +76,7 @@ public class PurOrderController {
     /**
      * 生成收货单
      */
+    @SaCheckPermission("purchase:order:create")
     @PostMapping("/create-receiving/{id}")
     @Transactional
     public ApiResponse<PurReceiving> createReceiving(@PathVariable Long id,

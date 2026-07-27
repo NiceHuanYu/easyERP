@@ -2,6 +2,7 @@ package top.huanyu666.backend.modules.sales.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +45,7 @@ public class SalesDeliveryController {
     /**
      * 分页列表
      */
+    @SaCheckPermission("sales:delivery:list")
     @GetMapping
     public ApiResponse<PageResult<SalesDelivery>> list(PageParam param) {
         Page<SalesDelivery> page = deliveryMapper.selectPage(
@@ -56,6 +58,7 @@ public class SalesDeliveryController {
     /**
      * 创建发货单
      */
+    @SaCheckPermission("sales:delivery:create")
     @PostMapping
     public ApiResponse<SalesDelivery> create(@RequestBody SalesDelivery delivery) {
         delivery.setStatus("DRAFT");
@@ -66,6 +69,7 @@ public class SalesDeliveryController {
     /**
      * 修改发货单
      */
+    @SaCheckPermission("sales:delivery:create")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SalesDelivery delivery) {
         SalesDelivery existing = deliveryMapper.selectById(id);
@@ -83,6 +87,7 @@ public class SalesDeliveryController {
     /**
      * 确认发货
      */
+    @SaCheckPermission("sales:delivery:confirm")
     @PostMapping("/{id}/confirm")
     @Transactional
     public ApiResponse<Void> confirm(@PathVariable Long id) {

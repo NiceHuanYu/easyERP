@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import top.huanyu666.backend.modules.base.entity.Customer;
 import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
 
@@ -21,6 +22,7 @@ public class CustomerController {
 
     private final CustomerMapper customerMapper;
 
+    @SaCheckPermission("base:customer:list")
     @GetMapping
     public ApiResponse<PageResult<Customer>> list(PageParam param,
                                                    @RequestParam(required = false) String keyword) {
@@ -36,17 +38,20 @@ public class CustomerController {
                 page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("base:customer:list")
     @GetMapping("/{id}")
     public ApiResponse<Customer> getById(@PathVariable Long id) {
         return ApiResponse.ok(customerMapper.selectById(id));
     }
 
+    @SaCheckPermission("base:customer:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Customer customer) {
         customerMapper.insert(customer);
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:customer:update")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Customer customer) {
         customer.setId(id);
@@ -54,6 +59,7 @@ public class CustomerController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("base:customer:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         customerMapper.deleteById(id);

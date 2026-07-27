@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 
 /**
  * 采购申请管理
@@ -34,6 +35,7 @@ public class PurRequisitionController {
 
     // ==================== 基础 CRUD ====================
 
+    @SaCheckPermission("purchase:requisition:list")
     @GetMapping
     public ApiResponse<PageResult<PurRequisition>> list(PageParam param,
                                                          @RequestParam(required = false) String status) {
@@ -47,6 +49,7 @@ public class PurRequisitionController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("purchase:requisition:create")
     @PostMapping
     public ApiResponse<PurRequisition> create(@RequestBody PurRequisition requisition) {
         requisition.setStatus("DRAFT");
@@ -54,6 +57,7 @@ public class PurRequisitionController {
         return ApiResponse.ok(requisition);
     }
 
+    @SaCheckPermission("purchase:requisition:create")
     @PutMapping("/{id}")
     public ApiResponse<PurRequisition> update(@PathVariable Long id, @RequestBody PurRequisition requisition) {
         PurRequisition exist = requisitionMapper.selectById(id);
@@ -73,6 +77,7 @@ public class PurRequisitionController {
     /**
      * 生成采购订单
      */
+    @SaCheckPermission("purchase:order:create")
     @PostMapping("/create-order/{id}")
     @Transactional
     public ApiResponse<PurOrder> createOrder(@PathVariable Long id,

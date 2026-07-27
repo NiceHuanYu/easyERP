@@ -1,5 +1,6 @@
 package top.huanyu666.backend.modules.production.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class ProdPickingController {
 
     // ==================== 基础 CRUD ====================
 
+    @SaCheckPermission("production:picking:list")
     @GetMapping
     public ApiResponse<PageResult<ProdPicking>> list(PageParam param,
                                                       @RequestParam(required = false) Long orderId,
@@ -55,6 +57,7 @@ public class ProdPickingController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("production:order:create")
     @PostMapping
     public ApiResponse<ProdPicking> create(@RequestBody ProdPicking picking) {
         picking.setStatus("DRAFT");
@@ -62,6 +65,7 @@ public class ProdPickingController {
         return ApiResponse.ok(picking);
     }
 
+    @SaCheckPermission("production:order:create")
     @PutMapping("/{id}")
     public ApiResponse<ProdPicking> update(@PathVariable Long id, @RequestBody ProdPicking picking) {
         ProdPicking exist = pickingMapper.selectById(id);
@@ -81,6 +85,7 @@ public class ProdPickingController {
     /**
      * 确认领料：DRAFT → CONFIRMED，扣减库存，记录流水
      */
+    @SaCheckPermission("production:picking:confirm")
     @PostMapping("/confirm/{id}")
     @Transactional
     public ApiResponse<String> confirm(@PathVariable Long id) {

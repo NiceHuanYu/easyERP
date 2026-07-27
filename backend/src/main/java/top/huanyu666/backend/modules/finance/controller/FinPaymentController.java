@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import cn.dev33.satoken.annotation.SaCheckPermission;
 
 /**
  * 收付款单管理
@@ -37,6 +38,7 @@ public class FinPaymentController {
     private final FinReceivableMapper receivableMapper;
     private final FinPayableMapper payableMapper;
 
+    @SaCheckPermission("finance:payment:list")
     @GetMapping
     public ApiResponse<PageResult<FinPayment>> list(PageParam param) {
         LambdaQueryWrapper<FinPayment> qw = new LambdaQueryWrapper<>();
@@ -46,12 +48,14 @@ public class FinPaymentController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("finance:payment:list")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody FinPayment payment) {
         paymentMapper.insert(payment);
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("finance:payment:list")
     @GetMapping("/{id}")
     public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
         FinPayment payment = paymentMapper.selectById(id);
@@ -66,6 +70,7 @@ public class FinPaymentController {
         return ApiResponse.ok(result);
     }
 
+    @SaCheckPermission("finance:payment:confirm")
     @PostMapping("/{id}/confirm")
     @Transactional
     public ApiResponse<Void> confirm(@PathVariable Long id) {

@@ -1,5 +1,6 @@
 package top.huanyu666.backend.modules.production.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class ProdFinishController {
 
     // ==================== 基础 CRUD ====================
 
+    @SaCheckPermission("production:finish:list")
     @GetMapping
     public ApiResponse<PageResult<ProdFinish>> list(PageParam param,
                                                      @RequestParam(required = false) Long orderId,
@@ -55,6 +57,7 @@ public class ProdFinishController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    @SaCheckPermission("production:order:create")
     @PostMapping
     public ApiResponse<ProdFinish> create(@RequestBody ProdFinish finish) {
         finish.setStatus("DRAFT");
@@ -62,6 +65,7 @@ public class ProdFinishController {
         return ApiResponse.ok(finish);
     }
 
+    @SaCheckPermission("production:order:create")
     @PutMapping("/{id}")
     public ApiResponse<ProdFinish> update(@PathVariable Long id, @RequestBody ProdFinish finish) {
         ProdFinish exist = finishMapper.selectById(id);
@@ -81,6 +85,7 @@ public class ProdFinishController {
     /**
      * 确认完工入库：DRAFT → CONFIRMED，增加库存，记录流水
      */
+    @SaCheckPermission("production:finish:confirm")
     @PostMapping("/confirm/{id}")
     @Transactional
     public ApiResponse<String> confirm(@PathVariable Long id) {
