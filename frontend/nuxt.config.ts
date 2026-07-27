@@ -37,4 +37,8 @@ export default defineNuxtConfig({
   routeRules: {
     '/login': { ssr: false },
   },
+
+  runtimeConfig: {
+    backendUrl: 'http://localhost:8080',
+  },
 })

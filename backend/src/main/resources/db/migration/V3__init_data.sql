@@ -1,11 +1,7 @@
 -- =====================================================
--- V3__init_data.sql — 初始化：管理员 / 角色 / 权限
+-- V3__init_data.sql — 初始化：角色 / 权限 / 字典
+-- 管理员用户由 DataInitializer 在启动时创建
 -- =====================================================
-
--- 默认管理员 (admin / admin123)
--- 密码为 BCrypt 加密，若登录失败请在应用中用 Hutool BCrypt.hashpw("admin123") 重新生成
-INSERT INTO t_sys_user (id, username, password, nickname, status, create_time, update_time)
-VALUES (1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5Eh', '系统管理员', 1, NOW(), NOW());
 
 -- ==================== 角色 ====================
 INSERT INTO t_sys_role (id, name, code, status, create_time, update_time) VALUES
