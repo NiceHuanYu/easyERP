@@ -212,13 +212,16 @@ const searchForm = reactive({
   dateRange: null as [string, string] | null,
 })
 
-const supplierOptions = [
-  { label: '深圳钢贸有限公司', value: '深圳钢贸有限公司' },
-  { label: '广州精工五金厂', value: '广州精工五金厂' },
-  { label: '上海华龙电子材料', value: '上海华龙电子材料' },
-  { label: '北京北方轴承集团', value: '北京北方轴承集团' },
-  { label: '杭州恒达化工有限公司', value: '杭州恒达化工有限公司' },
-]
+const supplierOptions = ref<{ label: string; value: string }[]>([])
+
+async function fetchSupplierOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>('/base/suppliers', 1, 1000)
+    supplierOptions.value = result.list.map((item) => ({ label: item.name, value: item.name }))
+  } catch {
+    // options load silently; the dropdown just stays empty
+  }
+}
 
 const statusTagMap: Record<string, 'warning' | 'success' | 'info'> = {
   '未核销': 'warning',
@@ -366,6 +369,7 @@ function handleReset() {
 
 // ── Init ───────────────────────────────────────────
 onMounted(() => {
+  fetchSupplierOptions()
   fetchData()
 })
 </script>

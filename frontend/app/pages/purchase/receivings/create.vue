@@ -174,20 +174,31 @@ const authStore = useAuthStore()
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
 
-// ==================== 选项数据（TODO: 后续替换为 API 调用） ====================
-const orderOptions = ref([
-  { label: 'PO-00001 / 深圳华强电子有限公司', value: 1 },
-  { label: 'PO-00002 / 广州万国元件有限公司', value: 2 },
-  { label: 'PO-00003 / 东莞正泰科技有限公司', value: 3 },
-  { label: 'PO-00004 / 上海锐拓半导体有限公司', value: 4 },
-  { label: 'PO-00005 / 深圳华强电子有限公司', value: 5 },
-])
+// ==================== 选项数据（从 API 加载） ====================
+const orderOptions = ref<{ label: string; value: number }[]>([])
 
-const warehouseOptions = ref([
-  { label: '原材料仓A', value: 1 },
-  { label: '原材料仓B', value: 2 },
-  { label: '半成品仓', value: 3 },
-])
+async function fetchOrderOptions() {
+  try {
+    const result = await api.page<{ id: number; orderNo: string; supplierName: string }>(
+      '/purchase/orders', 1, 1000, { status: 'issued' },
+    )
+    orderOptions.value = result.list.map((o) => ({
+      label: `${o.orderNo} / ${o.supplierName}`,
+      value: o.id,
+    }))
+  } catch { /* ignore */ }
+}
+
+const warehouseOptions = ref<{ label: string; value: number }[]>([])
+
+async function fetchWarehouseOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>(
+      '/base/warehouses', 1, 1000,
+    )
+    warehouseOptions.value = result.list.map((w) => ({ label: w.name, value: w.id }))
+  } catch { /* ignore */ }
+}
 
 // ==================== 类型定义 ====================
 interface ReceivingLine {
@@ -356,6 +367,8 @@ function prefillFromOrder(orderId: string) {
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  fetchOrderOptions()
+  fetchWarehouseOptions()
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }

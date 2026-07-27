@@ -143,13 +143,13 @@ async function loadOptions() {
   try {
     const [orders, warehouses] = await Promise.all([
       api.get<{ id: number; orderNo: string; productName: string; status: string }[]>('/production/orders?status=running&status=finishing'),
-      api.get<{ id: number; name: string }[]>('/system/warehouses'),
+      api.page<{ id: number; name: string }>('/base/warehouses', 1, 1000),
     ])
     orderOptions.value = orders.map((o) => {
       const statusLabel = o.status === 'running' ? '执行中' : '完工待入库'
       return { label: `${o.orderNo} / ${o.productName}（${statusLabel}）`, value: o.id }
     })
-    warehouseOptions.value = warehouses.map((w) => ({ label: w.name, value: w.id }))
+    warehouseOptions.value = warehouses.list.map((w) => ({ label: w.name, value: w.id }))
   } catch {
     // options load silently
   }

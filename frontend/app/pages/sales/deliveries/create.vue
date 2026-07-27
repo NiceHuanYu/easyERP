@@ -172,6 +172,15 @@ const isEdit = computed(() => !!route.query.id)
 const orderOptions = ref<{ label: string; value: number }[]>([])
 const warehouseOptions = ref<{ label: string; value: number }[]>([])
 
+async function fetchWarehouseOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>('/base/warehouses', 1, 1000)
+    warehouseOptions.value = result.list.map((item) => ({ label: item.name, value: item.id }))
+  } catch (e: any) {
+    // options load silently
+  }
+}
+
 // ==================== 类型 ====================
 interface DeliveryLine {
   materialId: number
@@ -304,6 +313,7 @@ function prefillFromOrder(orderId: string) {
 
 // ==================== 初始化 ====================
 onMounted(async () => {
+  fetchWarehouseOptions()
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }

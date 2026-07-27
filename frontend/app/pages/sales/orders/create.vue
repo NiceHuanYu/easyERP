@@ -202,6 +202,24 @@ const isEdit = computed(() => !!route.query.id)
 const customerOptions = ref<{ label: string; value: number }[]>([])
 const materialOptions = ref<{ label: string; value: number }[]>([])
 
+async function fetchCustomerOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>('/base/customers', 1, 1000)
+    customerOptions.value = result.list.map((item) => ({ label: item.name, value: item.id }))
+  } catch (e: any) {
+    // options load silently
+  }
+}
+
+async function fetchMaterialOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string; spec: string }>('/base/materials', 1, 1000)
+    materialOptions.value = result.list.map((item) => ({ label: item.name, value: item.id }))
+  } catch (e: any) {
+    // options load silently
+  }
+}
+
 // ==================== 表单数据 ====================
 interface OrderLine {
   materialId: number | null
@@ -362,6 +380,8 @@ async function handleSubmit() {
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  fetchCustomerOptions()
+  fetchMaterialOptions()
   if (route.query.id) {
     loadOrder(route.query.id as string)
   }

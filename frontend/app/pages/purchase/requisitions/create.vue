@@ -197,29 +197,44 @@ const authStore = useAuthStore()
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
 
-// ==================== 选项数据（TODO: 后续替换为 API 调用） ====================
-const employeeOptions = ref([
-  { label: '张三', value: 1 },
-  { label: '李四', value: 2 },
-  { label: '王五', value: 3 },
-  { label: '赵六', value: 4 },
-])
+// ==================== 选项数据（从 API 加载） ====================
+const employeeOptions = ref<{ label: string; value: number }[]>([])
 
-const materialOptions = ref([
-  { label: 'PCB-001 主板基板', value: 1, spec: 'FR-4 1.6mm', unit: '片' },
-  { label: 'CPU-002 中央处理器', value: 2, spec: 'ARM Cortex-A78', unit: '个' },
-  { label: 'LCD-003 液晶显示屏', value: 3, spec: '7寸 1024x600', unit: '块' },
-  { label: 'BAT-004 锂电池组', value: 4, spec: '3.7V 5000mAh', unit: '组' },
-  { label: 'CHS-005 充电器套件', value: 5, spec: '5V 2A USB-C', unit: '套' },
-  { label: 'ANT-006 天线模块', value: 6, spec: '2.4GHz 3dBi', unit: '个' },
-])
+async function fetchEmployeeOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>(
+      '/base/employees', 1, 1000,
+    )
+    employeeOptions.value = result.list.map((e) => ({ label: e.name, value: e.id }))
+  } catch { /* ignore */ }
+}
 
-const supplierOptions = ref([
-  { label: '深圳华强电子有限公司', value: 1 },
-  { label: '广州万国元件有限公司', value: 2 },
-  { label: '东莞正泰科技有限公司', value: 3 },
-  { label: '上海锐拓半导体有限公司', value: 4 },
-])
+const materialOptions = ref<{ label: string; value: number; spec: string; unit: string }[]>([])
+
+async function fetchMaterialOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string; spec: string }>(
+      '/base/materials', 1, 1000,
+    )
+    materialOptions.value = result.list.map((m) => ({
+      label: m.name,
+      value: m.id,
+      spec: m.spec ?? '',
+      unit: '',
+    }))
+  } catch { /* ignore */ }
+}
+
+const supplierOptions = ref<{ label: string; value: number }[]>([])
+
+async function fetchSupplierOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>(
+      '/base/suppliers', 1, 1000,
+    )
+    supplierOptions.value = result.list.map((s) => ({ label: s.name, value: s.id }))
+  } catch { /* ignore */ }
+}
 
 // ==================== 表单数据 ====================
 interface RequisitionLine {
@@ -374,6 +389,9 @@ async function handleSubmit() {
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  fetchEmployeeOptions()
+  fetchMaterialOptions()
+  fetchSupplierOptions()
   if (route.query.id) {
     loadRequisition(route.query.id as string)
   }

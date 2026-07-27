@@ -124,13 +124,16 @@ const searchForm = reactive({
   dateRange: null as [string, string] | null,
 })
 
-const warehouseOptions = [
-  { label: '原料仓', value: '1' },
-  { label: '半成品仓', value: '2' },
-  { label: '成品仓', value: '3' },
-  { label: '包材仓', value: '4' },
-  { label: '临调仓', value: '5' },
-]
+const warehouseOptions = ref<{ label: string; value: number }[]>([])
+
+async function loadWarehouseOptions() {
+  try {
+    const data = await api.page<{ id: number; name: string }>('/base/warehouses', 1, 1000)
+    warehouseOptions.value = data.list.map((w) => ({ label: w.name, value: w.id }))
+  } catch {
+    // options load silently
+  }
+}
 
 const typeTagMap: Record<string, 'success' | 'danger' | 'warning'> = {
   '入库': 'success',
@@ -190,6 +193,7 @@ function handleReset() {
 
 // ── Init ───────────────────────────────────────────
 onMounted(() => {
+  loadWarehouseOptions()
   fetchData()
 })
 </script>

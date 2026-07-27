@@ -217,13 +217,17 @@ const authStore = useAuthStore()
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
 
-// ==================== 选项数据（TODO: 后续替换为 API 调用） ====================
-const supplierOptions = ref([
-  { label: '深圳华强电子有限公司', value: 1 },
-  { label: '广州万国元件有限公司', value: 2 },
-  { label: '东莞正泰科技有限公司', value: 3 },
-  { label: '上海锐拓半导体有限公司', value: 4 },
-])
+// ==================== 选项数据（从 API 加载） ====================
+const supplierOptions = ref<{ label: string; value: number }[]>([])
+
+async function fetchSupplierOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>(
+      '/base/suppliers', 1, 1000,
+    )
+    supplierOptions.value = result.list.map((s) => ({ label: s.name, value: s.id }))
+  } catch { /* ignore */ }
+}
 
 const requisitionOptions = ref([
   { label: 'PR-00001 / 张三 / PCB主板等2项', value: 1 },
@@ -231,14 +235,16 @@ const requisitionOptions = ref([
   { label: 'PR-00005 / 王五 / 锂电池组等1项', value: 5 },
 ])
 
-const materialOptions = ref([
-  { label: 'PCB-001 主板基板', value: 1 },
-  { label: 'CPU-002 中央处理器', value: 2 },
-  { label: 'LCD-003 液晶显示屏', value: 3 },
-  { label: 'BAT-004 锂电池组', value: 4 },
-  { label: 'CHS-005 充电器套件', value: 5 },
-  { label: 'ANT-006 天线模块', value: 6 },
-])
+const materialOptions = ref<{ label: string; value: number }[]>([])
+
+async function fetchMaterialOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string; spec: string }>(
+      '/base/materials', 1, 1000,
+    )
+    materialOptions.value = result.list.map((m) => ({ label: m.name, value: m.id }))
+  } catch { /* ignore */ }
+}
 
 // ==================== 表单数据 ====================
 interface OrderLine {
@@ -429,6 +435,8 @@ function prefillFromRequisition(reqId: string) {
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  fetchSupplierOptions()
+  fetchMaterialOptions()
   if (route.query.fromRequisition) {
     prefillFromRequisition(route.query.fromRequisition as string)
   }

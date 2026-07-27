@@ -224,13 +224,17 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | 'default' {
   return map[s] ?? 'default'
 }
 
-// ==================== 选项（TODO: 后续替换为 API 调用） ====================
-const employeeOptions = ref([
-  { label: '张三', value: 1 },
-  { label: '李四', value: 2 },
-  { label: '王五', value: 3 },
-  { label: '赵六', value: 4 },
-])
+// ==================== 选项（从 API 加载） ====================
+const employeeOptions = ref<{ label: string; value: number }[]>([])
+
+async function fetchEmployeeOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>(
+      '/base/employees', 1, 1000,
+    )
+    employeeOptions.value = result.list.map((e) => ({ label: e.name, value: e.id }))
+  } catch { /* ignore */ }
+}
 
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
@@ -340,6 +344,7 @@ async function handleCreateOrder(row: Requisition) {
 // ==================== 初始化 ====================
 onMounted(() => {
   fetchData()
+  fetchEmployeeOptions()
 })
 </script>
 

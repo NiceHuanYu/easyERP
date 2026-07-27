@@ -172,6 +172,15 @@ interface SearchForm {
 // ==================== 客户选项 ====================
 const customerOptions = ref<{ label: string; value: number }[]>([])
 
+async function fetchCustomerOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>('/base/customers', 1, 1000)
+    customerOptions.value = result.list.map((item) => ({ label: item.name, value: item.id }))
+  } catch (e: any) {
+    // options load silently
+  }
+}
+
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
   deliveryNo: '',
@@ -251,6 +260,7 @@ async function handleDelete(row: Delivery) {
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  fetchCustomerOptions()
   fetchData()
 })
 </script>

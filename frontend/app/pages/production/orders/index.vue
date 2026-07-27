@@ -306,8 +306,11 @@ const materialOptions = ref<{ label: string; value: number }[]>([])
 
 async function loadMaterialOptions() {
   try {
-    const data = await api.get<{ id: number; name: string }[]>('/production/materials')
-    materialOptions.value = data.map((m) => ({ label: m.name, value: m.id }))
+    const data = await api.page<{ id: number; name: string; spec: string }>('/base/materials', 1, 1000)
+    materialOptions.value = data.list.map((m) => ({
+      label: m.spec ? `${m.name} (${m.spec})` : m.name,
+      value: m.id,
+    }))
   } catch {
     // options load silently
   }

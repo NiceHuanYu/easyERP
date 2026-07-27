@@ -230,13 +230,17 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | '' {
   return map[s] ?? 'info'
 }
 
-// ==================== 选项（TODO: 后续替换为 API 调用） ====================
-const supplierOptions = ref([
-  { label: '深圳华强电子有限公司', value: 1 },
-  { label: '广州万国元件有限公司', value: 2 },
-  { label: '东莞正泰科技有限公司', value: 3 },
-  { label: '上海锐拓半导体有限公司', value: 4 },
-])
+// ==================== 选项（从 API 加载） ====================
+const supplierOptions = ref<{ label: string; value: number }[]>([])
+
+async function fetchSupplierOptions() {
+  try {
+    const result = await api.page<{ id: number; name: string }>(
+      '/base/suppliers', 1, 1000,
+    )
+    supplierOptions.value = result.list.map((s) => ({ label: s.name, value: s.id }))
+  } catch { /* ignore */ }
+}
 
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
@@ -336,6 +340,7 @@ async function handleCreateReceiving(row: PurchaseOrder) {
 // ==================== 初始化 ====================
 onMounted(() => {
   fetchData()
+  fetchSupplierOptions()
 })
 </script>
 
