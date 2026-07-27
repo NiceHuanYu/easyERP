@@ -20,16 +20,18 @@ interface LoginCredentials {
   password: string
 }
 
-interface LoginResponse {
-  token: string
-  userInfo: UserInfo
+/** Backend raw response from GET /api/v1/auth/user-info */
+interface BackendUserInfo {
+  userId: number
+  username: string
+  nickname: string
   permissions: string[]
   menus: MenuItem[]
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  // ---- State ----
-  const token = ref<string>(import.meta.client ? localStorage.getItem('token') || '' : '')
+  // ---- State (useCookie for SSR-safe token persistence) ----
+  const token = useCookie<string>('token')
   const userInfo = ref<UserInfo>({
     id: 0,
     name: '',
@@ -49,20 +51,17 @@ export const useAuthStore = defineStore('auth', () => {
   // ---- Actions ----
   async function login(credentials: LoginCredentials): Promise<void> {
     try {
-      const res = await $fetch<{ code: number; data: LoginResponse }>('/api/v1/auth/login', {
+      // Step 1: login → get token (backend returns ApiResponse<string>)
+      const res = await $fetch<{ code: number; data: string }>('/api/v1/auth/login', {
         method: 'POST',
         body: credentials,
       })
 
-      const { token: t, userInfo: u, permissions: p, menus: m } = res.data
-      token.value = t
-      userInfo.value = u
-      permissions.value = p
-      menus.value = m
+      token.value = res.data
+      console.log('[auth] login token:', res.data?.substring(0, 50) + '...')
 
-      if (import.meta.client) {
-        localStorage.setItem('token', t)
-      }
+      // Step 2: fetch user info with the token
+      await fetchUserInfo()
     } catch (error: any) {
       console.error('Login failed:', error?.message ?? error)
       throw error
@@ -75,26 +74,30 @@ export const useAuthStore = defineStore('auth', () => {
     permissions.value = []
     menus.value = []
 
-    if (import.meta.client) {
-      localStorage.removeItem('token')
-      navigateTo('/login')
-    }
+    navigateTo('/login')
   }
 
   async function fetchUserInfo(): Promise<void> {
     try {
-      const res = await $fetch<{
-        code: number
-        data: {
-          userInfo: UserInfo
-          permissions: string[]
-          menus: MenuItem[]
-        }
-      }>('/api/v1/auth/user-info')
+      const res = await $fetch<{ code: number; data: BackendUserInfo }>('/api/v1/auth/user-info', {
+        headers: token.value ? { Authorization: `Bearer ${token.value}` } : {},
+      })
 
-      userInfo.value = res.data.userInfo
-      permissions.value = res.data.permissions
-      menus.value = res.data.menus
+      console.log('[auth] user-info raw response:', JSON.stringify(res))
+
+      const d = res.data
+      if (!d) {
+        throw new Error('后端返回空用户信息，请确认 token 有效')
+      }
+      // Map backend flat fields → frontend UserInfo
+      userInfo.value = {
+        id: d.userId,
+        name: d.nickname || d.username,
+        avatar: '',
+        roles: [],
+      }
+      permissions.value = d.permissions
+      menus.value = d.menus
     } catch (error: any) {
       console.error('Fetch user info failed:', error?.message ?? error)
       throw error

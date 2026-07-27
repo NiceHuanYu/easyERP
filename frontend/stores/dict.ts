@@ -2,11 +2,7 @@ import { defineStore } from 'pinia'
 
 interface DictItem {
   label: string
-  value: any
-}
-
-interface AllDictsResponse {
-  [dictType: string]: DictItem[]
+  value: string
 }
 
 export const useDictStore = defineStore('dict', () => {
@@ -22,15 +18,17 @@ export const useDictStore = defineStore('dict', () => {
   function getDictLabel(dictType: string, value: any): string {
     const items = dictMap.value[dictType]
     if (!items) return ''
-    const item = items.find((i) => i.value === value)
+    const item = items.find((i) => i.value === String(value))
     return item?.label ?? ''
   }
 
   // ---- Actions ----
   async function fetchAllDicts(): Promise<void> {
     try {
-      const res = await $fetch<AllDictsResponse>('/api/v1/system/dicts/all')
-      dictMap.value = res
+      const res = await $fetch<{ code: number; data: Record<string, DictItem[]> }>(
+        '/api/v1/system/dicts/all',
+      )
+      dictMap.value = res.data
       loaded.value = true
     } catch (error: any) {
       console.error('Fetch dicts failed:', error?.message ?? error)

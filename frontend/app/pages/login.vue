@@ -87,7 +87,12 @@ async function handleLogin() {
     })
     await navigateTo((route.query.redirect as string) || '/')
   } catch (err: any) {
-    ElMessage.error(err?.data?.message || err?.message || '登录失败，请检查用户名和密码')
+    const msg =
+      err?.data?.message ||
+      err?.response?._data?.message ||
+      err?.message ||
+      '登录失败，请检查用户名和密码'
+    ElMessage.error(msg)
   } finally {
     loading.value = false
   }

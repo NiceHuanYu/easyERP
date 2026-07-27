@@ -34,6 +34,7 @@ mybatis-plus:
 # Sa-Token
 sa-token:
   token-name: Authorization
+  token-prefix: Bearer
   timeout: 86400
   active-timeout: 1800
   is-concurrent: true
@@ -42,6 +43,11 @@ sa-token:
   is-log: false
 
 # Knife4j
+knife4j:
+  enable: true
+  setting:
+    swagger-model-name: EasyERP API
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
