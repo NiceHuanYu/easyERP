@@ -180,6 +180,7 @@
 
 <script setup lang="ts">
 import { Search, RefreshLeft } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 definePageMeta({ middleware: 'auth' })
 

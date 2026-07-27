@@ -256,6 +256,7 @@
 <script setup lang="ts">
 import { Search, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { formatMoney } from '~/utils'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 definePageMeta({ middleware: 'auth' })
 

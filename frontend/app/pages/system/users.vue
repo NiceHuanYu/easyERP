@@ -51,10 +51,10 @@
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
             <el-switch
-              :model-value="row.status === 'active'"
+              :model-value="row.status"
               active-value="active"
               inactive-value="inactive"
-              @change="(val: boolean) => handleStatusChange(row, val)"
+              @change="(val: string) => handleStatusChange(row, val)"
             />
           </template>
         </el-table-column>
@@ -129,10 +129,10 @@
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-switch
-            :model-value="form.status === 'active'"
+            :model-value="form.status"
             active-value="active"
             inactive-value="inactive"
-            @change="(val: boolean) => { form.status = val ? 'active' : 'inactive' }"
+            @change="(val: string) => { form.status = val }"
           />
         </el-form-item>
       </el-form>
@@ -146,6 +146,7 @@
 
 <script setup lang="ts">
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 
 definePageMeta({ middleware: 'auth' })
@@ -308,14 +309,13 @@ function handleDelete(row: User) {
   }).catch(() => {})
 }
 
-function handleStatusChange(row: User, val: boolean) {
-  const newStatus = val ? 'active' : 'inactive'
+function handleStatusChange(row: User, val: string) {
   ElMessageBox.confirm(
-    `确定要${val ? '启用' : '禁用'}用户「${row.username}」吗？`,
+    `确定要${val === 'active' ? '禁用' : '启用'}用户「${row.username}」吗？`,
     '状态变更',
     { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' },
   ).then(() => {
-    row.status = newStatus
+    row.status = val
     ElMessage.success('状态更新成功')
   }).catch(() => {})
 }

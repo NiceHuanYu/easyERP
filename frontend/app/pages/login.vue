@@ -55,6 +55,7 @@
 import { User, Lock } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
+import { ElMessage } from 'element-plus'
 
 definePageMeta({ layout: 'login' })
 

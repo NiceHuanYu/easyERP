@@ -183,6 +183,7 @@
 <script setup lang="ts">
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 definePageMeta({ middleware: 'auth' })
 

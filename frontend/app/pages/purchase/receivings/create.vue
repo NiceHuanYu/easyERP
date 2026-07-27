@@ -162,6 +162,7 @@
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { formatMoney, formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
+import { ElMessage } from 'element-plus'
 
 definePageMeta({ middleware: 'auth' })
 

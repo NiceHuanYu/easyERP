@@ -111,6 +111,7 @@
 
 <script setup lang="ts">
 import { Search, RefreshLeft, Download } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 definePageMeta({ middleware: 'auth' })
 

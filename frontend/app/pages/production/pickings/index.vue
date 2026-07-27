@@ -139,6 +139,7 @@
 
 <script setup lang="ts">
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 definePageMeta({ middleware: 'auth' })
 

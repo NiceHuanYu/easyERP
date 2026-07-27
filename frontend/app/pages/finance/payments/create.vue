@@ -177,6 +177,7 @@
 
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 definePageMeta({ middleware: 'auth' })
 
