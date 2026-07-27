@@ -6,4 +6,35 @@ export default defineNuxtConfig({
     port: 3000,
     host: '0.0.0.0',
   },
+
+  modules: [
+    '@pinia/nuxt',
+  ],
+
+  css: [
+    'element-plus/dist/index.css',
+    '~/assets/css/main.css',
+  ],
+
+  app: {
+    head: {
+      title: 'EasyERP',
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      ],
+    },
+  },
+
+  vite: {
+    resolve: {
+      alias: {
+        'echarts': 'echarts',
+      },
+    },
+  },
+
+  routeRules: {
+    '/login': { ssr: false },
+  },
 })
