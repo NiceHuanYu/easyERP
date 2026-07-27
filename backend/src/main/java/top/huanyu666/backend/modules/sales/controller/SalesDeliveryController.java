@@ -1,0 +1,202 @@
+package top.huanyu666.backend.modules.sales.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.exception.BusinessException;
+import top.huanyu666.backend.common.model.ApiResponse;
+import top.huanyu666.backend.common.model.PageParam;
+import top.huanyu666.backend.common.model.PageResult;
+import top.huanyu666.backend.modules.finance.entity.FinReceivable;
+import top.huanyu666.backend.modules.inventory.entity.InvStock;
+import top.huanyu666.backend.modules.inventory.entity.InvTransaction;
+import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
+import top.huanyu666.backend.modules.inventory.mapper.InvTransactionMapper;
+import top.huanyu666.backend.modules.sales.entity.*;
+import top.huanyu666.backend.modules.sales.mapper.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * 销售发货单管理
+ */
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/sales/deliveries")
+@RequiredArgsConstructor
+public class SalesDeliveryController {
+
+    private final SalesDeliveryMapper deliveryMapper;
+    private final SalesDeliveryItemMapper deliveryItemMapper;
+    private final SalesOrderMapper orderMapper;
+    private final SalesOrderItemMapper orderItemMapper;
+    private final InvStockMapper invStockMapper;
+    private final InvTransactionMapper invTransactionMapper;
+    // FinReceivable 没有 Mapper，通过 BaseMapper 注入；此处声明类型引用，
+    // 实际使用时通过 com.baomidou.mybatisplus.core.mapper.BaseMapper<FinReceivable> 操作
+    private final com.baomidou.mybatisplus.core.mapper.BaseMapper<FinReceivable> finReceivableMapper;
+
+    /**
+     * 分页列表
+     */
+    @GetMapping
+    public ApiResponse<PageResult<SalesDelivery>> list(PageParam param) {
+        Page<SalesDelivery> page = deliveryMapper.selectPage(
+                new Page<>(param.getPage(), param.getSize()),
+                new LambdaQueryWrapper<SalesDelivery>().orderByDesc(SalesDelivery::getCreateTime)
+        );
+        return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
+    }
+
+    /**
+     * 创建发货单
+     */
+    @PostMapping
+    public ApiResponse<SalesDelivery> create(@RequestBody SalesDelivery delivery) {
+        delivery.setStatus("DRAFT");
+        deliveryMapper.insert(delivery);
+        return ApiResponse.ok(delivery);
+    }
+
+    /**
+     * 修改发货单
+     */
+    @PutMapping("/{id}")
+    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SalesDelivery delivery) {
+        SalesDelivery existing = deliveryMapper.selectById(id);
+        if (existing == null) {
+            return ApiResponse.error("发货单不存在");
+        }
+        if (!"DRAFT".equals(existing.getStatus())) {
+            return ApiResponse.error("只有草稿状态的发货单才能修改");
+        }
+        delivery.setId(id);
+        deliveryMapper.updateById(delivery);
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 确认发货
+     */
+    @PostMapping("/{id}/confirm")
+    @Transactional
+    public ApiResponse<Void> confirm(@PathVariable Long id) {
+        SalesDelivery delivery = deliveryMapper.selectById(id);
+        if (delivery == null) {
+            throw new BusinessException("发货单不存在: " + id);
+        }
+        if (!"DRAFT".equals(delivery.getStatus())) {
+            throw new BusinessException("只有草稿状态的发货单才能确认发货");
+        }
+
+        // 1. 获取发货明细
+        List<SalesDeliveryItem> deliveryItems = deliveryItemMapper.selectList(
+                new LambdaQueryWrapper<SalesDeliveryItem>().eq(SalesDeliveryItem::getDeliveryId, id)
+        );
+
+        if (deliveryItems.isEmpty()) {
+            throw new BusinessException("发货单没有明细，无法确认发货");
+        }
+
+        // 获取订单
+        SalesOrder order = orderMapper.selectById(delivery.getOrderId());
+        if (order == null) {
+            throw new BusinessException("关联的销售订单不存在");
+        }
+
+        for (SalesDeliveryItem deliveryItem : deliveryItems) {
+            // 2. 更新订单明细的 shippedQty
+            SalesOrderItem orderItem = orderItemMapper.selectById(deliveryItem.getOrderItemId());
+            if (orderItem == null) {
+                throw new BusinessException("订单明细不存在: " + deliveryItem.getOrderItemId());
+            }
+
+            BigDecimal newShippedQty = orderItem.getShippedQty() != null
+                    ? orderItem.getShippedQty().add(deliveryItem.getQuantity())
+                    : deliveryItem.getQuantity();
+
+            if (newShippedQty.compareTo(orderItem.getQuantity()) > 0) {
+                throw new BusinessException("发货数量超过订单数量: orderItemId=" + orderItem.getId());
+            }
+
+            orderItem.setShippedQty(newShippedQty);
+            orderItem.setUpdateTime(LocalDateTime.now());
+            orderItemMapper.updateById(orderItem);
+
+            // 3. 扣减库存
+            InvStock stock = invStockMapper.selectOne(
+                    new LambdaQueryWrapper<InvStock>()
+                            .eq(InvStock::getMaterialId, deliveryItem.getMaterialId())
+                            .eq(InvStock::getWarehouseId, delivery.getWarehouseId())
+            );
+
+            if (stock == null) {
+                throw new BusinessException("库存记录不存在: materialId=" + deliveryItem.getMaterialId()
+                        + ", warehouseId=" + delivery.getWarehouseId());
+            }
+
+            if (stock.getAvailableQty().compareTo(deliveryItem.getQuantity()) < 0) {
+                throw new BusinessException("库存不足: materialId=" + deliveryItem.getMaterialId()
+                        + ", 可用=" + stock.getAvailableQty() + ", 需要=" + deliveryItem.getQuantity());
+            }
+
+            // 扣减可用库存
+            stock.setAvailableQty(stock.getAvailableQty().subtract(deliveryItem.getQuantity()));
+            stock.setQuantity(stock.getQuantity().subtract(deliveryItem.getQuantity()));
+            stock.setUpdateTime(LocalDateTime.now());
+            invStockMapper.updateById(stock);
+
+            // 4. 记录库存流水
+            InvTransaction transaction = new InvTransaction();
+            transaction.setMaterialId(deliveryItem.getMaterialId());
+            transaction.setWarehouseId(delivery.getWarehouseId());
+            transaction.setType("SALES_OUT");
+            transaction.setQuantity(deliveryItem.getQuantity().negate());
+            transaction.setCurrentStock(stock.getQuantity());
+            transaction.setSourceNo(delivery.getDeliveryNo());
+            transaction.setSourceType("SALES_DELIVERY");
+            transaction.setCreateTime(LocalDateTime.now());
+            invTransactionMapper.insert(transaction);
+
+            log.info("扣减库存: materialId={}, warehouseId={}, qty={}, currentStock={}",
+                    deliveryItem.getMaterialId(), delivery.getWarehouseId(),
+                    deliveryItem.getQuantity(), stock.getQuantity());
+        }
+
+        // 5. 检查订单是否全部发货，更新订单状态
+        List<SalesOrderItem> allItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<SalesOrderItem>().eq(SalesOrderItem::getOrderId, order.getId())
+        );
+
+        boolean allShipped = allItems.stream()
+                .allMatch(item -> item.getShippedQty() != null
+                        && item.getShippedQty().compareTo(item.getQuantity()) >= 0);
+
+        if (allShipped) {
+            order.setStatus("SHIPPED");
+            orderMapper.updateById(order);
+            log.info("订单全部发货: orderId={}", order.getId());
+        }
+
+        // 6. 更新发货单状态
+        delivery.setStatus("CONFIRMED");
+        deliveryMapper.updateById(delivery);
+
+        // 7. 创建应收台账
+        FinReceivable receivable = new FinReceivable();
+        receivable.setDeliveryId(delivery.getId());
+        receivable.setCustomerId(order.getCustomerId());
+        receivable.setReceivableAmount(order.getTotalAmount());
+        receivable.setReceivedAmount(BigDecimal.ZERO);
+        receivable.setStatus("PENDING");
+        finReceivableMapper.insert(receivable);
+
+        log.info("确认发货成功: deliveryId={}, orderId={}", id, order.getId());
+        return ApiResponse.ok();
+    }
+}

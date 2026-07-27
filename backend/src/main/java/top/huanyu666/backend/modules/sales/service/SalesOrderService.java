@@ -1,0 +1,135 @@
+package top.huanyu666.backend.modules.sales.service;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import top.huanyu666.backend.common.exception.BusinessException;
+import top.huanyu666.backend.modules.sales.entity.SalesOrder;
+import top.huanyu666.backend.modules.sales.entity.SalesOrderItem;
+import top.huanyu666.backend.modules.sales.mapper.SalesOrderItemMapper;
+import top.huanyu666.backend.modules.sales.mapper.SalesOrderMapper;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+/**
+ * 销售订单服务
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class SalesOrderService {
+
+    private final SalesOrderMapper orderMapper;
+    private final SalesOrderItemMapper orderItemMapper;
+
+    /**
+     * 创建订单（含明细）
+     */
+    @Transactional
+    public SalesOrder createOrder(SalesOrder order, List<SalesOrderItem> items) {
+        // 计算 totalAmount
+        BigDecimal totalAmount = items.stream()
+                .map(item -> {
+                    if (item.getAmount() != null) {
+                        return item.getAmount();
+                    }
+                    BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal price = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
+                    return qty.multiply(price);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        order.setTotalAmount(totalAmount);
+        order.setStatus("DRAFT");
+        orderMapper.insert(order);
+
+        for (SalesOrderItem item : items) {
+            item.setOrderId(order.getId());
+            orderItemMapper.insert(item);
+        }
+
+        log.info("创建销售订单: orderId={}, orderNo={}, totalAmount={}", order.getId(), order.getOrderNo(), totalAmount);
+        return order;
+    }
+
+    /**
+     * 提交：DRAFT → SUBMITTED
+     */
+    @Transactional
+    public void submit(Long id) {
+        SalesOrder order = getOrder(id);
+        if (!"DRAFT".equals(order.getStatus())) {
+            throw new BusinessException("只有草稿状态的订单才能提交");
+        }
+        order.setStatus("SUBMITTED");
+        orderMapper.updateById(order);
+        log.info("提交销售订单: orderId={}", id);
+    }
+
+    /**
+     * 审核：SUBMITTED → APPROVED
+     */
+    @Transactional
+    public void approve(Long id) {
+        SalesOrder order = getOrder(id);
+        if (!"SUBMITTED".equals(order.getStatus())) {
+            throw new BusinessException("只有已提交状态的订单才能审核");
+        }
+        order.setStatus("APPROVED");
+        orderMapper.updateById(order);
+        log.info("审核销售订单: orderId={}", id);
+    }
+
+    /**
+     * 驳回：SUBMITTED → DRAFT
+     */
+    @Transactional
+    public void reject(Long id) {
+        SalesOrder order = getOrder(id);
+        if (!"SUBMITTED".equals(order.getStatus())) {
+            throw new BusinessException("只有已提交状态的订单才能驳回");
+        }
+        order.setStatus("DRAFT");
+        orderMapper.updateById(order);
+        log.info("驳回销售订单: orderId={}", id);
+    }
+
+    /**
+     * 关闭：APPROVED → CLOSED
+     */
+    @Transactional
+    public void close(Long id) {
+        SalesOrder order = getOrder(id);
+        if (!"APPROVED".equals(order.getStatus())) {
+            throw new BusinessException("只有已审核状态的订单才能关闭");
+        }
+        order.setStatus("CLOSED");
+        orderMapper.updateById(order);
+        log.info("关闭销售订单: orderId={}", id);
+    }
+
+    /**
+     * 查询可发货明细（已审核订单中 shippedQty < quantity 的明细）
+     */
+    public List<SalesOrderItem> getDeliverableItems(Long orderId) {
+        SalesOrder order = getOrder(orderId);
+        if (!"APPROVED".equals(order.getStatus())) {
+            throw new BusinessException("只有已审核状态的订单才能查询可发货明细");
+        }
+        return orderItemMapper.selectList(
+                new LambdaQueryWrapper<SalesOrderItem>()
+                        .eq(SalesOrderItem::getOrderId, orderId)
+                        .apply("shipped_qty < quantity")
+        );
+    }
+
+    private SalesOrder getOrder(Long id) {
+        SalesOrder order = orderMapper.selectById(id);
+        if (order == null) {
+            throw new BusinessException("销售订单不存在: " + id);
+        }
+        return order;
+    }
+}
