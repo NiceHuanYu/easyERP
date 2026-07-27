@@ -45,8 +45,8 @@
         <el-table-column prop="version" label="版本号" width="100" />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'active' ? '启用' : '禁用' }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -72,8 +72,6 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         class="table-pagination"
-        @current-change="fetchData"
-        @size-change="fetchData"
       />
     </el-card>
 
@@ -114,8 +112,8 @@
         </el-row>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status" :disabled="isView">
-            <el-radio value="active">启用</el-radio>
-            <el-radio value="inactive">禁用</el-radio>
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -236,7 +234,7 @@ interface Bom {
   productMaterialCode: string
   productMaterialName: string
   version: string
-  status: string
+  status: number
   details: BomDetail[]
 }
 
@@ -258,7 +256,7 @@ const searchForm = reactive({
 const form = reactive({
   productMaterialId: null as number | null,
   version: '',
-  status: 'active',
+  status: 1 as number,
   details: [] as BomDetail[],
 })
 
@@ -471,12 +469,13 @@ function handleDialogClosed() {
 function resetForm() {
   form.productMaterialId = null
   form.version = ''
-  form.status = 'active'
+  form.status = 1
   form.details = []
 }
 
 // --------------- 初始化 ---------------
 fetchAllMaterials()
+watch([() => pagination.page, () => pagination.pageSize], () => { fetchData() })
 fetchData()
 </script>
 

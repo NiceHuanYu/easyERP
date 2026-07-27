@@ -121,7 +121,7 @@
 
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { formatDate } from '~/utils'
+import { formatDate, generateCode } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
@@ -166,6 +166,7 @@ interface FinishingLine {
 }
 
 interface FinishingForm {
+  finishingNo: string
   orderId: number | null
   warehouseId: number | null
   finishingDate: string
@@ -174,6 +175,7 @@ interface FinishingForm {
 
 // ==================== 表单 ====================
 const form = reactive<FinishingForm>({
+  finishingNo: '',
   orderId: null,
   warehouseId: null,
   finishingDate: formatDate(new Date(), 'YYYY-MM-DD'),
@@ -280,6 +282,9 @@ function prefillFromOrder(orderId: string) {
 // ==================== 初始化 ====================
 onMounted(() => {
   loadOptions()
+  if (!route.query.id) {
+    form.finishingNo = generateCode('finish')
+  }
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }

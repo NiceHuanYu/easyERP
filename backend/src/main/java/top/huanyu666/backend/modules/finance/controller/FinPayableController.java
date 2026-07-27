@@ -28,7 +28,7 @@ public class FinPayableController {
 
     private final FinPayableMapper payableMapper;
 
-    @SaCheckPermission("finance:payable:list")
+    @SaCheckPermission("finance:order:view")
     @GetMapping
     public ApiResponse<PageResult<FinPayable>> list(PageParam param,
                                                      @RequestParam(required = false) Long supplierId,
@@ -48,7 +48,7 @@ public class FinPayableController {
 
     // ==================== 核销 ====================
 
-    @SaCheckPermission("finance:payable:list")
+    @SaCheckPermission("finance:order:view")
     @PostMapping("/{no}/reconcile")
     @Transactional
     public ApiResponse<Void> reconcile(@PathVariable String no, @RequestBody Map<String, Object> body) {

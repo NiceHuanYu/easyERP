@@ -39,7 +39,7 @@ public class FinPaymentController {
     private final FinReceivableMapper receivableMapper;
     private final FinPayableMapper payableMapper;
 
-    @SaCheckPermission("finance:payment:list")
+    @SaCheckPermission("finance:order:view")
     @GetMapping
     public ApiResponse<PageResult<FinPayment>> list(PageParam param) {
         LambdaQueryWrapper<FinPayment> qw = new LambdaQueryWrapper<>();
@@ -49,14 +49,14 @@ public class FinPaymentController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("finance:payment:list")
+    @SaCheckPermission("finance:order:view")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody FinPayment payment) {
         paymentMapper.insert(payment);
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("finance:payment:list")
+    @SaCheckPermission("finance:order:view")
     @GetMapping("/{id}")
     public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
         FinPayment payment = paymentMapper.selectById(id);
@@ -71,7 +71,7 @@ public class FinPaymentController {
         return ApiResponse.ok(result);
     }
 
-    @SaCheckPermission("finance:payment:confirm")
+    @SaCheckPermission("finance:order:approve")
     @PostMapping("/{id}/confirm")
     @Transactional
     public ApiResponse<Void> confirm(@PathVariable Long id) {
@@ -123,7 +123,7 @@ public class FinPaymentController {
 
     // ==================== 编辑/删除 ====================
 
-    @SaCheckPermission("finance:payment:list")
+    @SaCheckPermission("finance:order:view")
     @PutMapping("/{id}")
     @Transactional
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody FinPayment payment) {
@@ -135,7 +135,7 @@ public class FinPaymentController {
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("finance:payment:list")
+    @SaCheckPermission("finance:order:view")
     @DeleteMapping("/{id}")
     @Transactional
     public ApiResponse<Void> delete(@PathVariable Long id) {

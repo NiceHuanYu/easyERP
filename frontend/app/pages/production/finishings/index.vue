@@ -130,8 +130,6 @@
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
-          @size-change="handleSearch"
-          @current-change="handleSearch"
         />
       </div>
     </el-card>
@@ -225,6 +223,10 @@ function handleReset() {
   searchForm.dateRange = null
   handleSearch()
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 // ==================== 行操作 ====================
 async function handleConfirm(row: Finishing) {

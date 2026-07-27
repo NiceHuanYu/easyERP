@@ -35,7 +35,7 @@ public class PurOrderController {
 
     // ==================== 基础 CRUD ====================
 
-    @SaCheckPermission("purchase:order:list")
+    @SaCheckPermission("purchase:order:view")
     @GetMapping
     public ApiResponse<PageResult<PurOrder>> list(PageParam param,
                                                    @RequestParam(required = false) Long supplierId,
@@ -53,7 +53,7 @@ public class PurOrderController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("purchase:order:list")
+    @SaCheckPermission("purchase:order:view")
     @GetMapping("/{id}")
     public ApiResponse<PurOrder> detail(@PathVariable Long id) {
         PurOrder order = orderMapper.selectById(id);

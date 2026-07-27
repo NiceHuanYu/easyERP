@@ -42,20 +42,24 @@ public class SalesOrderController {
     /**
      * 分页列表
      */
-    @SaCheckPermission("sales:order:list")
+    @SaCheckPermission("sales:order:view")
     @GetMapping
-    public ApiResponse<PageResult<SalesOrder>> list(PageParam param) {
+    public ApiResponse<PageResult<SalesOrder>> list(PageParam param,
+                                                     @RequestParam(required = false) String status) {
+        LambdaQueryWrapper<SalesOrder> qw = new LambdaQueryWrapper<>();
+        if (status != null && !status.isBlank()) {
+            qw.eq(SalesOrder::getStatus, status);
+        }
+        qw.orderByDesc(SalesOrder::getCreateTime);
         Page<SalesOrder> page = orderMapper.selectPage(
-                new Page<>(param.getPage(), param.getSize()),
-                new LambdaQueryWrapper<SalesOrder>().orderByDesc(SalesOrder::getCreateTime)
-        );
+                new Page<>(param.getPage(), param.getSize()), qw);
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
     /**
      * 详情（含明细）
      */
-    @SaCheckPermission("sales:order:list")
+    @SaCheckPermission("sales:order:view")
     @GetMapping("/{id}")
     public ApiResponse<SalesOrder> getById(@PathVariable Long id) {
         SalesOrder order = orderMapper.selectById(id);
@@ -74,7 +78,7 @@ public class SalesOrderController {
     /**
      * 详情（含明细），返回 Map 包装
      */
-    @SaCheckPermission("sales:order:list")
+    @SaCheckPermission("sales:order:view")
     @GetMapping("/{id}/detail")
     public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
         SalesOrder order = orderMapper.selectById(id);
@@ -115,7 +119,7 @@ public class SalesOrderController {
     /**
      * 修改（校验 DRAFT 状态）
      */
-    @SaCheckPermission("sales:order:update")
+    @SaCheckPermission("sales:order:edit")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SalesOrder order) {
         SalesOrder existing = orderMapper.selectById(id);
@@ -173,7 +177,7 @@ public class SalesOrderController {
     /**
      * 可发货明细
      */
-    @SaCheckPermission("sales:order:list")
+    @SaCheckPermission("sales:order:view")
     @GetMapping("/{id}/deliverable-items")
     public ApiResponse<List<SalesOrderItem>> deliverableItems(@PathVariable Long id) {
         return ApiResponse.ok(orderService.getDeliverableItems(id));
@@ -182,7 +186,7 @@ public class SalesOrderController {
     /**
      * 下推发货单
      */
-    @SaCheckPermission("sales:delivery:create")
+    @SaCheckPermission("delivery:order:create")
     @PostMapping("/{id}/create-delivery")
     public ApiResponse<Map<String, Object>> createDelivery(@PathVariable Long id, @RequestBody SalesDelivery delivery) {
         List<SalesOrderItem> deliverableItems = orderService.getDeliverableItems(id);

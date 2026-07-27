@@ -24,6 +24,12 @@ function checkPermission(
   const authStore = useAuthStore()
   const permissions: string[] = authStore.permissions ?? []
 
+  // If no permission data yet (e.g. still loading), don't remove the element
+  if (permissions.length === 0) return
+
+  // Super admin has all permissions
+  if (permissions.includes('*')) return
+
   const hasPermission = required.some((perm) => permissions.includes(perm))
   if (!hasPermission) {
     el.parentNode?.removeChild(el)

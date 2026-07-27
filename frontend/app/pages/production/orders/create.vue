@@ -174,7 +174,7 @@
 
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { formatDate } from '~/utils'
+import { formatDate, generateCode } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
@@ -241,6 +241,7 @@ async function recalcBom() {
 
 // ==================== 表单数据 ====================
 interface OrderForm {
+  orderNo: string
   salesOrderId: number | null
   materialId: number | null
   planQuantity: number
@@ -251,6 +252,7 @@ interface OrderForm {
 }
 
 const form = reactive<OrderForm>({
+  orderNo: '',
   salesOrderId: null,
   materialId: null,
   planQuantity: 100,
@@ -341,6 +343,9 @@ function prefillFromSalesOrder(orderId: string) {
 // ==================== 初始化 ====================
 onMounted(() => {
   loadOptions()
+  if (!route.query.id) {
+    form.orderNo = generateCode('production')
+  }
   if (route.query.id) {
     loadOrder(route.query.id as string)
   }

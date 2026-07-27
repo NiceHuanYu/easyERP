@@ -64,6 +64,7 @@
         <el-button
           type="primary"
           :icon="Plus"
+          v-permission="'purchase:requisition:create'"
           @click="navigateTo('/purchase/requisitions/create')"
         >
           新增申请
@@ -100,6 +101,7 @@
                 type="primary"
                 size="small"
                 link
+                v-permission="'purchase:requisition:create'"
                 @click="handleEdit(row)"
               >
                 编辑
@@ -111,7 +113,12 @@
                 @confirm="handleDelete(row)"
               >
                 <template #reference>
-                  <el-button type="danger" size="small" link>删除</el-button>
+                  <el-button
+                    type="danger"
+                    size="small"
+                    link
+                    v-permission="'purchase:requisition:create'"
+                  >删除</el-button>
                 </template>
               </el-popconfirm>
               <el-popconfirm
@@ -121,7 +128,12 @@
                 @confirm="handleSubmit(row)"
               >
                 <template #reference>
-                  <el-button type="warning" size="small" link>提交</el-button>
+                  <el-button
+                    type="warning"
+                    size="small"
+                    link
+                    v-permission="'purchase:requisition:create'"
+                  >提交</el-button>
                 </template>
               </el-popconfirm>
             </template>
@@ -137,7 +149,12 @@
                 @confirm="handleApprove(row)"
               >
                 <template #reference>
-                  <el-button type="success" size="small" link>审核</el-button>
+                  <el-button
+                    type="success"
+                    size="small"
+                    link
+                    v-permission="'purchase:requisition:create'"
+                  >审核</el-button>
                 </template>
               </el-popconfirm>
             </template>
@@ -150,6 +167,7 @@
                 type="success"
                 size="small"
                 link
+                v-permission="'purchase:requisition:create'"
                 @click="handleCreateOrder(row)"
               >
                 生成采购订单
@@ -168,8 +186,6 @@
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
-          @size-change="handleSearch"
-          @current-change="handleSearch"
         />
       </div>
     </el-card>
@@ -291,6 +307,10 @@ function handleReset() {
   searchForm.dateRange = null
   handleSearch()
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 // ==================== 行操作 ====================
 function handleView(row: Requisition) {

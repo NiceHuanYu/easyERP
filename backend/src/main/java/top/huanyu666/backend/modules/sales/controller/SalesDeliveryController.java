@@ -45,7 +45,7 @@ public class SalesDeliveryController {
     /**
      * 分页列表
      */
-    @SaCheckPermission("sales:delivery:list")
+    @SaCheckPermission("delivery:order:view")
     @GetMapping
     public ApiResponse<PageResult<SalesDelivery>> list(PageParam param) {
         Page<SalesDelivery> page = deliveryMapper.selectPage(
@@ -58,7 +58,7 @@ public class SalesDeliveryController {
     /**
      * 创建发货单
      */
-    @SaCheckPermission("sales:delivery:create")
+    @SaCheckPermission("delivery:order:create")
     @PostMapping
     public ApiResponse<SalesDelivery> create(@RequestBody SalesDelivery delivery) {
         delivery.setStatus("DRAFT");
@@ -69,7 +69,7 @@ public class SalesDeliveryController {
     /**
      * 修改发货单
      */
-    @SaCheckPermission("sales:delivery:create")
+    @SaCheckPermission("delivery:order:create")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SalesDelivery delivery) {
         SalesDelivery existing = deliveryMapper.selectById(id);
@@ -87,7 +87,7 @@ public class SalesDeliveryController {
     /**
      * 确认发货
      */
-    @SaCheckPermission("sales:delivery:confirm")
+    @SaCheckPermission("delivery:order:approve")
     @PostMapping("/{id}/confirm")
     @Transactional
     public ApiResponse<Void> confirm(@PathVariable Long id) {

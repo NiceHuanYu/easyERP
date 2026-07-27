@@ -22,7 +22,7 @@ public class EmployeeController {
 
     private final EmployeeMapper employeeMapper;
 
-    @SaCheckPermission("base:employee:list")
+    @SaCheckPermission("base-data:employee:view")
     @GetMapping
     public ApiResponse<PageResult<Employee>> list(PageParam param,
                                                    @RequestParam(required = false) String keyword) {
@@ -38,20 +38,20 @@ public class EmployeeController {
                 page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("base:employee:list")
+    @SaCheckPermission("base-data:employee:view")
     @GetMapping("/{id}")
     public ApiResponse<Employee> getById(@PathVariable Long id) {
         return ApiResponse.ok(employeeMapper.selectById(id));
     }
 
-    @SaCheckPermission("base:employee:create")
+    @SaCheckPermission("base-data:employee:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Employee employee) {
         employeeMapper.insert(employee);
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:employee:update")
+    @SaCheckPermission("base-data:employee:edit")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Employee employee) {
         employee.setId(id);
@@ -59,7 +59,7 @@ public class EmployeeController {
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:employee:delete")
+    @SaCheckPermission("base-data:employee:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         employeeMapper.deleteById(id);

@@ -11,8 +11,8 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="启用" value="active" />
-            <el-option label="禁用" value="inactive" />
+            <el-option label="启用" :value="1" />
+            <el-option label="禁用" :value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -37,8 +37,8 @@
         <el-table-column prop="address" label="地址" min-width="180" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'active' ? '启用' : '禁用' }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -61,8 +61,6 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         class="table-pagination"
-        @current-change="fetchData"
-        @size-change="fetchData"
       />
     </el-card>
 
@@ -98,8 +96,8 @@
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
-            <el-radio value="active">启用</el-radio>
-            <el-radio value="inactive">禁用</el-radio>
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -132,7 +130,7 @@ interface Supplier {
   email: string
   address: string
   remark: string
-  status: string
+  status: number
 }
 
 // --------------- 状态 ---------------
@@ -157,7 +155,7 @@ const form = reactive({
   email: '',
   address: '',
   remark: '',
-  status: 'active',
+  status: 1 as number,
 })
 
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
@@ -272,17 +270,18 @@ function handleDialogClosed() {
 }
 
 function resetForm() {
-  form.code = ''
+  form.code = generateCode('supplier')
   form.name = ''
   form.contact = ''
   form.phone = ''
   form.email = ''
   form.address = ''
   form.remark = ''
-  form.status = 'active'
+  form.status = 1
 }
 
 // --------------- 初始化 ---------------
+watch([() => pagination.page, () => pagination.pageSize], () => { fetchData() })
 fetchData()
 </script>
 

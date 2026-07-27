@@ -90,8 +90,6 @@
         layout="total, sizes, prev, pager, next, jumper"
         background
         class="pagination"
-        @size-change="handleSearch"
-        @current-change="handleSearch"
       />
     </el-card>
 
@@ -183,7 +181,7 @@
 <script setup lang="ts">
 import { Search, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { api } from '../../../composables/useApi'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -369,6 +367,10 @@ function handleReset() {
   searchForm.dateRange = null
   pagination.page = 1
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 // ── Init ───────────────────────────────────────────
 onMounted(() => {

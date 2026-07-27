@@ -4,6 +4,11 @@ spring:
   profiles:
     active: dev
 
+# 应用配置
+app:
+  init:
+    create-admin: true   # 首次启动是否自动创建管理员账号 (admin/admin123)
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/EasyERP?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true

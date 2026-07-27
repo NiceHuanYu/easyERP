@@ -20,7 +20,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 生产工单管理
@@ -41,7 +43,7 @@ public class ProdOrderController {
 
     // ==================== 基础 CRUD ====================
 
-    @SaCheckPermission("production:order:list")
+    @SaCheckPermission("production:order:view")
     @GetMapping
     public ApiResponse<PageResult<ProdOrder>> list(PageParam param,
                                                    @RequestParam(required = false) Long materialId,
@@ -59,14 +61,33 @@ public class ProdOrderController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("production:order:list")
+    @SaCheckPermission("production:order:view")
     @GetMapping("/{id}")
-    public ApiResponse<ProdOrder> detail(@PathVariable Long id) {
+    public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
         ProdOrder order = orderMapper.selectById(id);
         if (order == null) {
             throw new BusinessException("工单不存在");
         }
-        return ApiResponse.ok(order);
+
+        List<ProdPicking> pickings = pickingMapper.selectList(
+                new LambdaQueryWrapper<ProdPicking>().eq(ProdPicking::getOrderId, id));
+        List<ProdFinish> finishings = finishMapper.selectList(
+                new LambdaQueryWrapper<ProdFinish>().eq(ProdFinish::getOrderId, id));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("order", order);
+        result.put("pickings", pickings);
+        result.put("finishings", finishings);
+        return ApiResponse.ok(result);
+    }
+
+    /**
+     * 工单物料需求（别名）
+     */
+    @SaCheckPermission("production:order:view")
+    @GetMapping("/{id}/materials")
+    public ApiResponse<List<ProdOrderBom>> materials(@PathVariable Long id) {
+        return materialRequirements(id);
     }
 
     @SaCheckPermission("production:order:create")
@@ -132,7 +153,7 @@ public class ProdOrderController {
     /**
      * 查询工单物料需求
      */
-    @SaCheckPermission("production:order:list")
+    @SaCheckPermission("production:order:view")
     @GetMapping("/material-requirements/{id}")
     public ApiResponse<List<ProdOrderBom>> materialRequirements(@PathVariable Long id) {
         ProdOrder order = orderMapper.selectById(id);

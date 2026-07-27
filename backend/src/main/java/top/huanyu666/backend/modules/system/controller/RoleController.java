@@ -22,7 +22,7 @@ public class RoleController {
     private final SysRoleMapper roleMapper;
 
     @GetMapping
-    @SaCheckPermission("system:role:list")
+    @SaCheckPermission("system:role:view")
     public ApiResponse<List<SysRole>> list() {
         return ApiResponse.ok(roleMapper.selectList(
                 new LambdaQueryWrapper<SysRole>().orderByDesc(SysRole::getCreateTime)
@@ -37,7 +37,7 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
-    @SaCheckPermission("system:role:update")
+    @SaCheckPermission("system:role:edit")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SysRole role) {
         role.setId(id);
         roleMapper.updateById(role);

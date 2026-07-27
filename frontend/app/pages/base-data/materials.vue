@@ -11,16 +11,16 @@
         </el-form-item>
         <el-form-item label="物料分类">
           <el-select v-model="searchForm.category" placeholder="请选择分类" clearable>
-            <el-option label="原材料" value="raw" />
-            <el-option label="半成品" value="semi" />
-            <el-option label="成品" value="finished" />
-            <el-option label="包材" value="packaging" />
+            <el-option label="原材料" :value="1" />
+            <el-option label="半成品" :value="2" />
+            <el-option label="成品" :value="3" />
+            <el-option label="包材" :value="4" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="启用" value="active" />
-            <el-option label="禁用" value="inactive" />
+            <el-option label="启用" :value="1" />
+            <el-option label="禁用" :value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -50,8 +50,8 @@
         <el-table-column prop="safetyStock" label="安全库存" width="100" align="right" />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'active' ? '启用' : '禁用' }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -74,8 +74,6 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         class="table-pagination"
-        @current-change="fetchData"
-        @size-change="fetchData"
       />
     </el-card>
 
@@ -102,10 +100,10 @@
         </el-form-item>
         <el-form-item label="分类" prop="category">
           <el-select v-model="form.category" placeholder="请选择分类" style="width: 100%">
-            <el-option label="原材料" value="raw" />
-            <el-option label="半成品" value="semi" />
-            <el-option label="成品" value="finished" />
-            <el-option label="包材" value="packaging" />
+            <el-option label="原材料" :value="1" />
+            <el-option label="半成品" :value="2" />
+            <el-option label="成品" :value="3" />
+            <el-option label="包材" :value="4" />
           </el-select>
         </el-form-item>
         <el-form-item label="安全库存" prop="safetyStock">
@@ -116,8 +114,8 @@
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
-            <el-radio value="active">启用</el-radio>
-            <el-radio value="inactive">禁用</el-radio>
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -139,11 +137,11 @@ definePageMeta({ middleware: 'auth' })
 
 // --------------- 常量 ---------------
 const API_PATH = '/base/materials'
-const categoryMap: Record<string, string> = {
-  raw: '原材料',
-  semi: '半成品',
-  finished: '成品',
-  packaging: '包材',
+const categoryMap: Record<number, string> = {
+  1: '原材料',
+  2: '半成品',
+  3: '成品',
+  4: '包材',
 }
 
 // --------------- 类型 ---------------
@@ -153,10 +151,10 @@ interface Material {
   name: string
   spec: string
   unit: string
-  category: string
+  category: number
   safetyStock: number
   remark: string
-  status: string
+  status: number
 }
 
 // --------------- 状态 ---------------
@@ -170,7 +168,7 @@ const formRef = ref<FormInstance>()
 const searchForm = reactive({
   code: '',
   name: '',
-  category: '',
+  category: undefined as number | undefined,
   status: '',
 })
 
@@ -179,10 +177,10 @@ const form = reactive({
   name: '',
   spec: '',
   unit: '',
-  category: 'raw' as string,
+  category: 1 as number,
   safetyStock: 0,
   remark: '',
-  status: 'active',
+  status: 1 as number,
 })
 
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
@@ -228,7 +226,7 @@ function handleSearch() {
 function handleReset() {
   searchForm.code = ''
   searchForm.name = ''
-  searchForm.category = ''
+  searchForm.category = undefined
   searchForm.status = ''
   pagination.page = 1
   fetchData()
@@ -301,17 +299,18 @@ function handleDialogClosed() {
 }
 
 function resetForm() {
-  form.code = ''
+  form.code = generateCode('material')
   form.name = ''
   form.spec = ''
   form.unit = ''
-  form.category = 'raw'
+  form.category = 1
   form.safetyStock = 0
   form.remark = ''
-  form.status = 'active'
+  form.status = 1
 }
 
 // --------------- 初始化 ---------------
+watch([() => pagination.page, () => pagination.pageSize], () => { fetchData() })
 fetchData()
 </script>
 

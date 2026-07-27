@@ -22,7 +22,7 @@ public class CustomerController {
 
     private final CustomerMapper customerMapper;
 
-    @SaCheckPermission("base:customer:list")
+    @SaCheckPermission("base-data:customer:view")
     @GetMapping
     public ApiResponse<PageResult<Customer>> list(PageParam param,
                                                    @RequestParam(required = false) String keyword) {
@@ -38,20 +38,20 @@ public class CustomerController {
                 page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("base:customer:list")
+    @SaCheckPermission("base-data:customer:view")
     @GetMapping("/{id}")
     public ApiResponse<Customer> getById(@PathVariable Long id) {
         return ApiResponse.ok(customerMapper.selectById(id));
     }
 
-    @SaCheckPermission("base:customer:create")
+    @SaCheckPermission("base-data:customer:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Customer customer) {
         customerMapper.insert(customer);
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:customer:update")
+    @SaCheckPermission("base-data:customer:edit")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Customer customer) {
         customer.setId(id);
@@ -59,7 +59,7 @@ public class CustomerController {
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:customer:delete")
+    @SaCheckPermission("base-data:customer:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         customerMapper.deleteById(id);

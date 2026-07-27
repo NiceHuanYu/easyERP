@@ -59,6 +59,7 @@
     <el-card class="table-card" shadow="never">
       <div class="action-bar">
         <el-button
+          v-permission="'delivery:order:create'"
           type="primary"
           :icon="Plus"
           @click="router.push('/sales/deliveries/create')"
@@ -94,6 +95,7 @@
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button
+              v-permission="'delivery:order:create'"
               type="primary"
               size="small"
               link
@@ -109,7 +111,7 @@
                 @confirm="handleConfirm(row)"
               >
                 <template #reference>
-                  <el-button type="success" size="small" link>确认发货</el-button>
+                  <el-button v-permission="'delivery:order:approve'" type="success" size="small" link>确认发货</el-button>
                 </template>
               </el-popconfirm>
               <el-popconfirm
@@ -117,7 +119,7 @@
                 @confirm="handleDelete(row)"
               >
                 <template #reference>
-                  <el-button type="danger" size="small" link>删除</el-button>
+                  <el-button v-permission="'delivery:order:create'" type="danger" size="small" link>删除</el-button>
                 </template>
               </el-popconfirm>
             </template>
@@ -133,8 +135,6 @@
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
-          @size-change="handleSearch"
-          @current-change="handleSearch"
         />
       </div>
     </el-card>
@@ -237,6 +237,10 @@ function handleReset() {
   searchForm.dateRange = null
   handleSearch()
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 async function handleConfirm(row: Delivery) {
   try {

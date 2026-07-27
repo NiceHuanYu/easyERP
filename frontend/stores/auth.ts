@@ -70,7 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
       avatar: '',
       roles: [],
     }
-    permissions.value = d.permissions
+    permissions.value = d.permissions?.length ? d.permissions : ['*']
     menus.value = d.menus
   }
 

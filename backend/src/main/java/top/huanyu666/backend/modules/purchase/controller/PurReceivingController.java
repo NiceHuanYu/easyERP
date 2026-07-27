@@ -43,7 +43,7 @@ public class PurReceivingController {
 
     // ==================== 基础 CRUD ====================
 
-    @SaCheckPermission("purchase:receiving:list")
+    @SaCheckPermission("purchase:order:view")
     @GetMapping
     public ApiResponse<PageResult<PurReceiving>> list(PageParam param,
                                                        @RequestParam(required = false) Long orderId,
@@ -89,7 +89,7 @@ public class PurReceivingController {
     /**
      * 确认收货：DRAFT → CONFIRMED，增加库存，记录流水，创建应付
      */
-    @SaCheckPermission("purchase:receiving:confirm")
+    @SaCheckPermission("purchase:order:approve")
     @PostMapping("/confirm/{id}")
     @Transactional
     public ApiResponse<String> confirm(@PathVariable Long id) {

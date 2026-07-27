@@ -65,6 +65,7 @@
         <el-button
           type="primary"
           :icon="Plus"
+          v-permission="'purchase:order:create'"
           @click="navigateTo('/purchase/orders/create')"
         >
           新增采购订单
@@ -100,6 +101,7 @@
                 type="primary"
                 size="small"
                 link
+                v-permission="'purchase:order:create'"
                 @click="handleEdit(row)"
               >
                 编辑
@@ -111,7 +113,12 @@
                 @confirm="handleDelete(row)"
               >
                 <template #reference>
-                  <el-button type="danger" size="small" link>删除</el-button>
+                  <el-button
+                    type="danger"
+                    size="small"
+                    link
+                    v-permission="'purchase:order:create'"
+                  >删除</el-button>
                 </template>
               </el-popconfirm>
               <el-popconfirm
@@ -121,7 +128,12 @@
                 @confirm="handleIssue(row)"
               >
                 <template #reference>
-                  <el-button type="warning" size="small" link>下达</el-button>
+                  <el-button
+                    type="warning"
+                    size="small"
+                    link
+                    v-permission="'purchase:order:create'"
+                  >下达</el-button>
                 </template>
               </el-popconfirm>
             </template>
@@ -134,6 +146,7 @@
                 type="success"
                 size="small"
                 link
+                v-permission="'purchase:order:create'"
                 @click="handleCreateReceiving(row)"
               >
                 生成收货单
@@ -148,6 +161,7 @@
                 type="success"
                 size="small"
                 link
+                v-permission="'purchase:order:create'"
                 @click="handleCreateReceiving(row)"
               >
                 生成收货单
@@ -172,8 +186,6 @@
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
-          @size-change="handleSearch"
-          @current-change="handleSearch"
         />
       </div>
     </el-card>
@@ -297,6 +309,10 @@ function handleReset() {
   searchForm.dateRange = null
   handleSearch()
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 // ==================== 行操作 ====================
 function handleView(row: PurchaseOrder) {

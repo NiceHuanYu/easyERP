@@ -40,8 +40,8 @@
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px">
-              <el-option label="启用" value="active" />
-              <el-option label="禁用" value="inactive" />
+              <el-option label="启用" :value="1" />
+              <el-option label="禁用" :value="0" />
             </el-select>
           </el-form-item>
           <el-form-item>
@@ -70,8 +70,8 @@
           <el-table-column prop="sort" label="排序" width="80" align="center" />
           <el-table-column label="状态" width="80">
             <template #default="{ row }">
-              <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
-                {{ row.status === 'active' ? '启用' : '禁用' }}
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+                {{ row.status === 1 ? '启用' : '禁用' }}
               </el-tag>
             </template>
           </el-table-column>
@@ -95,8 +95,6 @@
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
           class="table-pagination"
-          @current-change="applyItemFilters"
-          @size-change="applyItemFilters"
         />
       </el-card>
     </div>
@@ -159,10 +157,10 @@
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-switch
-            :model-value="itemForm.status === 'active'"
-            active-value="active"
-            inactive-value="inactive"
-            @change="(val: boolean) => { itemForm.status = val ? 'active' : 'inactive' }"
+            :model-value="itemForm.status === 1"
+            :active-value="1"
+            :inactive-value="0"
+            @change="(val: boolean) => { itemForm.status = val ? 1 : 0 }"
           />
         </el-form-item>
         <el-form-item label="备注">
@@ -202,7 +200,7 @@ interface DictItem {
   label: string
   value: string
   sort: number
-  status: string
+  status: number
   remark: string
 }
 
@@ -264,7 +262,7 @@ const itemForm = reactive({
   label: '',
   value: '',
   sort: 0,
-  status: 'active',
+  status: 1,
   remark: '',
 })
 
@@ -517,11 +515,12 @@ function resetItemForm() {
   itemForm.label = ''
   itemForm.value = ''
   itemForm.sort = 0
-  itemForm.status = 'active'
+  itemForm.status = 1
   itemForm.remark = ''
 }
 
 // --------------- 初始化 ---------------
+watch([() => itemPagination.page, () => itemPagination.pageSize], () => { applyItemFilters() })
 async function fetchAllTypes() {
   try {
     const types = await api.get<DictType[]>('/system/dicts/all')

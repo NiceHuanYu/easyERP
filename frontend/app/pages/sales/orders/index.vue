@@ -117,7 +117,7 @@
           <template #default="{ row }">
             <template v-if="row.status === 'draft'">
               <el-button
-                v-permission="'sales:order:edit'"
+                v-permission="'sales:order:update'"
                 type="primary"
                 size="small"
                 link
@@ -245,8 +245,6 @@
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
-          @size-change="handleSearch"
-          @current-change="handleSearch"
         />
       </div>
     </el-card>
@@ -376,6 +374,10 @@ function handleReset() {
   searchForm.dateRange = null
   handleSearch()
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 // ==================== 行操作 ====================
 const router = useRouter()

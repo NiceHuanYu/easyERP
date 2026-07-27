@@ -39,7 +39,7 @@ public class ProdPickingController {
 
     // ==================== 基础 CRUD ====================
 
-    @SaCheckPermission("production:picking:list")
+    @SaCheckPermission("production:order:view")
     @GetMapping
     public ApiResponse<PageResult<ProdPicking>> list(PageParam param,
                                                       @RequestParam(required = false) Long orderId,

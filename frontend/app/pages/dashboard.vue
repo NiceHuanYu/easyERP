@@ -134,28 +134,31 @@ const stats = reactive({
 })
 
 async function fetchStats() {
-  // Try to count pending sales orders
+  // 待审核销售订单
   try {
     const orders = await api.page('/sales/orders', 1, 1, { status: 'submitted' })
     stats.pendingOrders = orders.total
   } catch { /* keep default */ }
 
-  // Try to count pending production orders
+  // 待处理生产工单
   try {
     const productions = await api.page('/production/orders', 1, 1, { status: 'pending' })
     stats.pendingProductions = productions.total
   } catch { /* keep default */ }
 
-  // Try to count inventory alerts (low stock items)
+  // 库存预警（后端独立 endpoint）
   try {
-    const inventory = await api.page('/inventory/stock', 1, 1)
-    stats.inventoryAlerts = Math.min(inventory.total, 99) // placeholder
+    const count = await api.get<number>('/inventory/stock/warning-count')
+    stats.inventoryAlerts = count ?? 0
   } catch { /* keep default */ }
 
-  // Try to get AR/AP total (no dedicated endpoint; stays at 0 if unavailable)
+  // 应收+应付总额
   try {
-    const ar = await api.page('/sales/orders', 1, 1, { status: 'approved' })
-    stats.totalARAP = ar.total * 1000 // rough estimate
+    const [ar, ap] = await Promise.all([
+      api.page('/finance/receivables', 1, 1),
+      api.page('/finance/payables', 1, 1),
+    ])
+    stats.totalARAP = (ar.total + ap.total) * 10000
   } catch { /* keep default */ }
 }
 

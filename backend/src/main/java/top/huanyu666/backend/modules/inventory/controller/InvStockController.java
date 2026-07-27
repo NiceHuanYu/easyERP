@@ -8,8 +8,12 @@ import org.springframework.web.bind.annotation.*;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 import top.huanyu666.backend.modules.inventory.entity.InvStock;
 import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
+
+import java.util.List;
 
 /**
  * 库存管理
@@ -21,6 +25,20 @@ import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
 public class InvStockController {
 
     private final InvStockMapper stockMapper;
+    private final MaterialMapper materialMapper;
+
+    @GetMapping("/warning-count")
+    public ApiResponse<Long> warningCount() {
+        // 统计库存数量低于安全库存的物料数
+        List<InvStock> stocks = stockMapper.selectList(null);
+        long count = stocks.stream().filter(stock -> {
+            if (stock.getQuantity() == null) return false;
+            Material material = materialMapper.selectById(stock.getMaterialId());
+            if (material == null || material.getSafetyStock() == null) return false;
+            return stock.getQuantity().compareTo(material.getSafetyStock()) <= 0;
+        }).count();
+        return ApiResponse.ok(count);
+    }
 
     @GetMapping
     public ApiResponse<PageResult<InvStock>> list(PageParam param,

@@ -37,7 +37,7 @@
       <template #header>
         <div class="card-header">
           <span>收付款管理</span>
-          <el-button type="primary" :icon="Plus" @click="handleCreate">新增</el-button>
+          <el-button v-permission="'finance:order:view'" type="primary" :icon="Plus" @click="handleCreate">新增</el-button>
         </div>
       </template>
 
@@ -67,9 +67,10 @@
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="handleView(row)">查看</el-button>
+            <el-button v-permission="'finance:order:view'" type="primary" link size="small" @click="handleView(row)">查看</el-button>
             <el-button
               v-if="row.status === '草稿'"
+              v-permission="'finance:order:approve'"
               type="success"
               link
               size="small"
@@ -89,8 +90,6 @@
         layout="total, sizes, prev, pager, next, jumper"
         background
         class="pagination"
-        @size-change="handleSearch"
-        @current-change="handleSearch"
       />
     </el-card>
 
@@ -225,6 +224,10 @@ function handleReset() {
   searchForm.dateRange = null
   pagination.page = 1
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 // ── Init ───────────────────────────────────────────
 onMounted(() => {

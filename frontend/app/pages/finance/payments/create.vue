@@ -179,6 +179,7 @@
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
+import { generateCode } from '~/utils'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -196,6 +197,7 @@ interface OpenItem {
 // ── Form ───────────────────────────────────────────
 const formRef = ref<FormInstance>()
 const form = reactive({
+  paymentNo: '',
   type: '收款' as '收款' | '付款',
   counterparty: '',
   amount: 0,
@@ -302,6 +304,7 @@ function handleCounterpartyChange() {
 
 // ── Init ───────────────────────────────────────────
 onMounted(() => {
+  form.paymentNo = generateCode('payment')
   fetchCustomerOptions()
   fetchSupplierOptions()
 })

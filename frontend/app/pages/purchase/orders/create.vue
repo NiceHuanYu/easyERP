@@ -203,7 +203,7 @@
 
 <script setup lang="ts">
 import { ArrowLeft, Plus, Delete } from '@element-plus/icons-vue'
-import { formatMoney, formatDate } from '~/utils'
+import { formatMoney, formatDate, generateCode } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
@@ -256,6 +256,7 @@ interface OrderLine {
 }
 
 interface OrderForm {
+  orderNo: string
   supplierId: number | null
   requisitionId: number | null
   orderDate: string
@@ -275,6 +276,7 @@ function createEmptyLine(): OrderLine {
 }
 
 const form = reactive<OrderForm>({
+  orderNo: '',
   supplierId: null,
   requisitionId: null,
   orderDate: formatDate(new Date(), 'YYYY-MM-DD'),
@@ -369,6 +371,7 @@ async function onRequisitionChange(val: number | null) {
 async function loadOrder(id: string) {
   try {
     const data = await api.get<any>(`/purchase/orders/${id}`)
+    form.orderNo = data.orderNo ?? ''
     form.supplierId = data.supplierId ?? null
     form.requisitionId = data.requisitionId ?? null
     form.orderDate = data.orderDate ?? formatDate(new Date(), 'YYYY-MM-DD')
@@ -437,6 +440,9 @@ function prefillFromRequisition(reqId: string) {
 onMounted(() => {
   fetchSupplierOptions()
   fetchMaterialOptions()
+  if (!route.query.id) {
+    form.orderNo = generateCode('purchaseOrder')
+  }
   if (route.query.fromRequisition) {
     prefillFromRequisition(route.query.fromRequisition as string)
   }

@@ -121,7 +121,7 @@
 
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { formatDate } from '~/utils'
+import { formatDate, generateCode } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
@@ -166,6 +166,7 @@ interface PickingLine {
 }
 
 interface PickingForm {
+  pickingNo: string
   orderId: number | null
   warehouseId: number | null
   pickingDate: string
@@ -174,6 +175,7 @@ interface PickingForm {
 
 // ==================== 表单 ====================
 const form = reactive<PickingForm>({
+  pickingNo: '',
   orderId: null,
   warehouseId: null,
   pickingDate: formatDate(new Date(), 'YYYY-MM-DD'),
@@ -273,6 +275,9 @@ function prefillFromOrder(orderId: string) {
 // ==================== 初始化 ====================
 onMounted(() => {
   loadOptions()
+  if (!route.query.id) {
+    form.pickingNo = generateCode('picking')
+  }
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }

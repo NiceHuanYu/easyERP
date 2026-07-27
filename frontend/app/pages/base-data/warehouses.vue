@@ -27,16 +27,10 @@
         <el-table-column prop="code" label="仓库编码" width="120" />
         <el-table-column prop="name" label="名称" width="160" />
         <el-table-column prop="address" label="地址" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="manager" label="负责人" width="100" />
-        <el-table-column prop="type" label="类型" width="100">
-          <template #default="{ row }">
-            {{ typeMap[row.type] ?? row.type }}
-          </template>
-        </el-table-column>
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'active' ? '启用' : '禁用' }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -59,8 +53,6 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         class="table-pagination"
-        @current-change="fetchData"
-        @size-change="fetchData"
       />
     </el-card>
 
@@ -82,25 +74,13 @@
         <el-form-item label="地址" prop="address">
           <el-input v-model="form.address" placeholder="请输入地址" />
         </el-form-item>
-        <el-form-item label="负责人" prop="manager">
-          <el-input v-model="form.manager" placeholder="请输入负责人" />
-        </el-form-item>
-        <el-form-item label="类型" prop="type">
-          <el-select v-model="form.type" placeholder="请选择仓库类型" style="width: 100%">
-            <el-option label="原料仓" value="raw" />
-            <el-option label="半成品仓" value="semi" />
-            <el-option label="成品仓" value="finished" />
-            <el-option label="包材仓" value="packaging" />
-            <el-option label="不良品仓" value="defective" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
-            <el-radio value="active">启用</el-radio>
-            <el-radio value="inactive">禁用</el-radio>
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -122,13 +102,6 @@ definePageMeta({ middleware: 'auth' })
 
 // --------------- 常量 ---------------
 const API_PATH = '/base/warehouses'
-const typeMap: Record<string, string> = {
-  raw: '原料仓',
-  semi: '半成品仓',
-  finished: '成品仓',
-  packaging: '包材仓',
-  defective: '不良品仓',
-}
 
 // --------------- 类型 ---------------
 interface Warehouse {
@@ -136,10 +109,8 @@ interface Warehouse {
   code: string
   name: string
   address: string
-  manager: string
-  type: string
   remark: string
-  status: string
+  status: number
 }
 
 // --------------- 状态 ---------------
@@ -159,10 +130,8 @@ const form = reactive({
   code: '',
   name: '',
   address: '',
-  manager: '',
-  type: 'raw' as string,
   remark: '',
-  status: 'active',
+  status: 1 as number,
 })
 
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
@@ -172,8 +141,6 @@ const rules: FormRules = {
   code: [{ required: true, message: '请输入仓库编码', trigger: 'blur' }],
   name: [{ required: true, message: '请输入仓库名称', trigger: 'blur' }],
   address: [{ required: true, message: '请输入地址', trigger: 'blur' }],
-  manager: [{ required: true, message: '请输入负责人', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择类型', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
@@ -222,8 +189,6 @@ function handleEdit(row: Warehouse) {
   form.code = row.code
   form.name = row.name
   form.address = row.address
-  form.manager = row.manager
-  form.type = row.type
   form.remark = row.remark
   form.status = row.status
   dialogVisible.value = true
@@ -275,16 +240,15 @@ function handleDialogClosed() {
 }
 
 function resetForm() {
-  form.code = ''
+  form.code = generateCode('warehouse')
   form.name = ''
   form.address = ''
-  form.manager = ''
-  form.type = 'raw'
   form.remark = ''
-  form.status = 'active'
+  form.status = 1
 }
 
 // --------------- 初始化 ---------------
+watch([() => pagination.page, () => pagination.pageSize], () => { fetchData() })
 fetchData()
 </script>
 

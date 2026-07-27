@@ -38,7 +38,7 @@
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="gender" label="性别" width="70">
           <template #default="{ row }">
-            {{ row.gender === 'male' ? '男' : '女' }}
+            {{ row.gender === 1 ? '男' : '女' }}
           </template>
         </el-table-column>
         <el-table-column prop="department" label="部门" width="100">
@@ -50,8 +50,8 @@
         <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'active' ? '在职' : '离职' }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '在职' : '离职' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -74,8 +74,6 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         class="table-pagination"
-        @current-change="fetchData"
-        @size-change="fetchData"
       />
     </el-card>
 
@@ -104,8 +102,8 @@
           <el-col :span="12">
             <el-form-item label="性别" prop="gender">
               <el-radio-group v-model="form.gender">
-                <el-radio value="male">男</el-radio>
-                <el-radio value="female">女</el-radio>
+                <el-radio :value="1">男</el-radio>
+                <el-radio :value="0">女</el-radio>
               </el-radio-group>
             </el-form-item>
           </el-col>
@@ -157,7 +155,7 @@
             <el-option
               v-for="u in userOptions"
               :key="u.id"
-              :label="`${u.username} (${u.realName})`"
+              :label="`${u.username} (${u.nickname || u.username})`"
               :value="u.id"
             />
           </el-select>
@@ -167,8 +165,8 @@
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
-            <el-radio value="active">在职</el-radio>
-            <el-radio value="inactive">离职</el-radio>
+            <el-radio :value="1">在职</el-radio>
+            <el-radio :value="0">离职</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -204,7 +202,7 @@ interface Employee {
   id: number
   code: string
   name: string
-  gender: string
+  gender: number
   department: string
   position: string
   phone: string
@@ -212,13 +210,13 @@ interface Employee {
   entryDate: string
   userId: number | null
   remark: string
-  status: string
+  status: number
 }
 
 interface UserOption {
   id: number
   username: string
-  realName: string
+  nickname: string
 }
 
 // --------------- 状态 ---------------
@@ -238,7 +236,7 @@ const searchForm = reactive({
 const form = reactive({
   code: '',
   name: '',
-  gender: 'male' as string,
+  gender: 1 as number,
   department: 'tech' as string,
   position: '',
   phone: '',
@@ -246,7 +244,7 @@ const form = reactive({
   entryDate: '',
   userId: null as number | null,
   remark: '',
-  status: 'active',
+  status: 1 as number,
 })
 
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
@@ -272,13 +270,8 @@ const dialogTitle = computed(() => (isEdit.value ? '编辑员工' : '新增员�
 // --------------- 方法 ---------------
 async function fetchUserOptions() {
   try {
-    const data = await api.get<UserOption[]>('/system/users', { page: '1', size: '200' })
-    // If the API returns paginated data, try to extract; otherwise assume it's an array
-    if (Array.isArray(data)) {
-      userOptions.value = data
-    } else if (data && typeof data === 'object' && 'records' in data) {
-      userOptions.value = (data as any).records ?? []
-    }
+    const data = await api.get<{ records: UserOption[] }>('/system/users', { page: 1, size: 200 })
+    userOptions.value = data?.records ?? []
   } catch {
     // user options are optional, ignore fetch error
   }
@@ -384,9 +377,9 @@ function handleDialogClosed() {
 }
 
 function resetForm() {
-  form.code = ''
+  form.code = generateCode('employee')
   form.name = ''
-  form.gender = 'male'
+  form.gender = 1
   form.department = 'tech'
   form.position = ''
   form.phone = ''
@@ -394,10 +387,11 @@ function resetForm() {
   form.entryDate = ''
   form.userId = null
   form.remark = ''
-  form.status = 'active'
+  form.status = 1
 }
 
 // --------------- 初始化 ---------------
+watch([() => pagination.page, () => pagination.pageSize], () => { fetchData() })
 fetchData()
 fetchUserOptions()
 </script>

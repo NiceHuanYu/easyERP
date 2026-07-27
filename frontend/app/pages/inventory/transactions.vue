@@ -88,8 +88,6 @@
         layout="total, sizes, prev, pager, next, jumper"
         background
         class="pagination"
-        @size-change="handleSearch"
-        @current-change="handleSearch"
       />
     </el-card>
   </div>
@@ -192,6 +190,7 @@ function handleReset() {
 }
 
 // ── Init ───────────────────────────────────────────
+watch([() => pagination.page, () => pagination.pageSize], () => { fetchData() })
 onMounted(() => {
   loadWarehouseOptions()
   fetchData()

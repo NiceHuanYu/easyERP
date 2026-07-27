@@ -31,7 +31,7 @@
         <el-table-column prop="createdAt" label="创建时间" width="170" />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" :icon="Edit" v-permission="'system:role:edit'" @click="handleEdit(row)">
+            <el-button link type="primary" :icon="Edit" v-permission="'system:role:update'" @click="handleEdit(row)">
               编辑
             </el-button>
             <el-button link type="danger" :icon="Delete" v-permission="'system:role:delete'" @click="handleDelete(row)">
@@ -51,8 +51,6 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         class="table-pagination"
-        @current-change="applyFilters"
-        @size-change="applyFilters"
       />
     </el-card>
 
@@ -215,7 +213,7 @@ const permTreeData: PermTreeNode[] = [
       { id: 'system:user:delete', label: '删除用户' },
       { id: 'system:role:view', label: '查看角色' },
       { id: 'system:role:create', label: '创建角色' },
-      { id: 'system:role:edit', label: '编辑角色' },
+      { id: 'system:role:update', label: '编辑角色' },
       { id: 'system:role:delete', label: '删除角色' },
       { id: 'system:dict:view', label: '查看字典' },
       { id: 'system:dict:create', label: '创建字典' },
@@ -395,6 +393,7 @@ function resetForm() {
 }
 
 // --------------- 初始化 ---------------
+watch([() => pagination.page, () => pagination.pageSize], () => { applyFilters() })
 fetchData()
 </script>
 

@@ -22,7 +22,7 @@ public class MaterialController {
 
     private final MaterialMapper materialMapper;
 
-    @SaCheckPermission("base:material:list")
+    @SaCheckPermission("base-data:material:view")
     @GetMapping
     public ApiResponse<PageResult<Material>> list(PageParam param,
                                                    @RequestParam(required = false) String keyword) {
@@ -38,20 +38,20 @@ public class MaterialController {
                 page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("base:material:list")
+    @SaCheckPermission("base-data:material:view")
     @GetMapping("/{id}")
     public ApiResponse<Material> getById(@PathVariable Long id) {
         return ApiResponse.ok(materialMapper.selectById(id));
     }
 
-    @SaCheckPermission("base:material:create")
+    @SaCheckPermission("base-data:material:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Material material) {
         materialMapper.insert(material);
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:material:update")
+    @SaCheckPermission("base-data:material:edit")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Material material) {
         material.setId(id);
@@ -59,7 +59,7 @@ public class MaterialController {
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:material:delete")
+    @SaCheckPermission("base-data:material:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         materialMapper.deleteById(id);

@@ -60,3 +60,22 @@ export function downloadFile(url: string, filename: string): void {
   anchor.click()
   document.body.removeChild(anchor)
 }
+
+/** 编码前缀映射 */
+const CODE_PREFIX: Record<string, string> = {
+  material: 'MAT', customer: 'CUS', supplier: 'SUP', employee: 'EMP', warehouse: 'WH',
+  salesOrder: 'SO', delivery: 'SD', requisition: 'PR', purchaseOrder: 'PO',
+  receiving: 'RCV', production: 'MO', picking: 'PK', finish: 'FI', payment: 'PAY',
+}
+
+/**
+ * Generate a document code / number.
+ * @param type  Entity type key (e.g. 'material', 'salesOrder')
+ * @returns     e.g. "MAT-20240727-a1b2" or "SO-20240727-001"
+ */
+export function generateCode(type: string): string {
+  const prefix = CODE_PREFIX[type] ?? 'XX'
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const rand = Math.random().toString(36).substring(2, 6)
+  return `${prefix}-${date}-${rand}`
+}

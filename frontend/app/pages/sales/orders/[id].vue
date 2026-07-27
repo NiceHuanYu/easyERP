@@ -13,7 +13,7 @@
     <div class="action-bar">
       <template v-if="order?.status === 'draft'">
         <el-button
-          v-permission="'sales:order:edit'"
+          v-permission="'sales:order:update'"
           type="primary"
           @click="router.push(`/sales/orders/create?id=${order?.id}`)"
         >

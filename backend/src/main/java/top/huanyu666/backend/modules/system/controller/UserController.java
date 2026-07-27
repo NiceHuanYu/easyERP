@@ -25,12 +25,16 @@ public class UserController {
     private final SysUserMapper userMapper;
 
     @GetMapping
-    @SaCheckPermission("system:user:list")
-    public ApiResponse<PageResult<SysUser>> list(PageParam param) {
+    @SaCheckPermission("system:user:view")
+    public ApiResponse<PageResult<SysUser>> list(PageParam param,
+                                                  @RequestParam(required = false) String keyword) {
+        LambdaQueryWrapper<SysUser> qw = new LambdaQueryWrapper<>();
+        if (keyword != null && !keyword.isBlank()) {
+            qw.and(w -> w.like(SysUser::getUsername, keyword).or().like(SysUser::getNickname, keyword));
+        }
+        qw.orderByDesc(SysUser::getCreateTime);
         Page<SysUser> page = userMapper.selectPage(
-                new Page<>(param.getPage(), param.getSize()),
-                new LambdaQueryWrapper<SysUser>().orderByDesc(SysUser::getCreateTime)
-        );
+                new Page<>(param.getPage(), param.getSize()), qw);
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
@@ -48,7 +52,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @SaCheckPermission("system:user:update")
+    @SaCheckPermission("system:user:edit")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SysUser user) {
         user.setId(id);
         userMapper.updateById(user);
@@ -63,7 +67,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}/status")
-    @SaCheckPermission("system:user:update")
+    @SaCheckPermission("system:user:edit")
     public ApiResponse<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
         SysUser user = userMapper.selectById(id);
         if (user == null) throw new BusinessException("用户不存在");

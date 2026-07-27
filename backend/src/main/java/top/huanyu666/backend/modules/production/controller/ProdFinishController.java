@@ -39,7 +39,7 @@ public class ProdFinishController {
 
     // ==================== 基础 CRUD ====================
 
-    @SaCheckPermission("production:finish:list")
+    @SaCheckPermission("production:order:view")
     @GetMapping
     public ApiResponse<PageResult<ProdFinish>> list(PageParam param,
                                                      @RequestParam(required = false) Long orderId,

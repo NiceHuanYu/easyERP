@@ -71,6 +71,7 @@
         <el-button
           type="primary"
           :icon="Plus"
+          v-permission="'purchase:order:create'"
           @click="navigateTo('/purchase/receivings/create')"
         >
           新增收货单
@@ -119,7 +120,12 @@
                 @confirm="handleConfirm(row)"
               >
                 <template #reference>
-                  <el-button type="success" size="small" link>确认收货</el-button>
+                  <el-button
+                    type="success"
+                    size="small"
+                    link
+                    v-permission="'purchase:receiving:confirm'"
+                  >确认收货</el-button>
                 </template>
               </el-popconfirm>
               <el-popconfirm
@@ -129,7 +135,12 @@
                 @confirm="handleDelete(row)"
               >
                 <template #reference>
-                  <el-button type="danger" size="small" link>删除</el-button>
+                  <el-button
+                    type="danger"
+                    size="small"
+                    link
+                    v-permission="'purchase:order:create'"
+                  >删除</el-button>
                 </template>
               </el-popconfirm>
             </template>
@@ -146,8 +157,6 @@
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
-          @size-change="handleSearch"
-          @current-change="handleSearch"
         />
       </div>
     </el-card>
@@ -253,6 +262,10 @@ function handleReset() {
   searchForm.dateRange = null
   handleSearch()
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 // ==================== 行操作 ====================
 function handleView(row: Receiving) {

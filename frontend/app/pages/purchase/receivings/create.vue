@@ -160,7 +160,7 @@
 
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { formatMoney, formatDate } from '~/utils'
+import { formatMoney, formatDate, generateCode } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
@@ -212,6 +212,7 @@ interface ReceivingLine {
 }
 
 interface ReceivingForm {
+  receivingNo: string
   orderId: number | null
   warehouseId: number | null
   receivingDate: string
@@ -221,6 +222,7 @@ interface ReceivingForm {
 
 // ==================== 表单 ====================
 const form = reactive<ReceivingForm>({
+  receivingNo: '',
   orderId: null,
   warehouseId: null,
   receivingDate: formatDate(new Date(), 'YYYY-MM-DD'),
@@ -339,6 +341,7 @@ async function handleSubmit() {
 async function loadReceiving(id: string) {
   try {
     const data = await api.get<any>(`/purchase/receivings/${id}`)
+    form.receivingNo = data.receivingNo ?? ''
     form.orderId = data.orderId ?? null
     form.warehouseId = data.warehouseId ?? null
     form.receivingDate = data.receivingDate ?? formatDate(new Date(), 'YYYY-MM-DD')
@@ -369,6 +372,9 @@ function prefillFromOrder(orderId: string) {
 onMounted(() => {
   fetchOrderOptions()
   fetchWarehouseOptions()
+  if (!route.query.id) {
+    form.receivingNo = generateCode('receiving')
+  }
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }

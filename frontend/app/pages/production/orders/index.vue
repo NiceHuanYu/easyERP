@@ -121,7 +121,7 @@
             <!-- 待排产 -->
             <template v-if="row.status === 'pending'">
               <el-button
-                v-permission="'production:order:edit'"
+                v-permission="'production:order:update'"
                 type="primary"
                 size="small"
                 link
@@ -238,8 +238,6 @@
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
-          @size-change="handleSearch"
-          @current-change="handleSearch"
         />
       </div>
     </el-card>
@@ -378,6 +376,10 @@ function handleReset() {
   searchForm.status = ''
   handleSearch()
 }
+
+watch([() => pagination.page, () => pagination.pageSize], () => {
+  fetchData()
+})
 
 // ==================== 行操作 ====================
 function handleView(row: ProductionOrder) {

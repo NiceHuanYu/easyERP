@@ -22,7 +22,7 @@ public class SupplierController {
 
     private final SupplierMapper supplierMapper;
 
-    @SaCheckPermission("base:supplier:list")
+    @SaCheckPermission("base-data:supplier:view")
     @GetMapping
     public ApiResponse<PageResult<Supplier>> list(PageParam param,
                                                    @RequestParam(required = false) String keyword) {
@@ -38,20 +38,20 @@ public class SupplierController {
                 page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("base:supplier:list")
+    @SaCheckPermission("base-data:supplier:view")
     @GetMapping("/{id}")
     public ApiResponse<Supplier> getById(@PathVariable Long id) {
         return ApiResponse.ok(supplierMapper.selectById(id));
     }
 
-    @SaCheckPermission("base:supplier:create")
+    @SaCheckPermission("base-data:supplier:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Supplier supplier) {
         supplierMapper.insert(supplier);
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:supplier:update")
+    @SaCheckPermission("base-data:supplier:edit")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Supplier supplier) {
         supplier.setId(id);
@@ -59,7 +59,7 @@ public class SupplierController {
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:supplier:delete")
+    @SaCheckPermission("base-data:supplier:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         supplierMapper.deleteById(id);

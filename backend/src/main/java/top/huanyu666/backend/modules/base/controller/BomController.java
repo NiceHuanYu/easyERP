@@ -21,7 +21,7 @@ public class BomController {
 
     private final BomMapper bomMapper;
 
-    @SaCheckPermission("base:bom:list")
+    @SaCheckPermission("base-data:bom:view")
     @GetMapping
     public ApiResponse<PageResult<Bom>> list(PageParam param,
                                               @RequestParam(required = false) Long parentMaterialId) {
@@ -36,20 +36,20 @@ public class BomController {
                 page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("base:bom:list")
+    @SaCheckPermission("base-data:bom:view")
     @GetMapping("/{id}")
     public ApiResponse<Bom> getById(@PathVariable Long id) {
         return ApiResponse.ok(bomMapper.selectById(id));
     }
 
-    @SaCheckPermission("base:material:create")
+    @SaCheckPermission("base-data:bom:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Bom bom) {
         bomMapper.insert(bom);
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:material:update")
+    @SaCheckPermission("base-data:bom:edit")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Bom bom) {
         bom.setId(id);
@@ -57,7 +57,7 @@ public class BomController {
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:material:delete")
+    @SaCheckPermission("base-data:bom:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         bomMapper.deleteById(id);

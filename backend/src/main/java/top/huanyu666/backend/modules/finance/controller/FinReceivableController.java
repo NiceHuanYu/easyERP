@@ -28,7 +28,7 @@ public class FinReceivableController {
 
     private final FinReceivableMapper receivableMapper;
 
-    @SaCheckPermission("finance:receivable:list")
+    @SaCheckPermission("finance:order:view")
     @GetMapping
     public ApiResponse<PageResult<FinReceivable>> list(PageParam param,
                                                         @RequestParam(required = false) Long customerId,
@@ -48,7 +48,7 @@ public class FinReceivableController {
 
     // ==================== 核销 ====================
 
-    @SaCheckPermission("finance:receivable:list")
+    @SaCheckPermission("finance:order:view")
     @PostMapping("/{no}/reconcile")
     @Transactional
     public ApiResponse<Void> reconcile(@PathVariable String no, @RequestBody Map<String, Object> body) {

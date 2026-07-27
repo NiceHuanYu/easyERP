@@ -22,7 +22,7 @@ public class WarehouseController {
 
     private final WarehouseMapper warehouseMapper;
 
-    @SaCheckPermission("base:warehouse:list")
+    @SaCheckPermission("base-data:warehouse:view")
     @GetMapping
     public ApiResponse<PageResult<Warehouse>> list(PageParam param,
                                                     @RequestParam(required = false) String keyword) {
@@ -38,20 +38,20 @@ public class WarehouseController {
                 page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("base:warehouse:list")
+    @SaCheckPermission("base-data:warehouse:view")
     @GetMapping("/{id}")
     public ApiResponse<Warehouse> getById(@PathVariable Long id) {
         return ApiResponse.ok(warehouseMapper.selectById(id));
     }
 
-    @SaCheckPermission("base:warehouse:create")
+    @SaCheckPermission("base-data:warehouse:create")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody Warehouse warehouse) {
         warehouseMapper.insert(warehouse);
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:warehouse:update")
+    @SaCheckPermission("base-data:warehouse:edit")
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Warehouse warehouse) {
         warehouse.setId(id);
@@ -59,7 +59,7 @@ public class WarehouseController {
         return ApiResponse.ok();
     }
 
-    @SaCheckPermission("base:warehouse:delete")
+    @SaCheckPermission("base-data:warehouse:delete")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         warehouseMapper.deleteById(id);

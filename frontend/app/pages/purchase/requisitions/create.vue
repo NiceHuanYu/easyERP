@@ -183,7 +183,7 @@
 
 <script setup lang="ts">
 import { ArrowLeft, Plus, Delete } from '@element-plus/icons-vue'
-import { formatDate } from '~/utils'
+import { formatDate, generateCode } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
@@ -247,6 +247,7 @@ interface RequisitionLine {
 }
 
 interface RequisitionForm {
+  reqNo: string
   reqDate: string
   applicantId: number | null
   remark: string
@@ -265,6 +266,7 @@ function createEmptyLine(): RequisitionLine {
 }
 
 const form = reactive<RequisitionForm>({
+  reqNo: '',
   reqDate: formatDate(new Date(), 'YYYY-MM-DD'),
   applicantId: null,
   remark: '',
@@ -330,6 +332,7 @@ function onMaterialChange(index: number, val: number | null) {
 async function loadRequisition(id: string) {
   try {
     const data = await api.get<any>(`/purchase/requisitions/${id}`)
+    form.reqNo = data.reqNo ?? ''
     form.reqDate = data.reqDate ?? formatDate(new Date(), 'YYYY-MM-DD')
     form.applicantId = data.applicantId ?? null
     form.remark = data.remark ?? ''
@@ -392,6 +395,9 @@ onMounted(() => {
   fetchEmployeeOptions()
   fetchMaterialOptions()
   fetchSupplierOptions()
+  if (!route.query.id) {
+    form.reqNo = generateCode('requisition')
+  }
   if (route.query.id) {
     loadRequisition(route.query.id as string)
   }

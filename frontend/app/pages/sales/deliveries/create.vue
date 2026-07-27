@@ -145,8 +145,8 @@
       <!-- 操作按钮 -->
       <div class="form-actions">
         <el-button @click="router.back()">取消</el-button>
-        <el-button type="primary" @click="handleSaveDraft">保存草稿</el-button>
-        <el-button type="success" @click="handleSubmit">提交</el-button>
+        <el-button v-permission="'delivery:order:create'" type="primary" @click="handleSaveDraft">保存草稿</el-button>
+        <el-button v-permission="'delivery:order:create'" type="success" @click="handleSubmit">提交</el-button>
       </div>
     </el-form>
   </div>
@@ -154,7 +154,7 @@
 
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { formatMoney, formatDate } from '~/utils'
+import { formatMoney, formatDate, generateCode } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
@@ -193,6 +193,7 @@ interface DeliveryLine {
 }
 
 interface DeliveryForm {
+  deliveryNo: string
   orderId: number | null
   warehouseId: number | null
   deliveryDate: string
@@ -202,6 +203,7 @@ interface DeliveryForm {
 
 // ==================== 表单 ====================
 const form = reactive<DeliveryForm>({
+  deliveryNo: '',
   orderId: null,
   warehouseId: null,
   deliveryDate: formatDate(new Date(), 'YYYY-MM-DD'),
@@ -314,12 +316,16 @@ function prefillFromOrder(orderId: string) {
 // ==================== 初始化 ====================
 onMounted(async () => {
   fetchWarehouseOptions()
+  if (!route.query.id) {
+    form.deliveryNo = generateCode('delivery')
+  }
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }
   if (route.query.id) {
     try {
       const data = await api.get<DeliveryForm>(`/sales/deliveries/${route.query.id}`)
+      form.deliveryNo = data.deliveryNo
       form.orderId = data.orderId
       form.warehouseId = data.warehouseId
       form.deliveryDate = data.deliveryDate

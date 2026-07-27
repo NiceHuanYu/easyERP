@@ -8,8 +8,8 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 140px">
-            <el-option label="启用" value="active" />
-            <el-option label="禁用" value="inactive" />
+            <el-option label="启用" :value="1" />
+            <el-option label="禁用" :value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -52,16 +52,16 @@
           <template #default="{ row }">
             <el-switch
               :model-value="row.status"
-              active-value="active"
-              inactive-value="inactive"
-              @change="(val: string) => handleStatusChange(row, val)"
+              :active-value="1"
+              :inactive-value="0"
+              @change="(val: number) => handleStatusChange(row, val)"
             />
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="170" />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" :icon="Edit" v-permission="'system:user:edit'" @click="handleEdit(row)">
+            <el-button link type="primary" :icon="Edit" v-permission="'system:user:update'" @click="handleEdit(row)">
               编辑
             </el-button>
             <el-button link type="danger" :icon="Delete" v-permission="'system:user:delete'" @click="handleDelete(row)">
@@ -81,8 +81,6 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         class="table-pagination"
-        @current-change="fetchData"
-        @size-change="fetchData"
       />
     </el-card>
 
@@ -130,9 +128,9 @@
         <el-form-item label="状态" prop="status">
           <el-switch
             :model-value="form.status"
-            active-value="active"
-            inactive-value="inactive"
-            @change="(val: string) => { form.status = val }"
+            :active-value="1"
+            :inactive-value="0"
+            @change="(val: number) => { form.status = val }"
           />
         </el-form-item>
       </el-form>
@@ -161,7 +159,7 @@ interface User {
   employeeId: number | null
   employeeName: string | null
   roles: string[]
-  status: string
+  status: number
   createdAt: string
 }
 
@@ -196,7 +194,7 @@ const form = reactive({
   email: '',
   employeeId: null as number | null,
   roles: [] as string[],
-  status: 'active',
+  status: 1,
 })
 
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
@@ -282,9 +280,9 @@ function handleDelete(row: User) {
   }).catch(() => {})
 }
 
-function handleStatusChange(row: User, val: string) {
+function handleStatusChange(row: User, val: number) {
   ElMessageBox.confirm(
-    `确定要${val === 'active' ? '禁用' : '启用'}用户「${row.username}」吗？`,
+    `确定要${val === 1 ? '禁用' : '启用'}用户「${row.username}」吗？`,
     '状态变更',
     { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' },
   ).then(async () => {
@@ -353,10 +351,11 @@ function resetForm() {
   form.email = ''
   form.employeeId = null
   form.roles = []
-  form.status = 'active'
+  form.status = 1
 }
 
 // --------------- 初始化 ---------------
+watch([() => pagination.page, () => pagination.pageSize], () => { fetchData() })
 fetchData()
 </script>
 

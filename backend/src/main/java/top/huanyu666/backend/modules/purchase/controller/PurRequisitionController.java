@@ -35,7 +35,7 @@ public class PurRequisitionController {
 
     // ==================== 基础 CRUD ====================
 
-    @SaCheckPermission("purchase:requisition:list")
+    @SaCheckPermission("purchase:order:view")
     @GetMapping
     public ApiResponse<PageResult<PurRequisition>> list(PageParam param,
                                                          @RequestParam(required = false) String status) {
@@ -49,7 +49,7 @@ public class PurRequisitionController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
-    @SaCheckPermission("purchase:requisition:create")
+    @SaCheckPermission("purchase:order:create")
     @PostMapping
     public ApiResponse<PurRequisition> create(@RequestBody PurRequisition requisition) {
         requisition.setStatus("DRAFT");
@@ -57,7 +57,7 @@ public class PurRequisitionController {
         return ApiResponse.ok(requisition);
     }
 
-    @SaCheckPermission("purchase:requisition:create")
+    @SaCheckPermission("purchase:order:create")
     @PutMapping("/{id}")
     public ApiResponse<PurRequisition> update(@PathVariable Long id, @RequestBody PurRequisition requisition) {
         PurRequisition exist = requisitionMapper.selectById(id);
@@ -134,7 +134,7 @@ public class PurRequisitionController {
 
     // ==================== 删除 ====================
 
-    @SaCheckPermission("purchase:requisition:create")
+    @SaCheckPermission("purchase:order:create")
     @DeleteMapping("/{id}")
     @Transactional
     public ApiResponse<Void> delete(@PathVariable Long id) {

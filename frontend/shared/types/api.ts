@@ -30,5 +30,5 @@ export interface PageData<T> {
 }
 
 export function fromPageResult<T>(result: PageResult<T>): PageData<T> {
-  return { list: result.records, total: result.total }
+  return { list: result.records, total: Number(result.total) || 0 }
 }
