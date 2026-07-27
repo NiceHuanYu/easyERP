@@ -16,7 +16,7 @@ import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
  * 供应商管理
  */
 @RestController
-@RequestMapping("/api/v1/base/suppliers")
+@RequestMapping({"/api/v1/base/suppliers", "/api/v1/base-data/suppliers"})
 @RequiredArgsConstructor
 public class SupplierController {
 

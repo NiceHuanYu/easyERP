@@ -116,10 +116,12 @@
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
 // --------------- 常量 ---------------
+const API_PATH = '/base/warehouses'
 const typeMap: Record<string, string> = {
   raw: '原料仓',
   semi: '半成品仓',
@@ -139,18 +141,6 @@ interface Warehouse {
   remark: string
   status: string
 }
-
-// --------------- Mock 数据 ---------------
-const mockWarehouses: Warehouse[] = [
-  { id: 1, code: 'WH-0001', name: '原料仓A', address: '工厂A栋1楼', manager: '张工', type: 'raw', remark: '存放钢板、管材', status: 'active' },
-  { id: 2, code: 'WH-0002', name: '原料仓B', address: '工厂A栋2楼', manager: '李工', type: 'raw', remark: '存放电子元器件', status: 'active' },
-  { id: 3, code: 'WH-0003', name: '半成品仓', address: '工厂B栋1楼', manager: '王工', type: 'semi', remark: '', status: 'active' },
-  { id: 4, code: 'WH-0004', name: '成品仓A', address: '工厂C栋1楼', manager: '赵工', type: 'finished', remark: '常规成品', status: 'active' },
-  { id: 5, code: 'WH-0005', name: '成品仓B', address: '工厂C栋2楼', manager: '陈工', type: 'finished', remark: '出口成品', status: 'active' },
-  { id: 6, code: 'WH-0006', name: '包材仓', address: '工厂A栋B1', manager: '刘工', type: 'packaging', remark: '', status: 'active' },
-  { id: 7, code: 'WH-0007', name: '不良品仓', address: '工厂D栋1楼', manager: '周工', type: 'defective', remark: '待处理不良品', status: 'active' },
-  { id: 8, code: 'WH-0008', name: '临时仓', address: '工厂E栋', manager: '吴工', type: 'finished', remark: '临时周转', status: 'inactive' },
-]
 
 // --------------- 状态 ---------------
 const loading = ref(false)
@@ -191,23 +181,20 @@ const rules: FormRules = {
 const dialogTitle = computed(() => (isEdit.value ? '编辑仓库' : '新增仓库'))
 
 // --------------- 方法 ---------------
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let list = [...mockWarehouses]
-
-    if (searchForm.code) {
-      list = list.filter((w) => w.code.includes(searchForm.code))
-    }
-    if (searchForm.name) {
-      list = list.filter((w) => w.name.includes(searchForm.name))
-    }
-
-    pagination.total = list.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = list.slice(start, start + pagination.pageSize)
+  try {
+    const result = await api.page<Warehouse>(API_PATH, pagination.page, pagination.pageSize, {
+      code: searchForm.code || undefined,
+      name: searchForm.name || undefined,
+    })
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -242,38 +229,44 @@ function handleEdit(row: Warehouse) {
   dialogVisible.value = true
 }
 
-function handleDelete(row: Warehouse) {
-  ElMessageBox.confirm(`确定要删除仓库「${row.name}」吗？`, '删除确认', {
-    type: 'warning',
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-  }).then(() => {
-    const idx = mockWarehouses.findIndex((w) => w.id === row.id)
-    if (idx > -1) mockWarehouses.splice(idx, 1)
+async function handleDelete(row: Warehouse) {
+  try {
+    await ElMessageBox.confirm(`确定要删除仓库「${row.name}」吗？`, '删除确认', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+    })
+    await api.del(`${API_PATH}/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
-  }).catch(() => {})
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.message) {
+      ElMessage.error(e.message || '删除失败')
+    }
+  }
 }
 
-function handleSubmit() {
-  formRef.value?.validate((valid) => {
-    if (!valid) return
-    submitLoading.value = true
-    setTimeout(() => {
-      if (isEdit.value && editingId.value !== null) {
-        const item = mockWarehouses.find((w) => w.id === editingId.value)
-        if (item) Object.assign(item, { ...form })
-        ElMessage.success('编辑成功')
-      } else {
-        const newId = Math.max(...mockWarehouses.map((w) => w.id), 0) + 1
-        mockWarehouses.push({ id: newId, ...form })
-        ElMessage.success('新增成功')
-      }
-      submitLoading.value = false
-      dialogVisible.value = false
-      fetchData()
-    }, 300)
-  })
+async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  submitLoading.value = true
+  try {
+    const body = { ...form }
+    if (isEdit.value && editingId.value !== null) {
+      await api.put(`${API_PATH}/${editingId.value}`, body)
+      ElMessage.success('编辑成功')
+    } else {
+      await api.post<Warehouse>(API_PATH, body)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 function handleDialogClosed() {

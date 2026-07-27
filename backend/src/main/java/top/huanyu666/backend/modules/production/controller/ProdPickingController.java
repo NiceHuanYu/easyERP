@@ -158,4 +158,18 @@ public class ProdPickingController {
         log.info("领料单 {} 已确认，{} 条明细", picking.getPickingNo(), items.size());
         return ApiResponse.ok("确认成功");
     }
+
+    /**
+     * 删除（仅草稿）
+     */
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        ProdPicking p = pickingMapper.selectById(id);
+        if (p == null) throw new BusinessException("领料单不存在");
+        if (!"DRAFT".equals(p.getStatus())) throw new BusinessException("只有草稿状态可删除");
+        pickingItemMapper.delete(new LambdaQueryWrapper<ProdPickingItem>().eq(ProdPickingItem::getPickingId, id));
+        pickingMapper.deleteById(id);
+        return ApiResponse.ok();
+    }
 }

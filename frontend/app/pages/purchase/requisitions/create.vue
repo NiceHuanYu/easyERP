@@ -186,6 +186,7 @@ import { ArrowLeft, Plus, Delete } from '@element-plus/icons-vue'
 import { formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -196,7 +197,7 @@ const authStore = useAuthStore()
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
 
-// ==================== 选项数据 ====================
+// ==================== 选项数据（TODO: 后续替换为 API 调用） ====================
 const employeeOptions = ref([
   { label: '张三', value: 1 },
   { label: '李四', value: 2 },
@@ -310,29 +311,26 @@ function onMaterialChange(index: number, val: number | null) {
   }
 }
 
-// ==================== Mock 数据（编辑模式） ====================
-function loadMockRequisition(_id: string) {
-  form.reqDate = '2025-06-10'
-  form.applicantId = 1
-  form.remark = '生产用料申请'
-  form.lines = [
-    {
-      materialId: 1,
-      materialName: 'PCB-001 主板基板',
-      spec: 'FR-4 1.6mm',
-      unit: '片',
-      quantity: 100,
-      suggestedSupplierId: 1,
-    },
-    {
-      materialId: 2,
-      materialName: 'CPU-002 中央处理器',
-      spec: 'ARM Cortex-A78',
-      unit: '个',
-      quantity: 50,
-      suggestedSupplierId: 4,
-    },
-  ]
+// ==================== 编辑模式：加载已有申请 ====================
+async function loadRequisition(id: string) {
+  try {
+    const data = await api.get<any>(`/purchase/requisitions/${id}`)
+    form.reqDate = data.reqDate ?? formatDate(new Date(), 'YYYY-MM-DD')
+    form.applicantId = data.applicantId ?? null
+    form.remark = data.remark ?? ''
+    form.lines = (data.lines && data.lines.length > 0)
+      ? data.lines.map((l: any) => ({
+          materialId: l.materialId ?? null,
+          materialName: l.materialName ?? '',
+          spec: l.spec ?? '',
+          unit: l.unit ?? '',
+          quantity: l.quantity ?? 0,
+          suggestedSupplierId: l.suggestedSupplierId ?? null,
+        }))
+      : [createEmptyLine()]
+  } catch {
+    ElMessage.error('加载申请数据失败')
+  }
 }
 
 // ==================== 提交操作 ====================
@@ -341,8 +339,18 @@ async function handleSaveDraft() {
   if (!valid) return
   if (!validateLines()) return
 
-  ElMessage.success('草稿保存成功')
-  router.push('/purchase/requisitions')
+  try {
+    const payload = { ...form, status: 'draft' }
+    if (isEdit.value) {
+      await api.put(`/purchase/requisitions/${route.query.id}`, payload)
+    } else {
+      await api.post('/purchase/requisitions', payload)
+    }
+    ElMessage.success('草稿保存成功')
+    router.push('/purchase/requisitions')
+  } catch {
+    ElMessage.error('保存失败')
+  }
 }
 
 async function handleSubmit() {
@@ -350,14 +358,24 @@ async function handleSubmit() {
   if (!valid) return
   if (!validateLines()) return
 
-  ElMessage.success('申请提交成功')
-  router.push('/purchase/requisitions')
+  try {
+    const payload = { ...form, status: 'submitted' }
+    if (isEdit.value) {
+      await api.put(`/purchase/requisitions/${route.query.id}`, payload)
+    } else {
+      await api.post('/purchase/requisitions', payload)
+    }
+    ElMessage.success('申请提交成功')
+    router.push('/purchase/requisitions')
+  } catch {
+    ElMessage.error('提交失败')
+  }
 }
 
 // ==================== 初始化 ====================
 onMounted(() => {
   if (route.query.id) {
-    loadMockRequisition(route.query.id as string)
+    loadRequisition(route.query.id as string)
   }
 })
 </script>

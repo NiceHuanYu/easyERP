@@ -16,7 +16,7 @@ import top.huanyu666.backend.modules.base.mapper.WarehouseMapper;
  * 仓库管理
  */
 @RestController
-@RequestMapping("/api/v1/base/warehouses")
+@RequestMapping({"/api/v1/base/warehouses", "/api/v1/base-data/warehouses"})
 @RequiredArgsConstructor
 public class WarehouseController {
 

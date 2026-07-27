@@ -206,6 +206,7 @@ import { ArrowLeft, Plus, Delete } from '@element-plus/icons-vue'
 import { formatMoney, formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -216,7 +217,7 @@ const authStore = useAuthStore()
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
 
-// ==================== 选项数据 ====================
+// ==================== 选项数据（TODO: 后续替换为 API 调用） ====================
 const supplierOptions = ref([
   { label: '深圳华强电子有限公司', value: 1 },
   { label: '广州万国元件有限公司', value: 2 },
@@ -339,28 +340,46 @@ const totalAmount = computed(() => {
 })
 
 // ==================== 采购申请联动 ====================
-function onRequisitionChange(val: number | null) {
+async function onRequisitionChange(val: number | null) {
   if (!val) return
-  // Mock: 根据采购申请加载物料明细
-  const mockLines: OrderLine[] = [
-    { materialId: 1, materialName: 'PCB-001 主板基板', quantity: 100, price: 25.50, amount: 2550.00 },
-    { materialId: 2, materialName: 'CPU-002 中央处理器', quantity: 50, price: 180.00, amount: 9000.00 },
-  ]
-  form.lines = mockLines
-  ElMessage.success('已从采购申请加载物料明细')
+  try {
+    const data = await api.get<any>(`/purchase/requisitions/${val}`)
+    if (data.lines && data.lines.length > 0) {
+      form.lines = data.lines.map((l: any) => ({
+        materialId: l.materialId ?? null,
+        materialName: l.materialName ?? '',
+        quantity: l.quantity ?? 0,
+        price: 0,
+        amount: 0,
+      }))
+      ElMessage.success('已从采购申请加载物料明细')
+    }
+  } catch {
+    ElMessage.error('加载采购申请明细失败')
+  }
 }
 
-// ==================== Mock 数据（编辑模式） ====================
-function loadMockOrder(_id: string) {
-  form.supplierId = 1
-  form.orderDate = '2025-06-15'
-  form.deliveryDate = '2025-07-01'
-  form.remark = '生产采购订单'
-  form.lines = [
-    { materialId: 1, materialName: 'PCB-001 主板基板', quantity: 100, price: 25.50, amount: 2550.00 },
-    { materialId: 2, materialName: 'CPU-002 中央处理器', quantity: 50, price: 180.00, amount: 9000.00 },
-    { materialId: 4, materialName: 'BAT-004 锂电池组', quantity: 200, price: 35.00, amount: 7000.00 },
-  ]
+// ==================== 编辑模式：加载已有订单 ====================
+async function loadOrder(id: string) {
+  try {
+    const data = await api.get<any>(`/purchase/orders/${id}`)
+    form.supplierId = data.supplierId ?? null
+    form.requisitionId = data.requisitionId ?? null
+    form.orderDate = data.orderDate ?? formatDate(new Date(), 'YYYY-MM-DD')
+    form.deliveryDate = data.deliveryDate ?? ''
+    form.remark = data.remark ?? ''
+    form.lines = (data.lines && data.lines.length > 0)
+      ? data.lines.map((l: any) => ({
+          materialId: l.materialId ?? null,
+          materialName: l.materialName ?? '',
+          quantity: l.quantity ?? 0,
+          price: l.price ?? 0,
+          amount: l.amount ?? 0,
+        }))
+      : [createEmptyLine()]
+  } catch {
+    ElMessage.error('加载订单数据失败')
+  }
 }
 
 // ==================== 提交操作 ====================
@@ -369,8 +388,18 @@ async function handleSaveDraft() {
   if (!valid) return
   if (!validateLines()) return
 
-  ElMessage.success('草稿保存成功')
-  router.push('/purchase/orders')
+  try {
+    const payload = { ...form, status: 'draft', totalAmount: totalAmount.value }
+    if (isEdit.value) {
+      await api.put(`/purchase/orders/${route.query.id}`, payload)
+    } else {
+      await api.post('/purchase/orders', payload)
+    }
+    ElMessage.success('草稿保存成功')
+    router.push('/purchase/orders')
+  } catch {
+    ElMessage.error('保存失败')
+  }
 }
 
 async function handleSubmit() {
@@ -378,8 +407,18 @@ async function handleSubmit() {
   if (!valid) return
   if (!validateLines()) return
 
-  ElMessage.success('采购订单已提交并下达')
-  router.push('/purchase/orders')
+  try {
+    const payload = { ...form, status: 'issued', totalAmount: totalAmount.value }
+    if (isEdit.value) {
+      await api.put(`/purchase/orders/${route.query.id}`, payload)
+    } else {
+      await api.post('/purchase/orders', payload)
+    }
+    ElMessage.success('采购订单已提交并下达')
+    router.push('/purchase/orders')
+  } catch {
+    ElMessage.error('提交失败')
+  }
 }
 
 // ==================== 预填逻辑（来自采购申请） ====================
@@ -394,7 +433,7 @@ onMounted(() => {
     prefillFromRequisition(route.query.fromRequisition as string)
   }
   if (route.query.id) {
-    loadMockOrder(route.query.id as string)
+    loadOrder(route.query.id as string)
   }
 })
 </script>

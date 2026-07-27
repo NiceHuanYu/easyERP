@@ -115,8 +115,12 @@
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
+
+// --------------- 常量 ---------------
+const API_PATH = '/base/customers'
 
 // --------------- 类型 ---------------
 interface Customer {
@@ -130,19 +134,6 @@ interface Customer {
   remark: string
   status: string
 }
-
-// --------------- Mock 数据 ---------------
-const mockCustomers: Customer[] = Array.from({ length: 28 }, (_, i) => ({
-  id: i + 1,
-  code: `CUS-${String(i + 1).padStart(4, '0')}`,
-  name: `${['深圳科技', '广州电子', '上海机械', '北京自动化', '杭州智造'][i % 5]}有限公司${i + 1}`,
-  contact: ['张三', '李四', '王五', '赵六', '陈七'][i % 5],
-  phone: `1${String(3 + (i % 9)).padStart(2, '0')}${String(Math.random() * 1e8 | 0).padStart(8, '0')}`,
-  email: `customer${i + 1}@example.com`,
-  address: `${['深圳市', '广州市', '上海市', '北京市', '杭州市'][i % 5]}${['南山区', '天河区', '浦东新区', '朝阳区', '滨江区'][i % 5]}科技园路${i + 1}号`,
-  remark: `备注信息 ${i + 1}`,
-  status: i % 6 === 0 ? 'inactive' : 'active',
-}))
 
 // --------------- 状态 ---------------
 const loading = ref(false)
@@ -184,26 +175,21 @@ const rules: FormRules = {
 const dialogTitle = computed(() => (isEdit.value ? '编辑客户' : '新增客户'))
 
 // --------------- 方法 ---------------
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let list = [...mockCustomers]
-
-    if (searchForm.code) {
-      list = list.filter((c) => c.code.includes(searchForm.code))
-    }
-    if (searchForm.name) {
-      list = list.filter((c) => c.name.includes(searchForm.name))
-    }
-    if (searchForm.status) {
-      list = list.filter((c) => c.status === searchForm.status)
-    }
-
-    pagination.total = list.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = list.slice(start, start + pagination.pageSize)
+  try {
+    const result = await api.page<Customer>(API_PATH, pagination.page, pagination.pageSize, {
+      code: searchForm.code || undefined,
+      name: searchForm.name || undefined,
+      status: searchForm.status || undefined,
+    })
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -240,38 +226,44 @@ function handleEdit(row: Customer) {
   dialogVisible.value = true
 }
 
-function handleDelete(row: Customer) {
-  ElMessageBox.confirm(`确定要删除客户「${row.name}」吗？`, '删除确认', {
-    type: 'warning',
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-  }).then(() => {
-    const idx = mockCustomers.findIndex((c) => c.id === row.id)
-    if (idx > -1) mockCustomers.splice(idx, 1)
+async function handleDelete(row: Customer) {
+  try {
+    await ElMessageBox.confirm(`确定要删除客户「${row.name}」吗？`, '删除确认', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+    })
+    await api.del(`${API_PATH}/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
-  }).catch(() => {})
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.message) {
+      ElMessage.error(e.message || '删除失败')
+    }
+  }
 }
 
-function handleSubmit() {
-  formRef.value?.validate((valid) => {
-    if (!valid) return
-    submitLoading.value = true
-    setTimeout(() => {
-      if (isEdit.value && editingId.value !== null) {
-        const item = mockCustomers.find((c) => c.id === editingId.value)
-        if (item) Object.assign(item, { ...form })
-        ElMessage.success('编辑成功')
-      } else {
-        const newId = Math.max(...mockCustomers.map((c) => c.id), 0) + 1
-        mockCustomers.push({ id: newId, ...form })
-        ElMessage.success('新增成功')
-      }
-      submitLoading.value = false
-      dialogVisible.value = false
-      fetchData()
-    }, 300)
-  })
+async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  submitLoading.value = true
+  try {
+    const body = { ...form }
+    if (isEdit.value && editingId.value !== null) {
+      await api.put(`${API_PATH}/${editingId.value}`, body)
+      ElMessage.success('编辑成功')
+    } else {
+      await api.post<Customer>(API_PATH, body)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 function handleDialogClosed() {

@@ -178,6 +178,7 @@
 <script setup lang="ts">
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -243,65 +244,36 @@ const totalWriteOffAmount = computed(() =>
   writeOffAmounts.value.reduce((sum, val) => sum + (val || 0), 0),
 )
 
-function generateOpenReceivables(customerName: string): OpenItem[] {
-  const date = new Date()
-  return [
-    {
-      receivableNo: 'AR-000023',
-      deliveryNo: 'SO-DLV-0045',
-      totalAmount: 45000,
-      openAmount: 28000,
-      dueDate: new Date(date.getTime() + 15 * 86400000).toISOString().slice(0, 10),
-    },
-    {
-      receivableNo: 'AR-000031',
-      deliveryNo: 'SO-DLV-0058',
-      totalAmount: 32000,
-      openAmount: 32000,
-      dueDate: new Date(date.getTime() + 30 * 86400000).toISOString().slice(0, 10),
-    },
-    {
-      receivableNo: 'AR-000045',
-      deliveryNo: 'SO-DLV-0072',
-      totalAmount: 68000,
-      openAmount: 40000,
-      dueDate: new Date(date.getTime() - 10 * 86400000).toISOString().slice(0, 10),
-    },
-    {
-      receivableNo: 'AR-000052',
-      deliveryNo: 'SO-DLV-0089',
-      totalAmount: 15000,
-      openAmount: 15000,
-      dueDate: new Date(date.getTime() + 45 * 86400000).toISOString().slice(0, 10),
-    },
-  ]
-}
-
-function generateOpenPayables(supplierName: string): OpenItem[] {
-  const date = new Date()
-  return [
-    {
-      payableNo: 'AP-000018',
-      receivingNo: 'PO-RCV-0032',
-      totalAmount: 38000,
-      openAmount: 22000,
-      dueDate: new Date(date.getTime() + 20 * 86400000).toISOString().slice(0, 10),
-    },
-    {
-      payableNo: 'AP-000027',
-      receivingNo: 'PO-RCV-0047',
-      totalAmount: 55000,
-      openAmount: 55000,
-      dueDate: new Date(date.getTime() + 35 * 86400000).toISOString().slice(0, 10),
-    },
-    {
-      payableNo: 'AP-000033',
-      receivingNo: 'PO-RCV-0061',
-      totalAmount: 24000,
-      openAmount: 18000,
-      dueDate: new Date(date.getTime() - 5 * 86400000).toISOString().slice(0, 10),
-    },
-  ]
+async function fetchOpenItems(counterparty: string) {
+  try {
+    if (form.type === '收款') {
+      const result = await api.get<any[]>('/finance/receivables', {
+        customer: counterparty,
+        status: '未核销',
+      })
+      openItems.value = (result || []).map((r: any) => ({
+        receivableNo: r.receivableNo,
+        deliveryNo: r.deliveryNo,
+        totalAmount: r.amount,
+        openAmount: r.unreceivedAmount,
+        dueDate: r.dueDate,
+      }))
+    } else {
+      const result = await api.get<any[]>('/finance/payables', {
+        supplier: counterparty,
+        status: '未核销',
+      })
+      openItems.value = (result || []).map((r: any) => ({
+        payableNo: r.payableNo,
+        receivingNo: r.receivingNo,
+        totalAmount: r.amount,
+        openAmount: r.unpaidAmount,
+        dueDate: r.dueDate,
+      }))
+    }
+  } catch {
+    openItems.value = []
+  }
 }
 
 // ── Event Handlers ─────────────────────────────────
@@ -318,13 +290,9 @@ function handleCounterpartyChange() {
     return
   }
 
-  if (form.type === '收款') {
-    openItems.value = generateOpenReceivables(form.counterparty)
-  } else {
-    openItems.value = generateOpenPayables(form.counterparty)
-  }
-
-  writeOffAmounts.value = new Array(openItems.value.length).fill(0)
+  fetchOpenItems(form.counterparty).then(() => {
+    writeOffAmounts.value = new Array(openItems.value.length).fill(0)
+  })
 }
 
 // ── Submit ─────────────────────────────────────────
@@ -350,12 +318,28 @@ async function doSubmit(status: '草稿' | '已确认') {
 
   submitting.value = true
 
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 800))
-
-  ElMessage.success(status === '已确认' ? '保存并确认成功' : '保存成功')
-  submitting.value = false
-  router.push('/finance/payments')
+  try {
+    const payload = {
+      ...form,
+      status,
+      writeOffs: openItems.value
+        .map((item, i) => ({
+          itemNo: form.type === '收款' ? item.receivableNo : item.payableNo,
+          amount: writeOffAmounts.value[i] || 0,
+        }))
+        .filter((w) => w.amount > 0),
+    }
+    const result = await api.post<any>('/finance/payments', payload)
+    if (status === '已确认' && result.paymentNo) {
+      await api.post(`/finance/payments/${result.paymentNo}/confirm`)
+    }
+    ElMessage.success(status === '已确认' ? '保存并确认成功' : '保存成功')
+    router.push('/finance/payments')
+  } catch {
+    ElMessage.error('保存失败')
+  } finally {
+    submitting.value = false
+  }
 }
 
 function handleCancel() {

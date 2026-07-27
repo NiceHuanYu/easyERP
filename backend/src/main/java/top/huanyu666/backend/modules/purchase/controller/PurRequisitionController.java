@@ -131,4 +131,18 @@ public class PurRequisitionController {
         log.info("采购申请 {} 生成采购订单 {}", requisition.getRequisitionNo(), order.getOrderNo());
         return ApiResponse.ok(order);
     }
+
+    // ==================== 删除 ====================
+
+    @SaCheckPermission("purchase:requisition:create")
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        PurRequisition r = requisitionMapper.selectById(id);
+        if (r == null) throw new BusinessException("采购申请不存在");
+        if (!"DRAFT".equals(r.getStatus())) throw new BusinessException("只有草稿状态可删除");
+        requisitionItemMapper.delete(new LambdaQueryWrapper<PurRequisitionItem>().eq(PurRequisitionItem::getRequisitionId, id));
+        requisitionMapper.deleteById(id);
+        return ApiResponse.ok();
+    }
 }

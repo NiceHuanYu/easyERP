@@ -133,10 +133,12 @@
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
 // --------------- 常量 ---------------
+const API_PATH = '/base/materials'
 const categoryMap: Record<string, string> = {
   raw: '原材料',
   semi: '半成品',
@@ -156,19 +158,6 @@ interface Material {
   remark: string
   status: string
 }
-
-// --------------- Mock 数据 ---------------
-const mockMaterials: Material[] = Array.from({ length: 35 }, (_, i) => ({
-  id: i + 1,
-  code: `MAT-${String(i + 1).padStart(4, '0')}`,
-  name: `物料${['钢板', '螺丝', '齿轮', '轴承', '弹簧', '密封圈'][i % 6]}${i + 1}`,
-  spec: `规格${['A', 'B', 'C', 'D'][i % 4]}-${i + 1}`,
-  unit: ['个', 'kg', '米', '套', '卷'][i % 5],
-  category: ['raw', 'semi', 'finished', 'packaging'][i % 4],
-  safetyStock: Math.floor(Math.random() * 500) + 10,
-  remark: `备注信息 ${i + 1}`,
-  status: i % 5 === 0 ? 'inactive' : 'active',
-}))
 
 // --------------- 状态 ---------------
 const loading = ref(false)
@@ -213,30 +202,22 @@ const rules: FormRules = {
 const dialogTitle = computed(() => (isEdit.value ? '编辑物料' : '新增物料'))
 
 // --------------- 方法 ---------------
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  // 模拟 API 请求
-  setTimeout(() => {
-    let list = [...mockMaterials]
-
-    if (searchForm.code) {
-      list = list.filter((m) => m.code.includes(searchForm.code))
-    }
-    if (searchForm.name) {
-      list = list.filter((m) => m.name.includes(searchForm.name))
-    }
-    if (searchForm.category) {
-      list = list.filter((m) => m.category === searchForm.category)
-    }
-    if (searchForm.status) {
-      list = list.filter((m) => m.status === searchForm.status)
-    }
-
-    pagination.total = list.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = list.slice(start, start + pagination.pageSize)
+  try {
+    const result = await api.page<Material>(API_PATH, pagination.page, pagination.pageSize, {
+      code: searchForm.code || undefined,
+      name: searchForm.name || undefined,
+      category: searchForm.category || undefined,
+      status: searchForm.status || undefined,
+    })
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -274,38 +255,44 @@ function handleEdit(row: Material) {
   dialogVisible.value = true
 }
 
-function handleDelete(row: Material) {
-  ElMessageBox.confirm(`确定要删除物料「${row.name}」吗？`, '删除确认', {
-    type: 'warning',
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-  }).then(() => {
-    const idx = mockMaterials.findIndex((m) => m.id === row.id)
-    if (idx > -1) mockMaterials.splice(idx, 1)
+async function handleDelete(row: Material) {
+  try {
+    await ElMessageBox.confirm(`确定要删除物料「${row.name}」吗？`, '删除确认', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+    })
+    await api.del(`${API_PATH}/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
-  }).catch(() => {})
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.message) {
+      ElMessage.error(e.message || '删除失败')
+    }
+  }
 }
 
-function handleSubmit() {
-  formRef.value?.validate((valid) => {
-    if (!valid) return
-    submitLoading.value = true
-    setTimeout(() => {
-      if (isEdit.value && editingId.value !== null) {
-        const item = mockMaterials.find((m) => m.id === editingId.value)
-        if (item) Object.assign(item, { ...form })
-        ElMessage.success('编辑成功')
-      } else {
-        const newId = Math.max(...mockMaterials.map((m) => m.id), 0) + 1
-        mockMaterials.push({ id: newId, ...form })
-        ElMessage.success('新增成功')
-      }
-      submitLoading.value = false
-      dialogVisible.value = false
-      fetchData()
-    }, 300)
-  })
+async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  submitLoading.value = true
+  try {
+    const body = { ...form }
+    if (isEdit.value && editingId.value !== null) {
+      await api.put(`${API_PATH}/${editingId.value}`, body)
+      ElMessage.success('编辑成功')
+    } else {
+      await api.post<Material>(API_PATH, body)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 function handleDialogClosed() {

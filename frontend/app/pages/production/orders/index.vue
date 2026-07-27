@@ -249,6 +249,7 @@
 <script setup lang="ts">
 import { Search, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -301,50 +302,16 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | '' {
 }
 
 // ==================== 物料选项 ====================
-const materialOptions = ref([
-  { label: 'PCB-001 主板基板', value: 1 },
-  { label: 'CPU-002 中央处理器', value: 2 },
-  { label: 'LCD-003 液晶显示屏', value: 3 },
-  { label: 'BAT-004 锂电池组', value: 4 },
-  { label: 'CHS-005 充电器套件', value: 5 },
-  { label: 'ANT-006 天线模块', value: 6 },
-])
+const materialOptions = ref<{ label: string; value: number }[]>([])
 
-// ==================== Mock 数据 ====================
-function generateMockData(): ProductionOrder[] {
-  const materials = materialOptions.value
-  const statuses: ProductionOrder['status'][] = [
-    'pending', 'released', 'running', 'finishing', 'completed',
-  ]
-  const data: ProductionOrder[] = []
-  for (let i = 1; i <= 35; i++) {
-    const mat = materials[i % materials.length]
-    const status = statuses[i % statuses.length]
-    const planQty = ((i % 5) + 1) * 100
-    const finishedQty =
-      status === 'completed'
-        ? planQty
-        : status === 'running' || status === 'finishing'
-          ? Math.floor(planQty * (0.3 + Math.random() * 0.5))
-          : 0
-    data.push({
-      id: i,
-      orderNo: `MO-${String(i).padStart(5, '0')}`,
-      salesOrderId: i % 4 === 0 ? null : i,
-      salesOrderNo: i % 4 === 0 ? '' : `SO-${String(i).padStart(5, '0')}`,
-      materialId: mat.value,
-      materialName: mat.label,
-      planQuantity: planQty,
-      finishedQuantity: finishedQty,
-      planStartDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 20) + 1).padStart(2, '0')}`,
-      planEndDate: `2025-${String(((i + 1) % 12) + 1).padStart(2, '0')}-${String(((i + 10) % 28) + 1).padStart(2, '0')}`,
-      status,
-    })
+async function loadMaterialOptions() {
+  try {
+    const data = await api.get<{ id: number; name: string }[]>('/production/materials')
+    materialOptions.value = data.map((m) => ({ label: m.name, value: m.id }))
+  } catch {
+    // options load silently
   }
-  return data
 }
-
-const allData = ref<ProductionOrder[]>(generateMockData())
 
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
@@ -369,33 +336,31 @@ function handleSelectionChange(rows: ProductionOrder[]) {
   selectedIds.value = rows.map((r) => r.id)
 }
 
-function fetchData() {
+function buildSearchQuery(): Record<string, string | number | undefined> {
+  const q: Record<string, string | number | undefined> = {}
+  if (searchForm.orderNo) q.orderNo = searchForm.orderNo
+  if (searchForm.salesOrderNo) q.salesOrderNo = searchForm.salesOrderNo
+  if (searchForm.materialId) q.materialId = searchForm.materialId
+  if (searchForm.status) q.status = searchForm.status
+  return q
+}
+
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...allData.value]
-
-    if (searchForm.orderNo) {
-      filtered = filtered.filter((o) =>
-        o.orderNo.toLowerCase().includes(searchForm.orderNo.toLowerCase()),
-      )
-    }
-    if (searchForm.salesOrderNo) {
-      filtered = filtered.filter((o) =>
-        o.salesOrderNo.toLowerCase().includes(searchForm.salesOrderNo.toLowerCase()),
-      )
-    }
-    if (searchForm.materialId) {
-      filtered = filtered.filter((o) => o.materialId === searchForm.materialId)
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter((o) => o.status === searchForm.status)
-    }
-
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = filtered.slice(start, start + pagination.pageSize)
+  try {
+    const result = await api.page<ProductionOrder>(
+      '/production/orders',
+      pagination.page,
+      pagination.pageSize,
+      buildSearchQuery(),
+    )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch {
+    ElMessage.error('加载工单列表失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -420,58 +385,63 @@ function handleEdit(row: ProductionOrder) {
   router.push(`/production/orders/create?id=${row.id}`)
 }
 
-function handleDelete(row: ProductionOrder) {
-  const idx = allData.value.findIndex((o) => o.id === row.id)
-  if (idx > -1) {
-    allData.value.splice(idx, 1)
+async function handleDelete(row: ProductionOrder) {
+  try {
+    await api.del(`/production/orders/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch {
+    ElMessage.error('删除失败')
   }
-  ElMessage.success('删除成功')
-  fetchData()
 }
 
-function handleRelease(row: ProductionOrder) {
-  const target = allData.value.find((o) => o.id === row.id)
-  if (target) {
-    target.status = 'released'
+async function handleRelease(row: ProductionOrder) {
+  try {
+    await api.post(`/production/orders/release/${row.id}`)
+    ElMessage.success('工单已下达')
+    fetchData()
+  } catch {
+    ElMessage.error('下达失败')
   }
-  ElMessage.success('工单已下达')
-  fetchData()
 }
 
-function handleFinish(row: ProductionOrder) {
-  const target = allData.value.find((o) => o.id === row.id)
-  if (target) {
-    target.status = 'finishing'
+async function handleFinish(row: ProductionOrder) {
+  try {
+    await api.post(`/production/orders/${row.id}/finish`)
+    ElMessage.success('已提交完工入库')
+    fetchData()
+  } catch {
+    ElMessage.error('操作失败')
   }
-  ElMessage.success('已提交完工入库')
-  fetchData()
 }
 
 function handleCreatePicking(row: ProductionOrder) {
   router.push(`/production/pickings/create?fromOrder=${row.id}`)
 }
 
-function handleBatchDelete() {
+async function handleBatchDelete() {
   if (selectedIds.value.length === 0) {
     ElMessage.warning('请先选择要删除的工单')
     return
   }
-  ElMessageBox.confirm(
-    `确认删除选中的 ${selectedIds.value.length} 条工单？`,
-    '批量删除',
-    { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' },
-  ).then(() => {
-    allData.value = allData.value.filter(
-      (o) => !selectedIds.value.includes(o.id),
+  try {
+    await ElMessageBox.confirm(
+      `确认删除选中的 ${selectedIds.value.length} 条工单？`,
+      '批量删除',
+      { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' },
     )
+    await Promise.all(selectedIds.value.map((id) => api.del(`/production/orders/${id}`)))
     selectedIds.value = []
     ElMessage.success('批量删除成功')
     fetchData()
-  })
+  } catch {
+    // cancelled or error — no-op
+  }
 }
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  loadMaterialOptions()
   fetchData()
 })
 </script>

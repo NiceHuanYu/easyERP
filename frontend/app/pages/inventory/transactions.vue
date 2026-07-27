@@ -4,13 +4,10 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="物料编码">
-          <el-input v-model="searchForm.materialCode" placeholder="请输入物料编码" clearable />
-        </el-form-item>
-        <el-form-item label="物料名称">
-          <el-input v-model="searchForm.materialName" placeholder="请输入物料名称" clearable />
+          <el-input v-model="searchForm.materialId" placeholder="请输入物料编码" clearable />
         </el-form-item>
         <el-form-item label="仓库">
-          <el-select v-model="searchForm.warehouse" placeholder="请选择仓库" clearable>
+          <el-select v-model="searchForm.warehouseId" placeholder="请选择仓库" clearable>
             <el-option
               v-for="wh in warehouseOptions"
               :key="wh.value"
@@ -51,7 +48,7 @@
 
       <el-table
         v-loading="loading"
-        :data="paginatedData"
+        :data="tableData"
         stripe
         border
       >
@@ -86,11 +83,13 @@
       <el-pagination
         v-model:current-page="pagination.page"
         v-model:page-size="pagination.pageSize"
-        :total="filteredData.length"
+        :total="pagination.total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         background
         class="pagination"
+        @size-change="handleSearch"
+        @current-change="handleSearch"
       />
     </el-card>
   </div>
@@ -98,6 +97,8 @@
 
 <script setup lang="ts">
 import { Search, RefreshLeft } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -117,19 +118,18 @@ interface Transaction {
 
 // ── Search Form ────────────────────────────────────
 const searchForm = reactive({
-  materialCode: '',
-  materialName: '',
-  warehouse: '',
+  materialId: '',
+  warehouseId: '',
   type: '' as string,
   dateRange: null as [string, string] | null,
 })
 
 const warehouseOptions = [
-  { label: '原料仓', value: '原料仓' },
-  { label: '半成品仓', value: '半成品仓' },
-  { label: '成品仓', value: '成品仓' },
-  { label: '包材仓', value: '包材仓' },
-  { label: '临调仓', value: '临调仓' },
+  { label: '原料仓', value: '1' },
+  { label: '半成品仓', value: '2' },
+  { label: '成品仓', value: '3' },
+  { label: '包材仓', value: '4' },
+  { label: '临调仓', value: '5' },
 ]
 
 const typeTagMap: Record<string, 'success' | 'danger' | 'warning'> = {
@@ -138,108 +138,60 @@ const typeTagMap: Record<string, 'success' | 'danger' | 'warning'> = {
   '调拨': 'warning',
 }
 
-// ── Mock Data ──────────────────────────────────────
-function generateMockTransactions(): Transaction[] {
-  const materials = [
-    { code: 'MAT-0001', name: '冷轧钢板 SPCC' },
-    { code: 'MAT-0002', name: '不锈钢管 304' },
-    { code: 'MAT-0003', name: '铜芯电缆 YJV' },
-    { code: 'MAT-0004', name: 'ABS 塑料粒子' },
-    { code: 'MAT-0005', name: '轴承 6205-2RS' },
-    { code: 'MAT-0006', name: '齿轮油 L-CKC220' },
-    { code: 'MAT-0007', name: '螺栓 M12×50' },
-    { code: 'MAT-0008', name: '密封圈 NBR' },
-  ]
-
-  const warehouses = ['原料仓', '半成品仓', '成品仓', '包材仓', '临调仓']
-  const types: Array<'入库' | '出库' | '调拨'> = ['入库', '出库', '调拨']
-  const operators = ['张伟', '李娜', '王强', '赵敏', '陈刚']
-  const refPrefixes: Record<string, string> = {
-    '入库': 'PO-RCV-',
-    '出库': 'SO-DLV-',
-    '调拨': 'TR-',
-  }
-
-  const data: Transaction[] = []
-  for (let i = 0; i < 60; i++) {
-    const type = types[Math.floor(Math.random() * types.length)]
-    const mat = materials[Math.floor(Math.random() * materials.length)]
-    const date = new Date()
-    date.setDate(date.getDate() - Math.floor(Math.random() * 90))
-    date.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 60), Math.floor(Math.random() * 60))
-
-    const direction = type === '出库' ? '-' : '+'
-    const qty = Math.floor(Math.random() * 500) + 10
-
-    data.push({
-      transNo: `TXN-${String(i + 1).padStart(6, '0')}`,
-      date: date.toLocaleDateString('zh-CN'),
-      materialCode: mat.code,
-      materialName: mat.name,
-      warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
-      type,
-      quantity: qty,
-      direction,
-      refNo: `${refPrefixes[type]}${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}`,
-      operator: operators[Math.floor(Math.random() * operators.length)],
-    })
-  }
-
-  // Sort by date descending
-  data.sort((a, b) => b.date.localeCompare(a.date) || b.transNo.localeCompare(a.transNo))
-  return data
-}
-
-const mockData = ref<Transaction[]>(generateMockTransactions())
+// ── Data ───────────────────────────────────────────
+const tableData = ref<Transaction[]>([])
 const loading = ref(false)
 
 // ── Pagination ─────────────────────────────────────
-const pagination = reactive({ page: 1, pageSize: 20 })
+const pagination = reactive({ page: 1, pageSize: 20, total: 0 })
 
-// ── Filtering ──────────────────────────────────────
-const filteredData = computed(() => {
-  let list = mockData.value
+// ── Fetch ──────────────────────────────────────────
+async function fetchData() {
+  loading.value = true
+  try {
+    const query: Record<string, string | number | undefined> = {}
+    if (searchForm.materialId) query.materialId = searchForm.materialId
+    if (searchForm.warehouseId) query.warehouseId = searchForm.warehouseId
+    if (searchForm.type) query.type = searchForm.type
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      query.startTime = searchForm.dateRange[0]
+      query.endTime = searchForm.dateRange[1]
+    }
 
-  if (searchForm.materialCode) {
-    list = list.filter((item) =>
-      item.materialCode.toLowerCase().includes(searchForm.materialCode.toLowerCase()),
+    const result = await api.page<Transaction>(
+      '/inventory/transactions',
+      pagination.page,
+      pagination.pageSize,
+      query,
     )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载失败')
+  } finally {
+    loading.value = false
   }
-  if (searchForm.materialName) {
-    list = list.filter((item) => item.materialName.includes(searchForm.materialName))
-  }
-  if (searchForm.warehouse) {
-    list = list.filter((item) => item.warehouse === searchForm.warehouse)
-  }
-  if (searchForm.type) {
-    list = list.filter((item) => item.type === searchForm.type)
-  }
-  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-    const [start, end] = searchForm.dateRange
-    list = list.filter((item) => item.date >= start && item.date <= end)
-  }
-
-  return list
-})
-
-const paginatedData = computed(() => {
-  const start = (pagination.page - 1) * pagination.pageSize
-  return filteredData.value.slice(start, start + pagination.pageSize)
-})
+}
 
 // ── Actions ────────────────────────────────────────
 function handleSearch() {
   pagination.page = 1
+  fetchData()
 }
 
 function handleReset() {
-  searchForm.materialCode = ''
-  searchForm.materialName = ''
-  searchForm.warehouse = ''
+  searchForm.materialId = ''
+  searchForm.warehouseId = ''
   searchForm.type = ''
   searchForm.dateRange = null
   pagination.page = 1
+  fetchData()
 }
+
+// ── Init ───────────────────────────────────────────
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style scoped>

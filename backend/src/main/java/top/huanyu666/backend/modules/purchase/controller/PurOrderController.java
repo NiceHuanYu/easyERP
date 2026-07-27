@@ -119,4 +119,43 @@ public class PurOrderController {
         log.info("采购订单 {} 创建收货单 {}", order.getOrderNo(), receiving.getReceivingNo());
         return ApiResponse.ok(receiving);
     }
+
+    // ==================== 编辑/删除/下达 ====================
+
+    @SaCheckPermission("purchase:order:create")
+    @PutMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody PurOrder order) {
+        PurOrder exist = orderMapper.selectById(id);
+        if (exist == null) throw new BusinessException("采购订单不存在");
+        if (!"DRAFT".equals(exist.getStatus())) throw new BusinessException("只有草稿状态可编辑");
+        order.setId(id);
+        orderMapper.updateById(order);
+        return ApiResponse.ok();
+    }
+
+    @SaCheckPermission("purchase:order:create")
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        PurOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BusinessException("采购订单不存在");
+        if (!"DRAFT".equals(order.getStatus())) throw new BusinessException("只有草稿状态可删除");
+        orderItemMapper.delete(new LambdaQueryWrapper<PurOrderItem>().eq(PurOrderItem::getOrderId, id));
+        orderMapper.deleteById(id);
+        return ApiResponse.ok();
+    }
+
+    @SaCheckPermission("purchase:order:create")
+    @PostMapping("/{id}/issue")
+    @Transactional
+    public ApiResponse<Void> issue(@PathVariable Long id) {
+        PurOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BusinessException("采购订单不存在");
+        if (!"DRAFT".equals(order.getStatus()) && !"SUBMITTED".equals(order.getStatus()))
+            throw new BusinessException("只有草稿或已提交状态可下达");
+        order.setStatus("APPROVED");
+        orderMapper.updateById(order);
+        return ApiResponse.ok();
+    }
 }

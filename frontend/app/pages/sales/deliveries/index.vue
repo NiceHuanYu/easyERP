@@ -144,6 +144,7 @@
 <script setup lang="ts">
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -169,34 +170,7 @@ interface SearchForm {
 }
 
 // ==================== 客户选项 ====================
-const customerOptions = ref([
-  { label: '华为技术有限公司', value: 1 },
-  { label: '中兴通讯股份有限公司', value: 2 },
-  { label: '比亚迪股份有限公司', value: 3 },
-  { label: '富士康科技集团', value: 4 },
-])
-
-// ==================== Mock 数据 ====================
-function generateMockData(): Delivery[] {
-  const customers = customerOptions.value
-  const data: Delivery[] = []
-  for (let i = 1; i <= 25; i++) {
-    const customer = customers[i % customers.length]
-    data.push({
-      id: i,
-      deliveryNo: `DLV-${String(i).padStart(5, '0')}`,
-      orderId: i,
-      orderNo: `SO-${String(i).padStart(5, '0')}`,
-      customerId: customer.value,
-      customerName: customer.label,
-      deliveryDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-      status: i % 3 === 0 ? 'draft' : 'shipped',
-    })
-  }
-  return data
-}
-
-const allData = ref<Delivery[]>(generateMockData())
+const customerOptions = ref<{ label: string; value: number }[]>([])
 
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
@@ -215,34 +189,31 @@ const pagination = reactive({
   total: 0,
 })
 
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...allData.value]
-
-    if (searchForm.deliveryNo) {
-      filtered = filtered.filter((d) =>
-        d.deliveryNo.toLowerCase().includes(searchForm.deliveryNo.toLowerCase()),
-      )
-    }
-    if (searchForm.customerId) {
-      filtered = filtered.filter((d) => d.customerId === searchForm.customerId)
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter((d) => d.status === searchForm.status)
-    }
+  try {
+    const query: Record<string, string | number | undefined> = {}
+    if (searchForm.deliveryNo) query.deliveryNo = searchForm.deliveryNo
+    if (searchForm.customerId) query.customerId = searchForm.customerId
+    if (searchForm.status) query.status = searchForm.status
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      const [start, end] = searchForm.dateRange
-      filtered = filtered.filter(
-        (d) => d.deliveryDate >= start && d.deliveryDate <= end,
-      )
+      query.startDate = searchForm.dateRange[0]
+      query.endDate = searchForm.dateRange[1]
     }
 
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = filtered.slice(start, start + pagination.pageSize)
+    const result = await api.page<Delivery>(
+      '/sales/deliveries',
+      pagination.page,
+      pagination.pageSize,
+      query,
+    )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -258,23 +229,24 @@ function handleReset() {
   handleSearch()
 }
 
-// ==================== 行操作 ====================
-function handleConfirm(row: Delivery) {
-  const target = allData.value.find((d) => d.id === row.id)
-  if (target) {
-    target.status = 'shipped'
+async function handleConfirm(row: Delivery) {
+  try {
+    await api.post(`/sales/deliveries/${row.id}/confirm`)
+    ElMessage.success('确认发货成功')
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '确认发货失败')
   }
-  ElMessage.success('确认发货成功')
-  fetchData()
 }
 
-function handleDelete(row: Delivery) {
-  const idx = allData.value.findIndex((d) => d.id === row.id)
-  if (idx > -1) {
-    allData.value.splice(idx, 1)
+async function handleDelete(row: Delivery) {
+  try {
+    await api.del(`/sales/deliveries/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '删除失败')
   }
-  ElMessage.success('删除成功')
-  fetchData()
 }
 
 // ==================== 初始化 ====================

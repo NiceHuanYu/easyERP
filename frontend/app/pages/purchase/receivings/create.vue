@@ -163,6 +163,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { formatMoney, formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -173,7 +174,7 @@ const authStore = useAuthStore()
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
 
-// ==================== 选项数据 ====================
+// ==================== 选项数据（TODO: 后续替换为 API 调用） ====================
 const orderOptions = ref([
   { label: 'PO-00001 / 深圳华强电子有限公司', value: 1 },
   { label: 'PO-00002 / 广州万国元件有限公司', value: 2 },
@@ -223,46 +224,30 @@ const rules = {
   receivingDate: [{ required: true, message: '请选择收货日期', trigger: 'change' }],
 }
 
-// ==================== Mock：根据采购订单加载可收货行 ====================
-function onOrderChange(val: number | null) {
+// ==================== 根据采购订单加载可收货行 ====================
+async function onOrderChange(val: number | null) {
   if (!val) {
     form.lines = []
     return
   }
-  // Mock: 根据订单 ID 加载明细
-  const mockLines: ReceivingLine[] = [
-    {
-      materialId: 1,
-      materialName: 'PCB-001 主板基板',
-      orderQuantity: 100,
-      receivedQuantity: 30,
-      receivingQuantity: 70,
-      price: 25.50,
-      subtotal: 0,
-    },
-    {
-      materialId: 2,
-      materialName: 'CPU-002 中央处理器',
-      orderQuantity: 50,
-      receivedQuantity: 0,
-      receivingQuantity: 50,
-      price: 180.00,
-      subtotal: 0,
-    },
-    {
-      materialId: 4,
-      materialName: 'BAT-004 锂电池组',
-      orderQuantity: 200,
-      receivedQuantity: 100,
-      receivingQuantity: 100,
-      price: 35.00,
-      subtotal: 0,
-    },
-  ]
-  form.lines = mockLines.map((l) => ({
-    ...l,
-    subtotal: parseFloat((l.receivingQuantity * l.price).toFixed(2)),
-  }))
+  try {
+    const data = await api.get<any>(`/purchase/orders/${val}`)
+    if (data.lines && data.lines.length > 0) {
+      form.lines = data.lines.map((l: any) => ({
+        materialId: l.materialId ?? 0,
+        materialName: l.materialName ?? '',
+        orderQuantity: l.quantity ?? 0,
+        receivedQuantity: l.receivedQuantity ?? 0,
+        receivingQuantity: (l.quantity ?? 0) - (l.receivedQuantity ?? 0),
+        price: l.price ?? 0,
+        subtotal: parseFloat((((l.quantity ?? 0) - (l.receivedQuantity ?? 0)) * (l.price ?? 0)).toFixed(2)),
+      }))
+    } else {
+      form.lines = []
+    }
+  } catch {
+    ElMessage.error('加载采购订单明细失败')
+  }
 }
 
 function recalcLine(index: number) {
@@ -301,16 +286,66 @@ async function handleSaveDraft() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   if (!validateLines()) return
-  ElMessage.success('收货单草稿保存成功')
-  router.push('/purchase/receivings')
+
+  try {
+    const payload = { ...form, status: 'draft', totalAmount: totalAmount.value }
+    if (isEdit.value) {
+      await api.put(`/purchase/receivings/${route.query.id}`, payload)
+    } else {
+      await api.post('/purchase/receivings', payload)
+    }
+    ElMessage.success('收货单草稿保存成功')
+    router.push('/purchase/receivings')
+  } catch {
+    ElMessage.error('保存失败')
+  }
 }
 
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   if (!validateLines()) return
-  ElMessage.success('收货确认成功')
-  router.push('/purchase/receivings')
+
+  try {
+    const payload = { ...form, status: 'received', totalAmount: totalAmount.value }
+    if (isEdit.value) {
+      await api.put(`/purchase/receivings/${route.query.id}`, payload)
+    } else {
+      const result = await api.post<any>('/purchase/receivings', payload)
+      // Auto-confirm if creating new
+      if (result.id) {
+        await api.post(`/purchase/receivings/confirm/${result.id}`)
+      }
+    }
+    ElMessage.success('收货确认成功')
+    router.push('/purchase/receivings')
+  } catch {
+    ElMessage.error('提交失败')
+  }
+}
+
+// ==================== 编辑模式：加载已有收货单 ====================
+async function loadReceiving(id: string) {
+  try {
+    const data = await api.get<any>(`/purchase/receivings/${id}`)
+    form.orderId = data.orderId ?? null
+    form.warehouseId = data.warehouseId ?? null
+    form.receivingDate = data.receivingDate ?? formatDate(new Date(), 'YYYY-MM-DD')
+    form.remark = data.remark ?? ''
+    if (data.lines && data.lines.length > 0) {
+      form.lines = data.lines.map((l: any) => ({
+        materialId: l.materialId ?? 0,
+        materialName: l.materialName ?? '',
+        orderQuantity: l.orderQuantity ?? 0,
+        receivedQuantity: l.receivedQuantity ?? 0,
+        receivingQuantity: l.receivingQuantity ?? 0,
+        price: l.price ?? 0,
+        subtotal: l.subtotal ?? 0,
+      }))
+    }
+  } catch {
+    ElMessage.error('加载收货单数据失败')
+  }
 }
 
 // ==================== 预填逻辑（来自采购订单） ====================
@@ -325,12 +360,7 @@ onMounted(() => {
     prefillFromOrder(route.query.fromOrder as string)
   }
   if (route.query.id) {
-    // 编辑模式：加载已有收货单（Mock）
-    form.orderId = 1
-    form.warehouseId = 1
-    form.receivingDate = '2025-07-02'
-    form.remark = '测试收货单'
-    onOrderChange(1)
+    loadReceiving(route.query.id as string)
   }
 })
 </script>

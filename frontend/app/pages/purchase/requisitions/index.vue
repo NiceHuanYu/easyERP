@@ -179,6 +179,7 @@
 <script setup lang="ts">
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -223,42 +224,13 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | 'default' {
   return map[s] ?? 'default'
 }
 
-// ==================== 选项 ====================
+// ==================== 选项（TODO: 后续替换为 API 调用） ====================
 const employeeOptions = ref([
   { label: '张三', value: 1 },
   { label: '李四', value: 2 },
   { label: '王五', value: 3 },
   { label: '赵六', value: 4 },
 ])
-
-// ==================== Mock 数据 ====================
-const materialNames = ['PCB-001 主板基板', 'CPU-002 中央处理器', 'LCD-003 液晶显示屏', 'BAT-004 锂电池组', 'CHS-005 充电器套件', 'ANT-006 天线模块']
-
-function generateMockData(): Requisition[] {
-  const employees = employeeOptions.value
-  const statuses: Requisition['status'][] = ['draft', 'submitted', 'approved']
-  const data: Requisition[] = []
-  for (let i = 1; i <= 28; i++) {
-    const emp = employees[i % employees.length]
-    const matCount = (i % 3) + 1
-    const summary = matCount === 1
-      ? materialNames[i % materialNames.length]
-      : `${materialNames[i % materialNames.length]} 等${matCount}项`
-    data.push({
-      id: i,
-      reqNo: `PR-${String(i).padStart(5, '0')}`,
-      applicantId: emp.value,
-      applicantName: emp.label,
-      reqDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-      materialSummary: summary,
-      totalQuantity: (i % 5) * 10 + 10,
-      status: statuses[i % statuses.length],
-    })
-  }
-  return data
-}
-
-const allData = ref<Requisition[]>(generateMockData())
 
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
@@ -277,34 +249,30 @@ const pagination = reactive({
   total: 0,
 })
 
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...allData.value]
-
-    if (searchForm.reqNo) {
-      filtered = filtered.filter((r) =>
-        r.reqNo.toLowerCase().includes(searchForm.reqNo.toLowerCase()),
-      )
-    }
-    if (searchForm.applicantId) {
-      filtered = filtered.filter((r) => r.applicantId === searchForm.applicantId)
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter((r) => r.status === searchForm.status)
-    }
+  try {
+    const extraQuery: Record<string, string | number | undefined> = {}
+    if (searchForm.reqNo) extraQuery.reqNo = searchForm.reqNo
+    if (searchForm.applicantId) extraQuery.applicantId = searchForm.applicantId
+    if (searchForm.status) extraQuery.status = searchForm.status
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      const [start, end] = searchForm.dateRange
-      filtered = filtered.filter(
-        (r) => r.reqDate >= start && r.reqDate <= end,
-      )
+      extraQuery.startDate = searchForm.dateRange[0]
+      extraQuery.endDate = searchForm.dateRange[1]
     }
-
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = filtered.slice(start, start + pagination.pageSize)
+    const result = await api.page<Requisition>(
+      '/purchase/requisitions',
+      pagination.page,
+      pagination.pageSize,
+      extraQuery,
+    )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch {
+    ElMessage.error('加载数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -329,35 +297,44 @@ function handleEdit(row: Requisition) {
   router.push(`/purchase/requisitions/create?id=${row.id}`)
 }
 
-function handleDelete(row: Requisition) {
-  const idx = allData.value.findIndex((r) => r.id === row.id)
-  if (idx > -1) {
-    allData.value.splice(idx, 1)
+async function handleDelete(row: Requisition) {
+  try {
+    await api.del(`/purchase/requisitions/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch {
+    ElMessage.error('删除失败')
   }
-  ElMessage.success('删除成功')
-  fetchData()
 }
 
-function handleSubmit(row: Requisition) {
-  const target = allData.value.find((r) => r.id === row.id)
-  if (target) {
-    target.status = 'submitted'
+async function handleSubmit(row: Requisition) {
+  try {
+    await api.put(`/purchase/requisitions/${row.id}`, { status: 'submitted' })
+    ElMessage.success('提交成功')
+    fetchData()
+  } catch {
+    ElMessage.error('提交失败')
   }
-  ElMessage.success('提交成功')
-  fetchData()
 }
 
-function handleApprove(row: Requisition) {
-  const target = allData.value.find((r) => r.id === row.id)
-  if (target) {
-    target.status = 'approved'
+async function handleApprove(row: Requisition) {
+  try {
+    await api.put(`/purchase/requisitions/${row.id}`, { status: 'approved' })
+    ElMessage.success('审核通过')
+    fetchData()
+  } catch {
+    ElMessage.error('审核失败')
   }
-  ElMessage.success('审核通过')
-  fetchData()
 }
 
-function handleCreateOrder(row: Requisition) {
-  router.push(`/purchase/orders/create?fromRequisition=${row.id}`)
+async function handleCreateOrder(row: Requisition) {
+  try {
+    await api.post(`/purchase/requisitions/create-order/${row.id}`)
+    ElMessage.success('已生成采购订单')
+    router.push(`/purchase/orders/create?fromRequisition=${row.id}`)
+  } catch {
+    ElMessage.error('生成采购订单失败')
+  }
 }
 
 // ==================== 初始化 ====================

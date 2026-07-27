@@ -141,6 +141,7 @@
 <script setup lang="ts">
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -165,28 +166,6 @@ interface SearchForm {
   dateRange: [string, string] | null
 }
 
-// ==================== Mock 数据 ====================
-const materialNames = ['PCB-001 主板基板', 'CPU-002 中央处理器', 'LCD-003 液晶显示屏', 'BAT-004 锂电池组', 'CHS-005 充电器套件']
-
-function generateMockData(): Finishing[] {
-  const data: Finishing[] = []
-  for (let i = 1; i <= 20; i++) {
-    data.push({
-      id: i,
-      finishingNo: `FN-${String(i).padStart(5, '0')}`,
-      orderId: i,
-      orderNo: `MO-${String(i).padStart(5, '0')}`,
-      materialName: materialNames[i % materialNames.length],
-      quantity: ((i % 3) + 1) * 30,
-      finishingDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-      status: i % 3 === 0 ? 'draft' : 'finished',
-    })
-  }
-  return data
-}
-
-const allData = ref<Finishing[]>(generateMockData())
-
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
   finishingNo: '',
@@ -204,36 +183,34 @@ const pagination = reactive({
   total: 0,
 })
 
-function fetchData() {
+function buildSearchQuery(): Record<string, string | number | undefined> {
+  const q: Record<string, string | number | undefined> = {}
+  if (searchForm.finishingNo) q.finishingNo = searchForm.finishingNo
+  if (searchForm.orderNo) q.orderNo = searchForm.orderNo
+  if (searchForm.status) q.status = searchForm.status
+  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+    q.startDate = searchForm.dateRange[0]
+    q.endDate = searchForm.dateRange[1]
+  }
+  return q
+}
+
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...allData.value]
-
-    if (searchForm.finishingNo) {
-      filtered = filtered.filter((f) =>
-        f.finishingNo.toLowerCase().includes(searchForm.finishingNo.toLowerCase()),
-      )
-    }
-    if (searchForm.orderNo) {
-      filtered = filtered.filter((f) =>
-        f.orderNo.toLowerCase().includes(searchForm.orderNo.toLowerCase()),
-      )
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter((f) => f.status === searchForm.status)
-    }
-    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      const [start, end] = searchForm.dateRange
-      filtered = filtered.filter(
-        (f) => f.finishingDate >= start && f.finishingDate <= end,
-      )
-    }
-
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = filtered.slice(start, start + pagination.pageSize)
+  try {
+    const result = await api.page<Finishing>(
+      '/production/finishings',
+      pagination.page,
+      pagination.pageSize,
+      buildSearchQuery(),
+    )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch {
+    ElMessage.error('加载入库单列表失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -250,22 +227,24 @@ function handleReset() {
 }
 
 // ==================== 行操作 ====================
-function handleConfirm(row: Finishing) {
-  const target = allData.value.find((f) => f.id === row.id)
-  if (target) {
-    target.status = 'finished'
+async function handleConfirm(row: Finishing) {
+  try {
+    await api.post(`/production/finishings/confirm/${row.id}`)
+    ElMessage.success('确认入库成功')
+    fetchData()
+  } catch {
+    ElMessage.error('确认入库失败')
   }
-  ElMessage.success('确认入库成功')
-  fetchData()
 }
 
-function handleDelete(row: Finishing) {
-  const idx = allData.value.findIndex((f) => f.id === row.id)
-  if (idx > -1) {
-    allData.value.splice(idx, 1)
+async function handleDelete(row: Finishing) {
+  try {
+    await api.del(`/production/finishings/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch {
+    ElMessage.error('删除失败')
   }
-  ElMessage.success('删除成功')
-  fetchData()
 }
 
 // ==================== 初始化 ====================

@@ -15,7 +15,7 @@ import top.huanyu666.backend.modules.base.mapper.BomMapper;
  * BOM 管理
  */
 @RestController
-@RequestMapping("/api/v1/base/boms")
+@RequestMapping({"/api/v1/base/boms", "/api/v1/base-data/boms"})
 @RequiredArgsConstructor
 public class BomController {
 

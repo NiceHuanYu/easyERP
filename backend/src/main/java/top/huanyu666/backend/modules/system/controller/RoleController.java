@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.modules.system.entity.SysRole;
 import top.huanyu666.backend.modules.system.mapper.SysRoleMapper;
@@ -40,6 +41,13 @@ public class RoleController {
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SysRole role) {
         role.setId(id);
         roleMapper.updateById(role);
+        return ApiResponse.ok();
+    }
+
+    @DeleteMapping("/{id}")
+    @SaCheckPermission("system:role:delete")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        roleMapper.deleteById(id);
         return ApiResponse.ok();
     }
 }

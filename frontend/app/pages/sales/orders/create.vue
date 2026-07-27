@@ -187,6 +187,7 @@ import { ArrowLeft, Plus, Delete } from '@element-plus/icons-vue'
 import { formatMoney, formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -198,21 +199,8 @@ const authStore = useAuthStore()
 const isEdit = computed(() => !!route.query.id)
 
 // ==================== 选项数据 ====================
-const customerOptions = ref([
-  { label: '华为技术有限公司', value: 1 },
-  { label: '中兴通讯股份有限公司', value: 2 },
-  { label: '比亚迪股份有限公司', value: 3 },
-  { label: '富士康科技集团', value: 4 },
-])
-
-const materialOptions = ref([
-  { label: 'PCB-001 主板基板', value: 1 },
-  { label: 'CPU-002 中央处理器', value: 2 },
-  { label: 'LCD-003 液晶显示屏', value: 3 },
-  { label: 'BAT-004 锂电池组', value: 4 },
-  { label: 'CHS-005 充电器套件', value: 5 },
-  { label: 'ANT-006 天线模块', value: 6 },
-])
+const customerOptions = ref<{ label: string; value: number }[]>([])
+const materialOptions = ref<{ label: string; value: number }[]>([])
 
 // ==================== 表单数据 ====================
 interface OrderLine {
@@ -310,29 +298,24 @@ const totalAmount = computed(() => {
   return form.lines.reduce((sum, l) => sum + l.amount, 0)
 })
 
-// ==================== Mock 数据（编辑模式） ====================
-function loadMockOrder(id: string) {
-  // 模拟加载已有订单
-  form.customerId = 1
-  form.orderDate = '2025-06-15'
-  form.deliveryDate = '2025-07-01'
-  form.remark = '测试订单备注'
-  form.lines = [
-    {
-      materialId: 1,
-      materialName: 'PCB-001 主板基板',
-      quantity: 100,
-      price: 25.5,
-      amount: 2550.0,
-    },
-    {
-      materialId: 2,
-      materialName: 'CPU-002 中央处理器',
-      quantity: 50,
-      price: 180.0,
-      amount: 9000.0,
-    },
-  ]
+// ==================== 加载已有订单（编辑模式） ====================
+async function loadOrder(id: string) {
+  try {
+    const data = await api.get<{
+      customerId: number
+      orderDate: string
+      deliveryDate: string
+      remark: string
+      lines: OrderLine[]
+    }>(`/sales/orders/${id}/detail`)
+    form.customerId = data.customerId
+    form.orderDate = data.orderDate
+    form.deliveryDate = data.deliveryDate
+    form.remark = data.remark || ''
+    form.lines = data.lines.map((l) => ({ ...createEmptyLine(), ...l }))
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载订单失败')
+  }
 }
 
 // ==================== 提交操作 ====================
@@ -341,8 +324,18 @@ async function handleSaveDraft() {
   if (!valid) return
   if (!validateLines()) return
 
-  ElMessage.success('草稿保存成功')
-  router.push('/sales/orders')
+  try {
+    if (isEdit.value) {
+      await api.put(`/sales/orders/${route.query.id}`, form)
+      ElMessage.success('订单更新成功')
+    } else {
+      await api.post('/sales/orders', form)
+      ElMessage.success('草稿保存成功')
+    }
+    router.push('/sales/orders')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  }
 }
 
 async function handleSubmit() {
@@ -350,14 +343,27 @@ async function handleSubmit() {
   if (!valid) return
   if (!validateLines()) return
 
-  ElMessage.success('订单提交成功')
-  router.push('/sales/orders')
+  try {
+    let orderId: number | string | undefined
+    if (isEdit.value) {
+      await api.put(`/sales/orders/${route.query.id}`, form)
+      orderId = route.query.id as string
+    } else {
+      const created = await api.post<{ id: number }>('/sales/orders', form)
+      orderId = created.id
+    }
+    await api.post(`/sales/orders/${orderId}/submit`)
+    ElMessage.success('订单提交成功')
+    router.push('/sales/orders')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '提交失败')
+  }
 }
 
 // ==================== 初始化 ====================
 onMounted(() => {
   if (route.query.id) {
-    loadMockOrder(route.query.id as string)
+    loadOrder(route.query.id as string)
   }
 })
 </script>

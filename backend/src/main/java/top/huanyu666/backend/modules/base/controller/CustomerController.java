@@ -16,7 +16,7 @@ import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
  * 客户管理
  */
 @RestController
-@RequestMapping("/api/v1/base/customers")
+@RequestMapping({"/api/v1/base/customers", "/api/v1/base-data/customers"})
 @RequiredArgsConstructor
 public class CustomerController {
 

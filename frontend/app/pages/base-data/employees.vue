@@ -184,10 +184,12 @@
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
 // --------------- 常量 ---------------
+const API_PATH = '/base/employees'
 const deptMap: Record<string, string> = {
   tech: '技术部',
   production: '生产部',
@@ -218,31 +220,6 @@ interface UserOption {
   username: string
   realName: string
 }
-
-// --------------- Mock 关联用户选项 ---------------
-const userOptions: UserOption[] = [
-  { id: 1, username: 'zhangsan', realName: '张三' },
-  { id: 2, username: 'lisi', realName: '李四' },
-  { id: 3, username: 'wangwu', realName: '王五' },
-  { id: 4, username: 'zhaoliu', realName: '赵六' },
-  { id: 5, username: 'chenqi', realName: '陈七' },
-]
-
-// --------------- Mock 数据 ---------------
-const mockEmployees: Employee[] = Array.from({ length: 30 }, (_, i) => ({
-  id: i + 1,
-  code: `EMP-${String(i + 1).padStart(4, '0')}`,
-  name: ['张三', '李四', '王五', '赵六', '陈七', '周八', '吴九', '郑十'][i % 8],
-  gender: i % 3 === 0 ? 'female' : 'male',
-  department: ['tech', 'production', 'sales', 'purchase', 'finance', 'hr'][i % 6],
-  position: ['工程师', '主管', '经理', '专员', '操作工'][i % 5],
-  phone: `1${String(3 + (i % 9)).padStart(2, '0')}${String(Math.random() * 1e8 | 0).padStart(8, '0')}`,
-  email: `emp${i + 1}@company.com`,
-  entryDate: `202${Math.min(4, i % 5)}-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-  userId: i < 5 ? i + 1 : null,
-  remark: i % 4 === 0 ? `备注 ${i + 1}` : '',
-  status: i % 8 === 0 ? 'inactive' : 'active',
-}))
 
 // --------------- 状态 ---------------
 const loading = ref(false)
@@ -275,6 +252,9 @@ const form = reactive({
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 const tableData = ref<Employee[]>([])
 
+// 关联用户选项（从 /system/users 获取）
+const userOptions = ref<UserOption[]>([])
+
 const rules: FormRules = {
   code: [{ required: true, message: '请输入员工编码', trigger: 'blur' }],
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
@@ -290,26 +270,35 @@ const rules: FormRules = {
 const dialogTitle = computed(() => (isEdit.value ? '编辑员工' : '新增员工'))
 
 // --------------- 方法 ---------------
-function fetchData() {
+async function fetchUserOptions() {
+  try {
+    const data = await api.get<UserOption[]>('/system/users', { page: '1', size: '200' })
+    // If the API returns paginated data, try to extract; otherwise assume it's an array
+    if (Array.isArray(data)) {
+      userOptions.value = data
+    } else if (data && typeof data === 'object' && 'records' in data) {
+      userOptions.value = (data as any).records ?? []
+    }
+  } catch {
+    // user options are optional, ignore fetch error
+  }
+}
+
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let list = [...mockEmployees]
-
-    if (searchForm.code) {
-      list = list.filter((e) => e.code.includes(searchForm.code))
-    }
-    if (searchForm.name) {
-      list = list.filter((e) => e.name.includes(searchForm.name))
-    }
-    if (searchForm.department) {
-      list = list.filter((e) => e.department === searchForm.department)
-    }
-
-    pagination.total = list.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = list.slice(start, start + pagination.pageSize)
+  try {
+    const result = await api.page<Employee>(API_PATH, pagination.page, pagination.pageSize, {
+      code: searchForm.code || undefined,
+      name: searchForm.name || undefined,
+      department: searchForm.department || undefined,
+    })
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -349,38 +338,44 @@ function handleEdit(row: Employee) {
   dialogVisible.value = true
 }
 
-function handleDelete(row: Employee) {
-  ElMessageBox.confirm(`确定要删除员工「${row.name}」吗？`, '删除确认', {
-    type: 'warning',
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-  }).then(() => {
-    const idx = mockEmployees.findIndex((e) => e.id === row.id)
-    if (idx > -1) mockEmployees.splice(idx, 1)
+async function handleDelete(row: Employee) {
+  try {
+    await ElMessageBox.confirm(`确定要删除员工「${row.name}」吗？`, '删除确认', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+    })
+    await api.del(`${API_PATH}/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
-  }).catch(() => {})
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.message) {
+      ElMessage.error(e.message || '删除失败')
+    }
+  }
 }
 
-function handleSubmit() {
-  formRef.value?.validate((valid) => {
-    if (!valid) return
-    submitLoading.value = true
-    setTimeout(() => {
-      if (isEdit.value && editingId.value !== null) {
-        const item = mockEmployees.find((e) => e.id === editingId.value)
-        if (item) Object.assign(item, { ...form })
-        ElMessage.success('编辑成功')
-      } else {
-        const newId = Math.max(...mockEmployees.map((e) => e.id), 0) + 1
-        mockEmployees.push({ id: newId, ...form })
-        ElMessage.success('新增成功')
-      }
-      submitLoading.value = false
-      dialogVisible.value = false
-      fetchData()
-    }, 300)
-  })
+async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  submitLoading.value = true
+  try {
+    const body = { ...form }
+    if (isEdit.value && editingId.value !== null) {
+      await api.put(`${API_PATH}/${editingId.value}`, body)
+      ElMessage.success('编辑成功')
+    } else {
+      await api.post<Employee>(API_PATH, body)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 function handleDialogClosed() {
@@ -404,6 +399,7 @@ function resetForm() {
 
 // --------------- 初始化 ---------------
 fetchData()
+fetchUserOptions()
 </script>
 
 <style scoped>

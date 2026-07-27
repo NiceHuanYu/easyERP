@@ -84,11 +84,13 @@
       <el-pagination
         v-model:current-page="pagination.page"
         v-model:page-size="pagination.pageSize"
-        :total="filteredData.length"
+        :total="totalItems"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         background
         class="pagination"
+        @size-change="handleSearch"
+        @current-change="handleSearch"
       />
     </el-card>
 
@@ -118,6 +120,7 @@
 <script setup lang="ts">
 import { Search, RefreshLeft, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -142,83 +145,42 @@ const searchForm = reactive({
   dateRange: null as [string, string] | null,
 })
 
-// ── Mock Data ──────────────────────────────────────
-function generateMockPayments(): Payment[] {
-  const types: Array<'收款' | '付款'> = ['收款', '付款']
-  const counterparties = [
-    '深圳创新科技有限公司',
-    '广州宏达实业集团',
-    '上海明远电子有限公司',
-    '深圳钢贸有限公司',
-    '广州精工五金厂',
-    '北京北方轴承集团',
-    '杭州华威贸易公司',
-    '杭州恒达化工有限公司',
-  ]
-  const statuses: Array<'草稿' | '已确认'> = ['草稿', '已确认']
-  const banks = ['工商银行 6222****8891', '建设银行 6217****5623', '中国银行 6216****3401']
-
-  const data: Payment[] = []
-  for (let i = 0; i < 35; i++) {
-    const type = types[Math.floor(Math.random() * types.length)]
-    const amount = Math.floor(Math.random() * 100000) + 5000
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    const reconciledAmount = status === '已确认' ? Math.floor(amount * (0.3 + Math.random() * 0.7)) : 0
-
-    const date = new Date()
-    date.setDate(date.getDate() - Math.floor(Math.random() * 60))
-    const dateStr = date.toISOString().slice(0, 10)
-
-    data.push({
-      paymentNo: type === '收款' ? `RCV-${String(i + 1).padStart(6, '0')}` : `PMT-${String(i + 1).padStart(6, '0')}`,
-      type,
-      counterparty: counterparties[Math.floor(Math.random() * counterparties.length)],
-      amount,
-      reconciledAmount,
-      date: dateStr,
-      status,
-      bankAccount: banks[Math.floor(Math.random() * banks.length)],
-      remark: i % 5 === 0 ? '备注信息：已核对发票' : '',
-    })
-  }
-
-  data.sort((a, b) => b.date.localeCompare(a.date) || b.paymentNo.localeCompare(a.paymentNo))
-  return data
-}
-
-const mockData = ref<Payment[]>(generateMockPayments())
+// ── Data ───────────────────────────────────────────
+const allData = ref<Payment[]>([])
+const totalItems = ref(0)
 const loading = ref(false)
 
 // ── Pagination ─────────────────────────────────────
 const pagination = reactive({ page: 1, pageSize: 10 })
 
-// ── Filtering ──────────────────────────────────────
-const filteredData = computed(() => {
-  let list = mockData.value
-
-  if (searchForm.paymentNo) {
-    list = list.filter((item) =>
-      item.paymentNo.toLowerCase().includes(searchForm.paymentNo.toLowerCase()),
+// ── Fetch ──────────────────────────────────────────
+async function fetchData() {
+  loading.value = true
+  try {
+    const extraQuery: Record<string, string | number | undefined> = {}
+    if (searchForm.paymentNo) extraQuery.paymentNo = searchForm.paymentNo
+    if (searchForm.type) extraQuery.type = searchForm.type
+    if (searchForm.counterparty) extraQuery.counterparty = searchForm.counterparty
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      extraQuery.startDate = searchForm.dateRange[0]
+      extraQuery.endDate = searchForm.dateRange[1]
+    }
+    const result = await api.page<Payment>(
+      '/finance/payments',
+      pagination.page,
+      pagination.pageSize,
+      extraQuery,
     )
+    allData.value = result.list
+    totalItems.value = result.total
+  } catch {
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
   }
-  if (searchForm.type) {
-    list = list.filter((item) => item.type === searchForm.type)
-  }
-  if (searchForm.counterparty) {
-    list = list.filter((item) => item.counterparty.includes(searchForm.counterparty))
-  }
-  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-    const [start, end] = searchForm.dateRange
-    list = list.filter((item) => item.date >= start && item.date <= end)
-  }
+}
 
-  return list
-})
-
-const paginatedData = computed(() => {
-  const start = (pagination.page - 1) * pagination.pageSize
-  return filteredData.value.slice(start, start + pagination.pageSize)
-})
+const paginatedData = computed(() => allData.value)
 
 // ── View Dialog ────────────────────────────────────
 const viewDialogVisible = ref(false)
@@ -236,24 +198,24 @@ function handleCreate() {
   router.push('/finance/payments/create')
 }
 
-function handleConfirm(row: Payment) {
-  ElMessageBox.confirm(
-    `确认将单据 ${row.paymentNo} 从"草稿"变更为"已确认"？`,
-    '确认操作',
-    { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' },
-  ).then(() => {
-    const item = mockData.value.find((p) => p.paymentNo === row.paymentNo)
-    if (item) {
-      item.status = '已确认'
-    }
+async function handleConfirm(row: Payment) {
+  try {
+    await ElMessageBox.confirm(
+      `确认将单据 ${row.paymentNo} 从"草稿"变更为"已确认"？`,
+      '确认操作',
+      { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' },
+    )
+    await api.post(`/finance/payments/${row.paymentNo}/confirm`)
     ElMessage.success('单据已确认')
-  }).catch(() => {
-    // cancelled
-  })
+    fetchData()
+  } catch {
+    // cancelled or error
+  }
 }
 
 function handleSearch() {
   pagination.page = 1
+  fetchData()
 }
 
 function handleReset() {
@@ -263,6 +225,11 @@ function handleReset() {
   searchForm.dateRange = null
   pagination.page = 1
 }
+
+// ── Init ───────────────────────────────────────────
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style scoped>

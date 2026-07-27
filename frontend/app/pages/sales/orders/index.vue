@@ -257,6 +257,7 @@
 import { Search, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { formatMoney } from '~/utils'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -301,36 +302,8 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | 'default' {
   return map[s] ?? 'default'
 }
 
-// ==================== 客户选项（Mock） ====================
-const customerOptions = ref([
-  { label: '华为技术有限公司', value: 1 },
-  { label: '中兴通讯股份有限公司', value: 2 },
-  { label: '比亚迪股份有限公司', value: 3 },
-  { label: '富士康科技集团', value: 4 },
-])
-
-// ==================== Mock 数据 ====================
-function generateMockData(): SalesOrder[] {
-  const customers = customerOptions.value
-  const statuses: SalesOrder['status'][] = ['draft', 'submitted', 'approved', 'closed']
-  const data: SalesOrder[] = []
-  for (let i = 1; i <= 35; i++) {
-    const customer = customers[i % customers.length]
-    data.push({
-      id: i,
-      orderNo: `SO-${String(i).padStart(5, '0')}`,
-      customerId: customer.value,
-      customerName: customer.label,
-      orderDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-      deliveryDate: `2025-${String(((i + 2) % 12) + 1).padStart(2, '0')}-${String(((i + 5) % 28) + 1).padStart(2, '0')}`,
-      totalAmount: parseFloat((Math.random() * 100000 + 5000).toFixed(2)),
-      status: statuses[i % statuses.length],
-    })
-  }
-  return data
-}
-
-const allData = ref<SalesOrder[]>(generateMockData())
+// ==================== 客户选项 ====================
+const customerOptions = ref<{ label: string; value: number }[]>([])
 
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
@@ -355,38 +328,31 @@ function handleSelectionChange(rows: SalesOrder[]) {
   selectedIds.value = rows.map((r) => r.id)
 }
 
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  // 模拟 API 请求延迟
-  setTimeout(() => {
-    let filtered = [...allData.value]
-
-    if (searchForm.orderNo) {
-      filtered = filtered.filter((o) =>
-        o.orderNo.toLowerCase().includes(searchForm.orderNo.toLowerCase()),
-      )
-    }
-
-    if (searchForm.customerId) {
-      filtered = filtered.filter((o) => o.customerId === searchForm.customerId)
-    }
-
-    if (searchForm.status.length > 0) {
-      filtered = filtered.filter((o) => searchForm.status.includes(o.status))
-    }
-
+  try {
+    const query: Record<string, string | number | undefined> = {}
+    if (searchForm.orderNo) query.orderNo = searchForm.orderNo
+    if (searchForm.customerId) query.customerId = searchForm.customerId
+    if (searchForm.status.length > 0) query.status = searchForm.status.join(',')
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      const [start, end] = searchForm.dateRange
-      filtered = filtered.filter(
-        (o) => o.orderDate >= start && o.orderDate <= end,
-      )
+      query.startDate = searchForm.dateRange[0]
+      query.endDate = searchForm.dateRange[1]
     }
 
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = filtered.slice(start, start + pagination.pageSize)
+    const result = await api.page<SalesOrder>(
+      '/sales/orders',
+      pagination.page,
+      pagination.pageSize,
+      query,
+    )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -413,40 +379,44 @@ function handleEdit(row: SalesOrder) {
   router.push(`/sales/orders/create?id=${row.id}`)
 }
 
-function handleDelete(row: SalesOrder) {
-  const idx = allData.value.findIndex((o) => o.id === row.id)
-  if (idx > -1) {
-    allData.value.splice(idx, 1)
+async function handleDelete(row: SalesOrder) {
+  try {
+    await api.del(`/sales/orders/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '删除失败')
   }
-  ElMessage.success('删除成功')
-  fetchData()
 }
 
-function handleSubmit(row: SalesOrder) {
-  const target = allData.value.find((o) => o.id === row.id)
-  if (target) {
-    target.status = 'submitted'
+async function handleSubmit(row: SalesOrder) {
+  try {
+    await api.post(`/sales/orders/${row.id}/submit`)
+    ElMessage.success('提交成功')
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '提交失败')
   }
-  ElMessage.success('提交成功')
-  fetchData()
 }
 
-function handleApprove(row: SalesOrder) {
-  const target = allData.value.find((o) => o.id === row.id)
-  if (target) {
-    target.status = 'approved'
+async function handleApprove(row: SalesOrder) {
+  try {
+    await api.post(`/sales/orders/${row.id}/approve`)
+    ElMessage.success('审核通过')
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '审核失败')
   }
-  ElMessage.success('审核通过')
-  fetchData()
 }
 
-function handleUnapprove(row: SalesOrder) {
-  const target = allData.value.find((o) => o.id === row.id)
-  if (target) {
-    target.status = 'submitted'
+async function handleUnapprove(row: SalesOrder) {
+  try {
+    await api.post(`/sales/orders/${row.id}/unapprove`)
+    ElMessage.success('已反审核')
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '反审核失败')
   }
-  ElMessage.success('已反审核')
-  fetchData()
 }
 
 function handleCreateProductionOrder(row: SalesOrder) {
@@ -457,23 +427,26 @@ function handleCreateDelivery(row: SalesOrder) {
   router.push(`/sales/deliveries/create?fromOrder=${row.id}`)
 }
 
-function handleBatchDelete() {
+async function handleBatchDelete() {
   if (selectedIds.value.length === 0) {
     ElMessage.warning('请先选择要删除的订单')
     return
   }
-  ElMessageBox.confirm(
-    `确认删除选中的 ${selectedIds.value.length} 条订单？`,
-    '批量删除',
-    { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' },
-  ).then(() => {
-    allData.value = allData.value.filter(
-      (o) => !selectedIds.value.includes(o.id),
+  try {
+    await ElMessageBox.confirm(
+      `确认删除选中的 ${selectedIds.value.length} 条订单？`,
+      '批量删除',
+      { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' },
     )
+    await Promise.all(selectedIds.value.map((id) => api.del(`/sales/orders/${id}`)))
     selectedIds.value = []
     ElMessage.success('批量删除成功')
     fetchData()
-  })
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      ElMessage.error(e?.message || '批量删除失败')
+    }
+  }
 }
 
 // ==================== 初始化 ====================

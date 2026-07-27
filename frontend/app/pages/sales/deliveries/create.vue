@@ -157,6 +157,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { formatMoney, formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -168,18 +169,8 @@ const authStore = useAuthStore()
 const isEdit = computed(() => !!route.query.id)
 
 // ==================== 选项数据 ====================
-const orderOptions = ref([
-  { label: 'SO-00001 / 华为技术有限公司', value: 1 },
-  { label: 'SO-00002 / 中兴通讯股份有限公司', value: 2 },
-  { label: 'SO-00003 / 比亚迪股份有限公司', value: 3 },
-  { label: 'SO-00004 / 富士康科技集团', value: 4 },
-])
-
-const warehouseOptions = ref([
-  { label: '成品仓A', value: 1 },
-  { label: '成品仓B', value: 2 },
-  { label: '中转仓', value: 3 },
-])
+const orderOptions = ref<{ label: string; value: number }[]>([])
+const warehouseOptions = ref<{ label: string; value: number }[]>([])
 
 // ==================== 类型 ====================
 interface DeliveryLine {
@@ -216,46 +207,22 @@ const rules = {
   deliveryDate: [{ required: true, message: '请选择发货日期', trigger: 'change' }],
 }
 
-// ==================== Mock：根据订单加载可发货行 ====================
-function onOrderChange(val: number | null) {
+// ==================== 根据订单加载可发货行 ====================
+async function onOrderChange(val: number | null) {
   if (!val) {
     form.lines = []
     return
   }
-  // Mock: 根据订单 ID 加载明细
-  const mockLines: DeliveryLine[] = [
-    {
-      materialId: 1,
-      materialName: 'PCB-001 主板基板',
-      orderQuantity: 100,
-      deliverableQuantity: 80,
-      deliveryQuantity: 80,
-      price: 25.5,
-      subtotal: 0,
-    },
-    {
-      materialId: 2,
-      materialName: 'CPU-002 中央处理器',
-      orderQuantity: 50,
-      deliverableQuantity: 50,
-      deliveryQuantity: 50,
-      price: 180.0,
-      subtotal: 0,
-    },
-    {
-      materialId: 3,
-      materialName: 'LCD-003 液晶显示屏',
-      orderQuantity: 200,
-      deliverableQuantity: 150,
-      deliveryQuantity: 150,
-      price: 45.0,
-      subtotal: 0,
-    },
-  ]
-  form.lines = mockLines.map((l) => ({
-    ...l,
-    subtotal: parseFloat((l.deliveryQuantity * l.price).toFixed(2)),
-  }))
+  try {
+    const items = await api.get<DeliveryLine[]>(`/sales/orders/${val}/deliverable-items`)
+    form.lines = items.map((l) => ({
+      ...l,
+      deliveryQuantity: l.deliverableQuantity,
+      subtotal: parseFloat((l.deliverableQuantity * l.price).toFixed(2)),
+    }))
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载可发货物料失败')
+  }
 }
 
 function recalcLine(index: number) {
@@ -292,16 +259,41 @@ async function handleSaveDraft() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   if (!validateLines()) return
-  ElMessage.success('发货单草稿保存成功')
-  router.push('/sales/deliveries')
+
+  try {
+    if (isEdit.value) {
+      await api.put(`/sales/deliveries/${route.query.id}`, form)
+      ElMessage.success('发货单更新成功')
+    } else {
+      await api.post('/sales/deliveries', form)
+      ElMessage.success('发货单草稿保存成功')
+    }
+    router.push('/sales/deliveries')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  }
 }
 
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   if (!validateLines()) return
-  ElMessage.success('发货单提交成功')
-  router.push('/sales/deliveries')
+
+  try {
+    let deliveryId: number | string | undefined
+    if (isEdit.value) {
+      await api.put(`/sales/deliveries/${route.query.id}`, form)
+      deliveryId = route.query.id as string
+    } else {
+      const created = await api.post<{ id: number }>('/sales/deliveries', form)
+      deliveryId = created.id
+    }
+    await api.post(`/sales/deliveries/${deliveryId}/confirm`)
+    ElMessage.success('发货单提交成功')
+    router.push('/sales/deliveries')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '提交失败')
+  }
 }
 
 // ==================== 预填逻辑 ====================
@@ -311,17 +303,25 @@ function prefillFromOrder(orderId: string) {
 }
 
 // ==================== 初始化 ====================
-onMounted(() => {
+onMounted(async () => {
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }
   if (route.query.id) {
-    // 编辑模式：加载已有发货单（Mock）
-    form.orderId = 1
-    form.warehouseId = 1
-    form.deliveryDate = '2025-07-02'
-    form.remark = '测试发货单'
-    onOrderChange(1)
+    try {
+      const data = await api.get<DeliveryForm>(`/sales/deliveries/${route.query.id}`)
+      form.orderId = data.orderId
+      form.warehouseId = data.warehouseId
+      form.deliveryDate = data.deliveryDate
+      form.remark = data.remark || ''
+      if (data.orderId) {
+        await onOrderChange(data.orderId)
+        // Overwrite lines with saved delivery quantities
+        form.lines = data.lines
+      }
+    } catch (e: any) {
+      ElMessage.error(e?.message || '加载发货单失败')
+    }
   }
 })
 </script>

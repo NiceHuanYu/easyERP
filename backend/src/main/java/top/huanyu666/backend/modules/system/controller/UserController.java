@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.system.entity.SysUser;
 import top.huanyu666.backend.modules.system.mapper.SysUserMapper;
+
+import java.util.Map;
 
 /**
  * 用户管理
@@ -56,6 +59,16 @@ public class UserController {
     @SaCheckPermission("system:user:delete")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         userMapper.deleteById(id);
+        return ApiResponse.ok();
+    }
+
+    @PutMapping("/{id}/status")
+    @SaCheckPermission("system:user:update")
+    public ApiResponse<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
+        SysUser user = userMapper.selectById(id);
+        if (user == null) throw new BusinessException("用户不存在");
+        user.setStatus(body.get("status"));
+        userMapper.updateById(user);
         return ApiResponse.ok();
     }
 }

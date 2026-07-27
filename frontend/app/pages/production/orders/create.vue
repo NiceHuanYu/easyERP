@@ -177,6 +177,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -187,28 +188,28 @@ const authStore = useAuthStore()
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
 
-// ==================== 选项数据 ====================
-const salesOrderOptions = ref([
-  { label: 'SO-00001 / 华为技术有限公司 - PCB-001 主板基板', value: 1 },
-  { label: 'SO-00002 / 中兴通讯股份有限公司 - CPU-002 中央处理器', value: 2 },
-  { label: 'SO-00003 / 比亚迪股份有限公司 - LCD-003 液晶显示屏', value: 3 },
-  { label: 'SO-00005 / 华为技术有限公司 - BAT-004 锂电池组', value: 5 },
-])
+// ==================== 选项数据（从后端加载） ====================
+const salesOrderOptions = ref<{ label: string; value: number }[]>([])
+const bomProductOptions = ref<{ label: string; value: number }[]>([])
+const workshopOptions = ref<{ label: string; value: number }[]>([])
 
-const bomProductOptions = ref([
-  { label: 'PCB-001 主板基板', value: 1 },
-  { label: 'CPU-002 中央处理器', value: 2 },
-  { label: 'LCD-003 液晶显示屏', value: 3 },
-  { label: 'BAT-004 锂电池组', value: 4 },
-  { label: 'CHS-005 充电器套件', value: 5 },
-])
-
-const workshopOptions = ref([
-  { label: 'SMT 贴片车间', value: 1 },
-  { label: '装配车间 A', value: 2 },
-  { label: '装配车间 B', value: 3 },
-  { label: '包装车间', value: 4 },
-])
+async function loadOptions() {
+  try {
+    const [orders, products, workshops] = await Promise.all([
+      api.get<{ id: number; orderNo: string; customerName: string; productName: string }[]>('/sales/orders?status=confirmed'),
+      api.get<{ id: number; name: string }[]>('/production/materials'),
+      api.get<{ id: number; name: string }[]>('/system/workshops'),
+    ])
+    salesOrderOptions.value = orders.map((o) => ({
+      label: `${o.orderNo} / ${o.customerName} - ${o.productName}`,
+      value: o.id,
+    }))
+    bomProductOptions.value = products.map((p) => ({ label: p.name, value: p.id }))
+    workshopOptions.value = workshops.map((w) => ({ label: w.name, value: w.id }))
+  } catch {
+    // options load silently
+  }
+}
 
 // ==================== BOM 需求行 ====================
 interface BomLine {
@@ -220,42 +221,22 @@ interface BomLine {
   warehouseName: string
 }
 
-// Mock BOM 数据：key 为 product materialId
-const bomDataMap: Record<number, BomLine[]> = {
-  1: [
-    { materialId: 11, materialName: '电阻 10KΩ', unitUsage: 5, requiredQuantity: 0, unit: '个', warehouseName: '电子料仓' },
-    { materialId: 12, materialName: '电容 100μF', unitUsage: 3, requiredQuantity: 0, unit: '个', warehouseName: '电子料仓' },
-    { materialId: 13, materialName: 'PCB 裸板', unitUsage: 1, requiredQuantity: 0, unit: '块', warehouseName: '板材仓' },
-    { materialId: 14, materialName: '锡膏', unitUsage: 0.02, requiredQuantity: 0, unit: 'kg', warehouseName: '辅料仓' },
-  ],
-  2: [
-    { materialId: 21, materialName: '晶圆 die', unitUsage: 1, requiredQuantity: 0, unit: '片', warehouseName: '电子料仓' },
-    { materialId: 22, materialName: '散热片', unitUsage: 1, requiredQuantity: 0, unit: '个', warehouseName: '结构件仓' },
-    { materialId: 23, materialName: '导热硅脂', unitUsage: 0.01, requiredQuantity: 0, unit: 'kg', warehouseName: '辅料仓' },
-  ],
-  3: [
-    { materialId: 31, materialName: 'LCD 面板', unitUsage: 1, requiredQuantity: 0, unit: '块', warehouseName: '电子料仓' },
-    { materialId: 32, materialName: '背光模组', unitUsage: 1, requiredQuantity: 0, unit: '个', warehouseName: '电子料仓' },
-    { materialId: 33, materialName: '排线 FPC', unitUsage: 2, requiredQuantity: 0, unit: '根', warehouseName: '电子料仓' },
-  ],
-}
-
 const bomLines = ref<BomLine[]>([])
 
-function recalcBom() {
+async function recalcBom() {
   if (!form.materialId || !form.planQuantity) {
     bomLines.value = []
     return
   }
-  const raw = bomDataMap[form.materialId]
-  if (!raw) {
+  try {
+    const data = await api.get<BomLine[]>(`/production/materials/${form.materialId}/bom`)
+    bomLines.value = data.map((l) => ({
+      ...l,
+      requiredQuantity: parseFloat((l.unitUsage * form.planQuantity).toFixed(4)),
+    }))
+  } catch {
     bomLines.value = []
-    return
   }
-  bomLines.value = raw.map((l) => ({
-    ...l,
-    requiredQuantity: parseFloat((l.unitUsage * form.planQuantity).toFixed(4)),
-  }))
 }
 
 // ==================== 表单数据 ====================
@@ -289,17 +270,16 @@ const rules = {
 }
 
 // ==================== 事件处理 ====================
-function onSalesOrderChange(val: number | null) {
+async function onSalesOrderChange(val: number | null) {
   if (!val) return
-  // Mock: 根据销售订单自动带出物料
-  const so = salesOrderOptions.value.find((o) => o.value === val)
-  if (so) {
-    // 简单匹配：根据选项中的物料名查找
-    const productOpt = bomProductOptions.value.find((p) => so.label.includes(p.label))
-    if (productOpt) {
-      form.materialId = productOpt.value
+  try {
+    const so = await api.get<{ productId: number }>(`/sales/orders/${val}`)
+    if (so?.productId) {
+      form.materialId = so.productId
       recalcBom()
     }
+  } catch {
+    // silently fail
   }
 }
 
@@ -311,9 +291,26 @@ function onMaterialChange(_val: number | null) {
 async function doSave(status: 'pending' | 'released') {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
-  const actionLabel = status === 'pending' ? '保存' : '下达'
-  ElMessage.success(`工单${actionLabel}成功`)
-  router.push('/production/orders')
+
+  const payload = { ...form }
+
+  try {
+    const id = route.query.id as string | undefined
+    if (id) {
+      await api.put(`/production/orders/${id}`, payload)
+    } else {
+      await api.post('/production/orders', payload)
+    }
+    if (status === 'released') {
+      const savedId = id ?? (await api.get<{ id: number }>(`/production/orders/latest`)).id
+      await api.post(`/production/orders/release/${savedId}`)
+    }
+    const actionLabel = status === 'pending' ? '保存' : '下达'
+    ElMessage.success(`工单${actionLabel}成功`)
+    router.push('/production/orders')
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
 
 async function handleSave() {
@@ -325,15 +322,14 @@ async function handleSaveAndRelease() {
 }
 
 // ==================== 编辑模式加载 ====================
-function loadMockOrder(_id: string) {
-  form.salesOrderId = 1
-  form.materialId = 1
-  form.planQuantity = 100
-  form.planStartDate = '2025-06-15'
-  form.planEndDate = '2025-07-01'
-  form.workshopId = 1
-  form.remark = '测试工单'
-  recalcBom()
+async function loadOrder(id: string) {
+  try {
+    const data = await api.get<OrderForm>(`/production/orders/${id}`)
+    Object.assign(form, data)
+    recalcBom()
+  } catch {
+    ElMessage.error('加载工单数据失败')
+  }
 }
 
 // ==================== 从销售订单预填 ====================
@@ -344,8 +340,9 @@ function prefillFromSalesOrder(orderId: string) {
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  loadOptions()
   if (route.query.id) {
-    loadMockOrder(route.query.id as string)
+    loadOrder(route.query.id as string)
   }
   if (route.query.fromSalesOrder) {
     prefillFromSalesOrder(route.query.fromSalesOrder as string)

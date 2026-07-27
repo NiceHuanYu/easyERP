@@ -157,6 +157,7 @@
 <script setup lang="ts">
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -182,35 +183,13 @@ interface SearchForm {
   dateRange: [string, string] | null
 }
 
-// ==================== 选项 ====================
+// ==================== 选项（TODO: 后续替换为 API 调用） ====================
 const supplierOptions = ref([
   { label: '深圳华强电子有限公司', value: 1 },
   { label: '广州万国元件有限公司', value: 2 },
   { label: '东莞正泰科技有限公司', value: 3 },
   { label: '上海锐拓半导体有限公司', value: 4 },
 ])
-
-// ==================== Mock 数据 ====================
-function generateMockData(): Receiving[] {
-  const suppliers = supplierOptions.value
-  const data: Receiving[] = []
-  for (let i = 1; i <= 22; i++) {
-    const supplier = suppliers[i % suppliers.length]
-    data.push({
-      id: i,
-      receivingNo: `RCV-${String(i).padStart(5, '0')}`,
-      orderId: i,
-      orderNo: `PO-${String(i).padStart(5, '0')}`,
-      supplierId: supplier.value,
-      supplierName: supplier.label,
-      receivingDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-      status: i % 3 === 0 ? 'draft' : 'received',
-    })
-  }
-  return data
-}
-
-const allData = ref<Receiving[]>(generateMockData())
 
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
@@ -230,39 +209,31 @@ const pagination = reactive({
   total: 0,
 })
 
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...allData.value]
-
-    if (searchForm.receivingNo) {
-      filtered = filtered.filter((r) =>
-        r.receivingNo.toLowerCase().includes(searchForm.receivingNo.toLowerCase()),
-      )
-    }
-    if (searchForm.orderNo) {
-      filtered = filtered.filter((r) =>
-        r.orderNo.toLowerCase().includes(searchForm.orderNo.toLowerCase()),
-      )
-    }
-    if (searchForm.supplierId) {
-      filtered = filtered.filter((r) => r.supplierId === searchForm.supplierId)
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter((r) => r.status === searchForm.status)
-    }
+  try {
+    const extraQuery: Record<string, string | number | undefined> = {}
+    if (searchForm.receivingNo) extraQuery.receivingNo = searchForm.receivingNo
+    if (searchForm.orderNo) extraQuery.orderNo = searchForm.orderNo
+    if (searchForm.supplierId) extraQuery.supplierId = searchForm.supplierId
+    if (searchForm.status) extraQuery.status = searchForm.status
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      const [start, end] = searchForm.dateRange
-      filtered = filtered.filter(
-        (r) => r.receivingDate >= start && r.receivingDate <= end,
-      )
+      extraQuery.startDate = searchForm.dateRange[0]
+      extraQuery.endDate = searchForm.dateRange[1]
     }
-
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = filtered.slice(start, start + pagination.pageSize)
+    const result = await api.page<Receiving>(
+      '/purchase/receivings',
+      pagination.page,
+      pagination.pageSize,
+      extraQuery,
+    )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch {
+    ElMessage.error('加载数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -284,22 +255,24 @@ function handleView(row: Receiving) {
   router.push(`/purchase/receivings/create?id=${row.id}`)
 }
 
-function handleConfirm(row: Receiving) {
-  const target = allData.value.find((r) => r.id === row.id)
-  if (target) {
-    target.status = 'received'
+async function handleConfirm(row: Receiving) {
+  try {
+    await api.post(`/purchase/receivings/confirm/${row.id}`)
+    ElMessage.success('确认收货成功')
+    fetchData()
+  } catch {
+    ElMessage.error('确认收货失败')
   }
-  ElMessage.success('确认收货成功')
-  fetchData()
 }
 
-function handleDelete(row: Receiving) {
-  const idx = allData.value.findIndex((r) => r.id === row.id)
-  if (idx > -1) {
-    allData.value.splice(idx, 1)
+async function handleDelete(row: Receiving) {
+  try {
+    await api.del(`/purchase/receivings/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch {
+    ElMessage.error('删除失败')
   }
-  ElMessage.success('删除成功')
-  fetchData()
 }
 
 // ==================== 初始化 ====================

@@ -164,4 +164,18 @@ public class ProdFinishController {
         log.info("完工入库单 {} 已确认，{} 条明细", finish.getFinishNo(), items.size());
         return ApiResponse.ok("确认成功");
     }
+
+    /**
+     * 删除（仅草稿）
+     */
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        ProdFinish f = finishMapper.selectById(id);
+        if (f == null) throw new BusinessException("完工入库单不存在");
+        if (!"DRAFT".equals(f.getStatus())) throw new BusinessException("只有草稿状态可删除");
+        finishItemMapper.delete(new LambdaQueryWrapper<ProdFinishItem>().eq(ProdFinishItem::getFinishId, id));
+        finishMapper.deleteById(id);
+        return ApiResponse.ok();
+    }
 }

@@ -95,8 +95,8 @@
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
           class="table-pagination"
-          @current-change="fetchItems"
-          @size-change="fetchItems"
+          @current-change="applyItemFilters"
+          @size-change="applyItemFilters"
         />
       </el-card>
     </div>
@@ -181,6 +181,7 @@
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -206,74 +207,14 @@ interface DictItem {
 }
 
 // --------------- Mock 字典类型数据 ---------------
-const mockDictTypes: DictType[] = [
-  { id: 1, label: '订单状态', code: 'order_status', parentId: null, sort: 1, remark: '销售订单状态' },
-  { id: 2, label: '计量单位', code: 'unit', parentId: null, sort: 2, remark: '物料计量单位' },
-  { id: 3, label: '仓库类型', code: 'warehouse_type', parentId: null, sort: 3, remark: '' },
-  { id: 4, label: '客户等级', code: 'customer_level', parentId: null, sort: 4, remark: '客户分级' },
-  { id: 5, label: '供应商类型', code: 'supplier_type', parentId: null, sort: 5, remark: '' },
-  { id: 6, label: '支付方式', code: 'payment_method', parentId: null, sort: 6, remark: '' },
-  { id: 7, label: '审批状态', code: 'approval_status', parentId: null, sort: 7, remark: '通用审批流状态' },
-  { id: 8, label: '员工状态', code: 'employee_status', parentId: null, sort: 8, remark: '在职/离职' },
-]
+// (loaded from API)
 
 // --------------- Mock 字典项数据 ---------------
-const mockDictItems: Record<string, DictItem[]> = {
-  order_status: [
-    { id: 1, typeCode: 'order_status', label: '待提交', value: 'draft', sort: 1, status: 'active', remark: '' },
-    { id: 2, typeCode: 'order_status', label: '待审批', value: 'pending_approval', sort: 2, status: 'active', remark: '' },
-    { id: 3, typeCode: 'order_status', label: '已审批', value: 'approved', sort: 3, status: 'active', remark: '' },
-    { id: 4, typeCode: 'order_status', label: '生产中', value: 'in_production', sort: 4, status: 'active', remark: '' },
-    { id: 5, typeCode: 'order_status', label: '已完成', value: 'completed', sort: 5, status: 'active', remark: '' },
-    { id: 6, typeCode: 'order_status', label: '已取消', value: 'cancelled', sort: 6, status: 'inactive', remark: '停用' },
-  ],
-  unit: [
-    { id: 7, typeCode: 'unit', label: '个', value: 'piece', sort: 1, status: 'active', remark: '' },
-    { id: 8, typeCode: 'unit', label: '千克', value: 'kg', sort: 2, status: 'active', remark: '' },
-    { id: 9, typeCode: 'unit', label: '克', value: 'g', sort: 3, status: 'active', remark: '' },
-    { id: 10, typeCode: 'unit', label: '米', value: 'm', sort: 4, status: 'active', remark: '' },
-    { id: 11, typeCode: 'unit', label: '厘米', value: 'cm', sort: 5, status: 'active', remark: '' },
-    { id: 12, typeCode: 'unit', label: '升', value: 'L', sort: 6, status: 'active', remark: '' },
-    { id: 13, typeCode: 'unit', label: '箱', value: 'box', sort: 7, status: 'active', remark: '' },
-    { id: 14, typeCode: 'unit', label: '卷', value: 'roll', sort: 8, status: 'active', remark: '' },
-  ],
-  warehouse_type: [
-    { id: 15, typeCode: 'warehouse_type', label: '原料仓', value: 'raw', sort: 1, status: 'active', remark: '' },
-    { id: 16, typeCode: 'warehouse_type', label: '半成品仓', value: 'semi', sort: 2, status: 'active', remark: '' },
-    { id: 17, typeCode: 'warehouse_type', label: '成品仓', value: 'finished', sort: 3, status: 'active', remark: '' },
-    { id: 18, typeCode: 'warehouse_type', label: '包材仓', value: 'packaging', sort: 4, status: 'active', remark: '' },
-    { id: 19, typeCode: 'warehouse_type', label: '不良品仓', value: 'defective', sort: 5, status: 'active', remark: '' },
-  ],
-  customer_level: [
-    { id: 20, typeCode: 'customer_level', label: 'VIP客户', value: 'vip', sort: 1, status: 'active', remark: '顶级客户' },
-    { id: 21, typeCode: 'customer_level', label: 'A级客户', value: 'A', sort: 2, status: 'active', remark: '' },
-    { id: 22, typeCode: 'customer_level', label: 'B级客户', value: 'B', sort: 3, status: 'active', remark: '' },
-    { id: 23, typeCode: 'customer_level', label: 'C级客户', value: 'C', sort: 4, status: 'active', remark: '' },
-  ],
-  supplier_type: [
-    { id: 24, typeCode: 'supplier_type', label: '原材料供应商', value: 'raw_material', sort: 1, status: 'active', remark: '' },
-    { id: 25, typeCode: 'supplier_type', label: '零部件供应商', value: 'component', sort: 2, status: 'active', remark: '' },
-    { id: 26, typeCode: 'supplier_type', label: '外包服务商', value: 'outsource', sort: 3, status: 'active', remark: '' },
-  ],
-  payment_method: [
-    { id: 27, typeCode: 'payment_method', label: '银行转账', value: 'bank_transfer', sort: 1, status: 'active', remark: '' },
-    { id: 28, typeCode: 'payment_method', label: '现金', value: 'cash', sort: 2, status: 'active', remark: '' },
-    { id: 29, typeCode: 'payment_method', label: '支票', value: 'cheque', sort: 3, status: 'active', remark: '' },
-    { id: 30, typeCode: 'payment_method', label: '承兑汇票', value: 'acceptance_bill', sort: 4, status: 'active', remark: '' },
-  ],
-  approval_status: [
-    { id: 31, typeCode: 'approval_status', label: '待提交', value: 'draft', sort: 1, status: 'active', remark: '' },
-    { id: 32, typeCode: 'approval_status', label: '审批中', value: 'pending', sort: 2, status: 'active', remark: '' },
-    { id: 33, typeCode: 'approval_status', label: '已通过', value: 'approved', sort: 3, status: 'active', remark: '' },
-    { id: 34, typeCode: 'approval_status', label: '已驳回', value: 'rejected', sort: 4, status: 'active', remark: '' },
-  ],
-  employee_status: [
-    { id: 35, typeCode: 'employee_status', label: '在职', value: 'active', sort: 1, status: 'active', remark: '' },
-    { id: 36, typeCode: 'employee_status', label: '离职', value: 'inactive', sort: 2, status: 'active', remark: '' },
-  ],
-}
+// (loaded from API)
 
 // --------------- 字典类型树（转为 el-tree 所需格式） ---------------
+const allDictTypes = ref<DictType[]>([])
+
 function buildTypeTree(types: DictType[]): DictType[] {
   return types
     .filter((t) => !t.parentId)
@@ -283,10 +224,10 @@ function buildTypeTree(types: DictType[]): DictType[] {
     }))
 }
 
-const dictTypeTree = computed(() => buildTypeTree(mockDictTypes))
+const dictTypeTree = computed(() => buildTypeTree(allDictTypes.value))
 
 const typeOptionsForParent = computed(() =>
-  mockDictTypes.filter((t) => t.id !== (typeEditingId.value ?? -1)),
+  allDictTypes.value.filter((t) => t.id !== (typeEditingId.value ?? -1)),
 )
 
 // --------------- 状态 ---------------
@@ -343,12 +284,13 @@ const itemPagination = reactive({ page: 1, pageSize: 10, total: 0 })
 const itemTableData = ref<DictItem[]>([])
 
 // 当前选中类型
-const selectedTypeId = ref<number | null>(1) // 默认选中第一个
+const selectedTypeId = ref<number | null>(null)
+const allItems = ref<DictItem[]>([])
 
 // --------------- 计算 ---------------
 const selectedType = computed(() => {
   if (!selectedTypeId.value) return null
-  return mockDictTypes.find((t) => t.id === selectedTypeId.value) ?? null
+  return allDictTypes.value.find((t) => t.id === selectedTypeId.value) ?? null
 })
 
 const typeDialogTitle = computed(() => (isTypeEdit.value ? '编辑字典类型' : '新增字典类型'))
@@ -371,29 +313,38 @@ function fetchItems() {
     return
   }
   itemLoading.value = true
-  setTimeout(() => {
-    let list = [...(mockDictItems[selectedType.value!.code] ?? [])]
+  api.get<DictItem[]>(`/system/dicts/${selectedType.value.code}/items`)
+    .then((items) => {
+      allItems.value = items
+      applyItemFilters()
+    })
+    .catch((e: any) => {
+      ElMessage.error(e?.message || '获取字典项失败')
+    })
+    .finally(() => {
+      itemLoading.value = false
+    })
+}
 
-    if (searchForm.label) {
-      list = list.filter((i) => i.label.includes(searchForm.label))
-    }
-    if (searchForm.value) {
-      list = list.filter((i) => i.value.includes(searchForm.value))
-    }
-    if (searchForm.status) {
-      list = list.filter((i) => i.status === searchForm.status)
-    }
-
-    itemPagination.total = list.length
-    const start = (itemPagination.page - 1) * itemPagination.pageSize
-    itemTableData.value = list.slice(start, start + itemPagination.pageSize)
-    itemLoading.value = false
-  }, 300)
+function applyItemFilters() {
+  let list = [...allItems.value]
+  if (searchForm.label) {
+    list = list.filter((i) => i.label.includes(searchForm.label))
+  }
+  if (searchForm.value) {
+    list = list.filter((i) => i.value.includes(searchForm.value))
+  }
+  if (searchForm.status) {
+    list = list.filter((i) => i.status === searchForm.status)
+  }
+  itemPagination.total = list.length
+  const start = (itemPagination.page - 1) * itemPagination.pageSize
+  itemTableData.value = list.slice(start, start + itemPagination.pageSize)
 }
 
 function handleSearch() {
   itemPagination.page = 1
-  fetchItems()
+  applyItemFilters()
 }
 
 function handleReset() {
@@ -401,7 +352,7 @@ function handleReset() {
   searchForm.value = ''
   searchForm.status = ''
   itemPagination.page = 1
-  fetchItems()
+  applyItemFilters()
 }
 
 // --------------- 字典类型 CRUD ---------------
@@ -428,66 +379,48 @@ function handleEditType() {
 function handleDeleteType() {
   if (!selectedType.value) return
   const t = selectedType.value
-  const items = mockDictItems[t.code]
-  if (items && items.length > 0) {
-    ElMessage.warning(`字典类型「${t.label}」下还有 ${items.length} 个字典项，请先清空字典项`)
-    return
-  }
   ElMessageBox.confirm(`确定要删除字典类型「${t.label}」吗？`, '删除确认', {
     type: 'warning',
     confirmButtonText: '确定',
     cancelButtonText: '取消',
-  }).then(() => {
-    const idx = mockDictTypes.findIndex((dt) => dt.id === t.id)
-    if (idx > -1) mockDictTypes.splice(idx, 1)
-    delete mockDictItems[t.code]
-    selectedTypeId.value = mockDictTypes.length > 0 ? mockDictTypes[0].id : null
-    ElMessage.success('删除成功')
-    fetchItems()
+  }).then(async () => {
+    try {
+      await api.del(`/system/dicts/types/${t.id}`)
+      ElMessage.success('删除成功')
+      selectedTypeId.value = null
+      fetchAllTypes()
+    } catch (e: any) {
+      ElMessage.error(e?.message || '删除失败')
+    }
   }).catch(() => {})
 }
 
 function handleTypeSubmit() {
-  typeFormRef.value?.validate((valid) => {
+  typeFormRef.value?.validate(async (valid) => {
     if (!valid) return
     typeSubmitLoading.value = true
-    setTimeout(() => {
+    try {
+      const payload = {
+        label: typeForm.label,
+        code: typeForm.code,
+        parentId: typeForm.parentId,
+        sort: typeForm.sort,
+        remark: typeForm.remark,
+      }
       if (isTypeEdit.value && typeEditingId.value !== null) {
-        const item = mockDictTypes.find((dt) => dt.id === typeEditingId.value)
-        if (item) {
-          const oldCode = item.code
-          Object.assign(item, {
-            label: typeForm.label,
-            code: typeForm.code,
-            parentId: typeForm.parentId,
-            sort: typeForm.sort,
-            remark: typeForm.remark,
-          })
-          // 如果编码变了，迁移字典项
-          if (oldCode !== typeForm.code && mockDictItems[oldCode]) {
-            mockDictItems[typeForm.code] = mockDictItems[oldCode].map((i) => ({ ...i, typeCode: typeForm.code }))
-            delete mockDictItems[oldCode]
-          }
-        }
+        await api.put(`/system/dicts/types/${typeEditingId.value}`, payload)
         ElMessage.success('编辑成功')
       } else {
-        const newId = Math.max(...mockDictTypes.map((dt) => dt.id), 0) + 1
-        mockDictTypes.push({
-          id: newId,
-          label: typeForm.label,
-          code: typeForm.code,
-          parentId: typeForm.parentId,
-          sort: typeForm.sort,
-          remark: typeForm.remark,
-        })
-        mockDictItems[typeForm.code] = []
-        selectedTypeId.value = newId
+        await api.post('/system/dicts/types', payload)
         ElMessage.success('新增成功')
       }
-      typeSubmitLoading.value = false
       typeDialogVisible.value = false
-      fetchItems()
-    }, 300)
+      fetchAllTypes()
+    } catch (e: any) {
+      ElMessage.error(e?.message || '保存失败')
+    } finally {
+      typeSubmitLoading.value = false
+    }
   })
 }
 
@@ -528,61 +461,50 @@ function handleEditItem(row: DictItem) {
 }
 
 function handleDeleteItem(row: DictItem) {
+  if (!selectedType.value) return
   ElMessageBox.confirm(`确定要删除字典项「${row.label}」吗？`, '删除确认', {
     type: 'warning',
     confirmButtonText: '确定',
     cancelButtonText: '取消',
-  }).then(() => {
-    const items = mockDictItems[row.typeCode]
-    if (items) {
-      const idx = items.findIndex((i) => i.id === row.id)
-      if (idx > -1) items.splice(idx, 1)
+  }).then(async () => {
+    try {
+      await api.del(`/system/dicts/${selectedType.value!.code}/items/${row.id}`)
+      ElMessage.success('删除成功')
+      fetchItems()
+    } catch (e: any) {
+      ElMessage.error(e?.message || '删除失败')
     }
-    ElMessage.success('删除成功')
-    fetchItems()
   }).catch(() => {})
 }
 
 function handleItemSubmit() {
-  itemFormRef.value?.validate((valid) => {
+  itemFormRef.value?.validate(async (valid) => {
     if (!valid) return
     if (!selectedType.value) return
     itemSubmitLoading.value = true
-    setTimeout(() => {
-      const items = mockDictItems[selectedType.value!.code] ?? []
+    try {
+      const payload = {
+        label: itemForm.label,
+        value: itemForm.value,
+        sort: itemForm.sort,
+        status: itemForm.status,
+        remark: itemForm.remark,
+      }
+      const typeCode = selectedType.value.code
       if (isItemEdit.value && itemEditingId.value !== null) {
-        const item = items.find((i) => i.id === itemEditingId.value)
-        if (item) {
-          Object.assign(item, {
-            label: itemForm.label,
-            value: itemForm.value,
-            sort: itemForm.sort,
-            status: itemForm.status,
-            remark: itemForm.remark,
-          })
-        }
+        await api.put(`/system/dicts/${typeCode}/items/${itemEditingId.value}`, payload)
         ElMessage.success('编辑成功')
       } else {
-        const allItems = Object.values(mockDictItems).flat()
-        const newId = Math.max(...allItems.map((i) => i.id), 0) + 1
-        items.push({
-          id: newId,
-          typeCode: selectedType.value!.code,
-          label: itemForm.label,
-          value: itemForm.value,
-          sort: itemForm.sort,
-          status: itemForm.status,
-          remark: itemForm.remark,
-        })
-        if (!mockDictItems[selectedType.value!.code]) {
-          mockDictItems[selectedType.value!.code] = items
-        }
+        await api.post(`/system/dicts/${typeCode}/items`, payload)
         ElMessage.success('新增成功')
       }
-      itemSubmitLoading.value = false
       itemDialogVisible.value = false
       fetchItems()
-    }, 300)
+    } catch (e: any) {
+      ElMessage.error(e?.message || '保存失败')
+    } finally {
+      itemSubmitLoading.value = false
+    }
   })
 }
 
@@ -600,7 +522,23 @@ function resetItemForm() {
 }
 
 // --------------- 初始化 ---------------
-fetchItems()
+async function fetchAllTypes() {
+  try {
+    const types = await api.get<DictType[]>('/system/dicts/all')
+    allDictTypes.value = types
+    // Auto-select first type if none selected
+    if (!selectedTypeId.value && types.length > 0) {
+      selectedTypeId.value = types[0].id
+    }
+    if (selectedTypeId.value) {
+      fetchItems()
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取字典类型失败')
+  }
+}
+
+fetchAllTypes()
 </script>
 
 <style scoped>

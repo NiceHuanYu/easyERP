@@ -203,8 +203,13 @@
 import { Search, Refresh, Plus, Edit, Delete, View } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
+
+// --------------- 常量 ---------------
+const BOM_API_PATH = '/base/boms'
+const MATERIAL_API_PATH = '/base/materials'
 
 // --------------- 类型 ---------------
 interface MaterialOption {
@@ -235,65 +240,6 @@ interface Bom {
   details: BomDetail[]
 }
 
-// --------------- Mock 物料选项 ---------------
-const allMaterials: MaterialOption[] = [
-  { id: 1, code: 'MAT-0001', name: '钢板A', unit: 'kg', category: 'raw' },
-  { id: 2, code: 'MAT-0002', name: '螺丝B', unit: '个', category: 'raw' },
-  { id: 3, code: 'MAT-0003', name: '齿轮C', unit: '个', category: 'semi' },
-  { id: 4, code: 'MAT-0004', name: '轴承D', unit: '套', category: 'semi' },
-  { id: 5, code: 'MAT-0005', name: '成品设备X', unit: '台', category: 'finished' },
-  { id: 6, code: 'MAT-0006', name: '成品设备Y', unit: '台', category: 'finished' },
-  { id: 7, code: 'MAT-0007', name: '弹簧E', unit: '个', category: 'raw' },
-  { id: 8, code: 'MAT-0008', name: '密封圈F', unit: '个', category: 'raw' },
-  { id: 9, code: 'MAT-0009', name: '包装箱G', unit: '个', category: 'packaging' },
-  { id: 10, code: 'MAT-0010', name: '半成品H', unit: '件', category: 'semi' },
-]
-
-// --------------- Mock BOM 数据 ---------------
-const mockBoms: Bom[] = [
-  {
-    id: 1,
-    bomNo: 'BOM-2024-0001',
-    productMaterialId: 5,
-    productMaterialCode: 'MAT-0005',
-    productMaterialName: '成品设备X',
-    version: 'V1.0',
-    status: 'active',
-    details: [
-      { materialId: 1, materialCode: 'MAT-0001', materialName: '钢板A', quantity: 10, unit: 'kg', remark: '' },
-      { materialId: 2, materialCode: 'MAT-0002', materialName: '螺丝B', quantity: 24, unit: '个', remark: '' },
-      { materialId: 4, materialCode: 'MAT-0004', materialName: '轴承D', quantity: 4, unit: '套', remark: '' },
-    ],
-  },
-  {
-    id: 2,
-    bomNo: 'BOM-2024-0002',
-    productMaterialId: 6,
-    productMaterialCode: 'MAT-0006',
-    productMaterialName: '成品设备Y',
-    version: 'V2.1',
-    status: 'active',
-    details: [
-      { materialId: 1, materialCode: 'MAT-0001', materialName: '钢板A', quantity: 15, unit: 'kg', remark: '' },
-      { materialId: 3, materialCode: 'MAT-0003', materialName: '齿轮C', quantity: 8, unit: '个', remark: '' },
-      { materialId: 7, materialCode: 'MAT-0007', materialName: '弹簧E', quantity: 12, unit: '个', remark: '高精度' },
-    ],
-  },
-  {
-    id: 3,
-    bomNo: 'BOM-2024-0003',
-    productMaterialId: 5,
-    productMaterialCode: 'MAT-0005',
-    productMaterialName: '成品设备X',
-    version: 'V1.1',
-    status: 'inactive',
-    details: [
-      { materialId: 1, materialCode: 'MAT-0001', materialName: '钢板A', quantity: 12, unit: 'kg', remark: '' },
-      { materialId: 8, materialCode: 'MAT-0008', materialName: '密封圈F', quantity: 6, unit: '个', remark: '' },
-    ],
-  },
-]
-
 // --------------- 状态 ---------------
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -319,11 +265,12 @@ const form = reactive({
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 const tableData = ref<Bom[]>([])
 
-// 物料选项（用于搜索和表单的 select）
-const materialOptions = ref<MaterialOption[]>(allMaterials)
+// 所有物料选项（用于搜索和表单的 select）
+const allMaterials = ref<MaterialOption[]>([])
+const materialOptions = ref<MaterialOption[]>([])
 // 原材料选项（用于 BOM 明细）
 const rawMaterialOptions = computed(() =>
-  allMaterials.filter((m) => m.category === 'raw' || m.category === 'semi')
+  allMaterials.value.filter((m) => m.category === 'raw' || m.category === 'semi')
 )
 
 const rules: FormRules = {
@@ -339,23 +286,33 @@ const dialogTitle = computed(() => {
 })
 
 // --------------- 方法 ---------------
-function fetchData() {
+async function fetchAllMaterials() {
+  try {
+    const result = await api.page<MaterialOption>(MATERIAL_API_PATH, 1, 1000)
+    allMaterials.value = result.list
+    materialOptions.value = result.list
+  } catch {
+    // ignore fetch error for options
+  }
+}
+
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let list = [...mockBoms]
-
+  try {
+    const extraQuery: Record<string, string | number | undefined> = {
+      bomNo: searchForm.bomNo || undefined,
+    }
     if (searchForm.productMaterialId) {
-      list = list.filter((b) => b.productMaterialId === searchForm.productMaterialId)
+      extraQuery.productMaterialId = searchForm.productMaterialId
     }
-    if (searchForm.bomNo) {
-      list = list.filter((b) => b.bomNo.includes(searchForm.bomNo))
-    }
-
-    pagination.total = list.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = list.slice(start, start + pagination.pageSize)
+    const result = await api.page<Bom>(BOM_API_PATH, pagination.page, pagination.pageSize, extraQuery)
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -372,16 +329,17 @@ function handleReset() {
 
 function remoteSearchMaterial(query: string) {
   materialSearchLoading.value = true
-  setTimeout(() => {
+  try {
     if (query) {
-      materialOptions.value = allMaterials.filter(
+      materialOptions.value = allMaterials.value.filter(
         (m) => m.code.includes(query) || m.name.includes(query)
       )
     } else {
-      materialOptions.value = allMaterials
+      materialOptions.value = allMaterials.value
     }
+  } finally {
     materialSearchLoading.value = false
-  }, 200)
+  }
 }
 
 function handleAdd() {
@@ -414,25 +372,29 @@ function handleEdit(row: Bom) {
   dialogVisible.value = true
 }
 
-function handleDelete(row: Bom) {
-  ElMessageBox.confirm(`确定要删除 BOM「${row.bomNo}」吗？`, '删除确认', {
-    type: 'warning',
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-  }).then(() => {
-    const idx = mockBoms.findIndex((b) => b.id === row.id)
-    if (idx > -1) mockBoms.splice(idx, 1)
+async function handleDelete(row: Bom) {
+  try {
+    await ElMessageBox.confirm(`确定要删除 BOM「${row.bomNo}」吗？`, '删除确认', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+    })
+    await api.del(`${BOM_API_PATH}/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
-  }).catch(() => {})
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.message) {
+      ElMessage.error(e.message || '删除失败')
+    }
+  }
 }
 
 function onProductMaterialChange(val: number | null) {
-  // 自动填充成品物料信息
+  // 自动填充成品物料信息（由后端处理）
 }
 
 function onDetailMaterialChange(val: number | null, detail: BomDetail) {
-  const mat = allMaterials.find((m) => m.id === val)
+  const mat = allMaterials.value.find((m) => m.id === val)
   if (mat) {
     detail.materialCode = mat.code
     detail.materialName = mat.name
@@ -459,47 +421,46 @@ function removeDetailRow(index: number) {
   form.details.splice(index, 1)
 }
 
-function handleSubmit() {
-  formRef.value?.validate((valid) => {
-    if (!valid) return
-    if (form.details.length === 0) {
-      ElMessage.warning('请至少添加一条 BOM 明细')
-      return
-    }
-    // 校验明细
-    const hasEmptyDetail = form.details.some((d) => !d.materialId || d.quantity <= 0)
-    if (hasEmptyDetail) {
-      ElMessage.warning('请完善 BOM 明细（原材料和用量必填）')
-      return
+async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+  if (form.details.length === 0) {
+    ElMessage.warning('请至少添加一条 BOM 明细')
+    return
+  }
+  // 校验明细
+  const hasEmptyDetail = form.details.some((d) => !d.materialId || d.quantity <= 0)
+  if (hasEmptyDetail) {
+    ElMessage.warning('请完善 BOM 明细（原材料和用量必填）')
+    return
+  }
+
+  submitLoading.value = true
+  try {
+    const productMat = allMaterials.value.find((m) => m.id === form.productMaterialId)
+    const body: Record<string, unknown> = {
+      productMaterialId: form.productMaterialId!,
+      productMaterialCode: productMat?.code ?? '',
+      productMaterialName: productMat?.name ?? '',
+      version: form.version,
+      status: form.status,
+      details: form.details.map((d) => ({ ...d })),
     }
 
-    submitLoading.value = true
-    setTimeout(() => {
-      const productMat = allMaterials.find((m) => m.id === form.productMaterialId)
-      const payload = {
-        productMaterialId: form.productMaterialId!,
-        productMaterialCode: productMat?.code ?? '',
-        productMaterialName: productMat?.name ?? '',
-        version: form.version,
-        status: form.status,
-        details: form.details.map((d) => ({ ...d })),
-      }
-
-      if (isEdit.value && editingId.value !== null) {
-        const item = mockBoms.find((b) => b.id === editingId.value)
-        if (item) Object.assign(item, payload)
-        ElMessage.success('编辑成功')
-      } else {
-        const newId = Math.max(...mockBoms.map((b) => b.id), 0) + 1
-        const newBomNo = `BOM-${new Date().getFullYear()}-${String(newId).padStart(4, '0')}`
-        mockBoms.push({ id: newId, bomNo: newBomNo, ...payload })
-        ElMessage.success('新增成功')
-      }
-      submitLoading.value = false
-      dialogVisible.value = false
-      fetchData()
-    }, 300)
-  })
+    if (isEdit.value && editingId.value !== null) {
+      await api.put(`${BOM_API_PATH}/${editingId.value}`, body)
+      ElMessage.success('编辑成功')
+    } else {
+      await api.post(BOM_API_PATH, body)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 function handleDialogClosed() {
@@ -515,6 +476,7 @@ function resetForm() {
 }
 
 // --------------- 初始化 ---------------
+fetchAllMaterials()
 fetchData()
 </script>
 

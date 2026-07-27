@@ -124,6 +124,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -135,18 +136,24 @@ const authStore = useAuthStore()
 const isEdit = computed(() => !!route.query.id)
 
 // ==================== 选项数据 ====================
-const orderOptions = ref([
-  { label: 'MO-00001 / PCB-001 主板基板（执行中）', value: 1 },
-  { label: 'MO-00002 / CPU-002 中央处理器（执行中）', value: 2 },
-  { label: 'MO-00003 / LCD-003 液晶显示屏（完工待入库）', value: 3 },
-  { label: 'MO-00005 / BAT-004 锂电池组（执行中）', value: 5 },
-])
+const orderOptions = ref<{ label: string; value: number }[]>([])
+const warehouseOptions = ref<{ label: string; value: number }[]>([])
 
-const warehouseOptions = ref([
-  { label: '成品仓A', value: 1 },
-  { label: '成品仓B', value: 2 },
-  { label: '中转仓', value: 3 },
-])
+async function loadOptions() {
+  try {
+    const [orders, warehouses] = await Promise.all([
+      api.get<{ id: number; orderNo: string; productName: string; status: string }[]>('/production/orders?status=running&status=finishing'),
+      api.get<{ id: number; name: string }[]>('/system/warehouses'),
+    ])
+    orderOptions.value = orders.map((o) => {
+      const statusLabel = o.status === 'running' ? '执行中' : '完工待入库'
+      return { label: `${o.orderNo} / ${o.productName}（${statusLabel}）`, value: o.id }
+    })
+    warehouseOptions.value = warehouses.map((w) => ({ label: w.name, value: w.id }))
+  } catch {
+    // options load silently
+  }
+}
 
 // ==================== 类型 ====================
 interface FinishingLine {
@@ -165,22 +172,6 @@ interface FinishingForm {
   lines: FinishingLine[]
 }
 
-// ==================== Mock：根据工单加载产品 ====================
-const orderLinesMap: Record<number, FinishingLine[]> = {
-  1: [
-    { materialId: 1, materialName: 'PCB-001 主板基板', orderQuantity: 100, finishedQuantity: 60, finishingQuantity: 20, unit: '块' },
-  ],
-  2: [
-    { materialId: 2, materialName: 'CPU-002 中央处理器', orderQuantity: 50, finishedQuantity: 0, finishingQuantity: 30, unit: '个' },
-  ],
-  3: [
-    { materialId: 3, materialName: 'LCD-003 液晶显示屏', orderQuantity: 200, finishedQuantity: 150, finishingQuantity: 50, unit: '块' },
-  ],
-  5: [
-    { materialId: 4, materialName: 'BAT-004 锂电池组', orderQuantity: 100, finishedQuantity: 30, finishingQuantity: 40, unit: '组' },
-  ],
-}
-
 // ==================== 表单 ====================
 const form = reactive<FinishingForm>({
   orderId: null,
@@ -197,17 +188,24 @@ const rules = {
 }
 
 // ==================== 事件处理 ====================
-function onOrderChange(val: number | null) {
+async function onOrderChange(val: number | null) {
   if (!val) {
     form.lines = []
     return
   }
-  const lines = orderLinesMap[val]
-  if (lines) {
-    form.lines = lines.map((l) => ({ ...l }))
-  } else {
+  try {
+    const orderData = await api.get<{ materialId: number; materialName: string; planQuantity: number; finishedQuantity: number; unit: string }>(`/production/orders/${val}`)
+    form.lines = [{
+      materialId: orderData.materialId,
+      materialName: orderData.materialName,
+      orderQuantity: orderData.planQuantity,
+      finishedQuantity: orderData.finishedQuantity,
+      finishingQuantity: Math.max(0, orderData.planQuantity - orderData.finishedQuantity),
+      unit: orderData.unit || '个',
+    }]
+  } catch {
     form.lines = []
-    ElMessage.warning('未找到该工单的产品信息')
+    ElMessage.warning('加载产品信息失败')
   }
 }
 
@@ -238,9 +236,31 @@ async function doSubmit(status: 'draft' | 'finished') {
   if (!valid) return
   if (!validateLines()) return
 
-  const actionLabel = status === 'draft' ? '保存草稿' : '确认入库'
-  ElMessage.success(`${actionLabel}成功`)
-  router.push('/production/finishings')
+  const payload = {
+    orderId: form.orderId,
+    warehouseId: form.warehouseId,
+    finishingDate: form.finishingDate,
+    lines: form.lines.filter((l) => l.finishingQuantity > 0).map((l) => ({
+      materialId: l.materialId,
+      quantity: l.finishingQuantity,
+    })),
+  }
+
+  try {
+    if (isEdit.value) {
+      await api.put(`/production/finishings/${route.query.id}`, payload)
+    } else {
+      const result = await api.post<{ id: number }>('/production/finishings', payload)
+      if (status === 'finished') {
+        await api.post(`/production/finishings/confirm/${result.id}`)
+      }
+    }
+    const actionLabel = status === 'draft' ? '保存草稿' : '确认入库'
+    ElMessage.success(`${actionLabel}成功`)
+    router.push('/production/finishings')
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
 
 async function handleSaveDraft() {
@@ -259,20 +279,26 @@ function prefillFromOrder(orderId: string) {
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  loadOptions()
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }
   if (route.query.id) {
-    // 编辑/查看模式：加载已有入库单
-    form.orderId = 1
-    form.warehouseId = 1
-    form.finishingDate = '2025-06-20'
-    onOrderChange(1)
-    form.lines.forEach((l) => {
-      l.finishingQuantity = 30
-    })
+    loadFinishing(route.query.id as string)
   }
 })
+
+async function loadFinishing(id: string) {
+  try {
+    const data = await api.get<{ orderId: number; warehouseId: number; finishingDate: string; lines: FinishingLine[] }>(`/production/finishings/${id}`)
+    form.orderId = data.orderId
+    form.warehouseId = data.warehouseId
+    form.finishingDate = data.finishingDate
+    form.lines = data.lines.map((l) => ({ ...l }))
+  } catch {
+    ElMessage.error('加载入库单数据失败')
+  }
+}
 </script>
 
 <style scoped>

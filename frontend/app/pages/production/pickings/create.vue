@@ -124,6 +124,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { formatDate } from '~/utils'
 import { useAuthStore } from '../../../stores/auth'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -135,19 +136,24 @@ const authStore = useAuthStore()
 const isEdit = computed(() => !!route.query.id)
 
 // ==================== 选项数据 ====================
-const orderOptions = ref([
-  { label: 'MO-00001 / PCB-001 主板基板（执行中）', value: 1 },
-  { label: 'MO-00002 / CPU-002 中央处理器（已下达）', value: 2 },
-  { label: 'MO-00003 / LCD-003 液晶显示屏（执行中）', value: 3 },
-  { label: 'MO-00005 / BAT-004 锂电池组（已下达）', value: 5 },
-])
+const orderOptions = ref<{ label: string; value: number }[]>([])
+const warehouseOptions = ref<{ label: string; value: number }[]>([])
 
-const warehouseOptions = ref([
-  { label: '电子料仓', value: 1 },
-  { label: '板材仓', value: 2 },
-  { label: '辅料仓', value: 3 },
-  { label: '结构件仓', value: 4 },
-])
+async function loadOptions() {
+  try {
+    const [orders, warehouses] = await Promise.all([
+      api.get<{ id: number; orderNo: string; productName: string; status: string }[]>('/production/orders?status=released&status=running'),
+      api.get<{ id: number; name: string }[]>('/system/warehouses'),
+    ])
+    orderOptions.value = orders.map((o) => ({
+      label: `${o.orderNo} / ${o.productName}（${o.status === 'running' ? '执行中' : '已下达'}）`,
+      value: o.id,
+    }))
+    warehouseOptions.value = warehouses.map((w) => ({ label: w.name, value: w.id }))
+  } catch {
+    // options load silently
+  }
+}
 
 // ==================== 类型 ====================
 interface PickingLine {
@@ -166,32 +172,6 @@ interface PickingForm {
   lines: PickingLine[]
 }
 
-// ==================== Mock：根据工单加载物料需求 ====================
-// key: orderId → lines
-const orderLinesMap: Record<number, PickingLine[]> = {
-  1: [
-    { materialId: 11, materialName: '电阻 10KΩ', requiredQuantity: 500, pickedQuantity: 500, pickingQuantity: 0, unit: '个' },
-    { materialId: 12, materialName: '电容 100μF', requiredQuantity: 300, pickedQuantity: 200, pickingQuantity: 100, unit: '个' },
-    { materialId: 13, materialName: 'PCB 裸板', requiredQuantity: 100, pickedQuantity: 60, pickingQuantity: 40, unit: '块' },
-    { materialId: 14, materialName: '锡膏', requiredQuantity: 2, pickedQuantity: 1.5, pickingQuantity: 0.5, unit: 'kg' },
-  ],
-  2: [
-    { materialId: 21, materialName: '晶圆 die', requiredQuantity: 50, pickedQuantity: 0, pickingQuantity: 50, unit: '片' },
-    { materialId: 22, materialName: '散热片', requiredQuantity: 50, pickedQuantity: 0, pickingQuantity: 50, unit: '个' },
-    { materialId: 23, materialName: '导热硅脂', requiredQuantity: 0.5, pickedQuantity: 0, pickingQuantity: 0.5, unit: 'kg' },
-  ],
-  3: [
-    { materialId: 31, materialName: 'LCD 面板', requiredQuantity: 200, pickedQuantity: 100, pickingQuantity: 100, unit: '块' },
-    { materialId: 32, materialName: '背光模组', requiredQuantity: 200, pickedQuantity: 100, pickingQuantity: 100, unit: '个' },
-    { materialId: 33, materialName: '排线 FPC', requiredQuantity: 400, pickedQuantity: 200, pickingQuantity: 200, unit: '根' },
-  ],
-  5: [
-    { materialId: 41, materialName: '电芯 18650', requiredQuantity: 200, pickedQuantity: 0, pickingQuantity: 200, unit: '个' },
-    { materialId: 42, materialName: '保护板 BMS', requiredQuantity: 100, pickedQuantity: 0, pickingQuantity: 100, unit: '个' },
-    { materialId: 43, materialName: '电池外壳', requiredQuantity: 100, pickedQuantity: 0, pickingQuantity: 100, unit: '个' },
-  ],
-}
-
 // ==================== 表单 ====================
 const form = reactive<PickingForm>({
   orderId: null,
@@ -208,18 +188,17 @@ const rules = {
 }
 
 // ==================== 事件处理 ====================
-function onOrderChange(val: number | null) {
+async function onOrderChange(val: number | null) {
   if (!val) {
     form.lines = []
     return
   }
-  const lines = orderLinesMap[val]
-  if (lines) {
-    // 深拷贝，避免修改原始数据
-    form.lines = lines.map((l) => ({ ...l }))
-  } else {
+  try {
+    const lines = await api.get<PickingLine[]>(`/production/orders/material-requirements/${val}`)
+    form.lines = lines.map((l) => ({ ...l, pickingQuantity: Math.max(0, l.requiredQuantity - l.pickedQuantity) }))
+  } catch {
     form.lines = []
-    ElMessage.warning('未找到该工单的物料需求')
+    ElMessage.warning('加载物料需求失败')
   }
 }
 
@@ -250,9 +229,31 @@ async function doSubmit(status: 'draft' | 'picked') {
   if (!valid) return
   if (!validateLines()) return
 
-  const actionLabel = status === 'draft' ? '保存草稿' : '确认领料'
-  ElMessage.success(`${actionLabel}成功`)
-  router.push('/production/pickings')
+  const payload = {
+    orderId: form.orderId,
+    warehouseId: form.warehouseId,
+    pickingDate: form.pickingDate,
+    lines: form.lines.filter((l) => l.pickingQuantity > 0).map((l) => ({
+      materialId: l.materialId,
+      quantity: l.pickingQuantity,
+    })),
+  }
+
+  try {
+    if (isEdit.value) {
+      await api.put(`/production/pickings/${route.query.id}`, payload)
+    } else {
+      const result = await api.post<{ id: number }>('/production/pickings', payload)
+      if (status === 'picked') {
+        await api.post(`/production/pickings/confirm/${result.id}`)
+      }
+    }
+    const actionLabel = status === 'draft' ? '保存草稿' : '确认领料'
+    ElMessage.success(`${actionLabel}成功`)
+    router.push('/production/pickings')
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
 
 async function handleSaveDraft() {
@@ -271,21 +272,27 @@ function prefillFromOrder(orderId: string) {
 
 // ==================== 初始化 ====================
 onMounted(() => {
+  loadOptions()
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }
   if (route.query.id) {
-    // 编辑/查看模式：加载已有领料单
-    form.orderId = 1
-    form.warehouseId = 1
-    form.pickingDate = '2025-06-16'
-    onOrderChange(1)
-    // 锁定数量
-    form.lines.forEach((l) => {
-      l.pickingQuantity = l.pickedQuantity > 0 ? l.pickedQuantity : l.requiredQuantity
-    })
+    // 查看模式：加载已有领料单
+    loadPicking(route.query.id as string)
   }
 })
+
+async function loadPicking(id: string) {
+  try {
+    const data = await api.get<{ orderId: number; warehouseId: number; pickingDate: string; lines: PickingLine[] }>(`/production/pickings/${id}`)
+    form.orderId = data.orderId
+    form.warehouseId = data.warehouseId
+    form.pickingDate = data.pickingDate
+    form.lines = data.lines.map((l) => ({ ...l }))
+  } catch {
+    ElMessage.error('加载领料单数据失败')
+  }
+}
 </script>
 
 <style scoped>

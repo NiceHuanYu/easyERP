@@ -16,7 +16,7 @@ import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
  * 物料管理
  */
 @RestController
-@RequestMapping("/api/v1/base/materials")
+@RequestMapping({"/api/v1/base/materials", "/api/v1/base-data/materials"})
 @RequiredArgsConstructor
 public class MaterialController {
 

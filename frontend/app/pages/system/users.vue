@@ -148,6 +148,7 @@
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -170,38 +171,10 @@ interface EmployeeOption {
   name: string
 }
 
-// --------------- Mock 选项数据 ---------------
-const employeeOptions: EmployeeOption[] = [
-  { id: 1, code: 'EMP-0001', name: '张三' },
-  { id: 2, code: 'EMP-0002', name: '李四' },
-  { id: 3, code: 'EMP-0003', name: '王五' },
-  { id: 4, code: 'EMP-0004', name: '赵六' },
-  { id: 5, code: 'EMP-0005', name: '陈七' },
-  { id: 6, code: 'EMP-0006', name: '周八' },
-]
+// --------------- 选项数据 ---------------
+const employeeOptions: EmployeeOption[] = []
 
-const roleOptions = [
-  { label: '系统管理员', value: 'admin' },
-  { label: '销售经理', value: 'sales_manager' },
-  { label: '生产主管', value: 'production_supervisor' },
-  { label: '采购员', value: 'purchaser' },
-  { label: '财务', value: 'finance' },
-  { label: '仓管', value: 'warehouse_keeper' },
-  { label: '普通用户', value: 'user' },
-]
-
-// --------------- Mock 数据 ---------------
-const mockUsers: User[] = Array.from({ length: 35 }, (_, i) => ({
-  id: i + 1,
-  username: ['admin', 'zhangsan', 'lisi', 'wangwu', 'zhaoliu', 'chenqi', 'zhouba'][i % 7] + (i > 6 ? `_${i + 1}` : ''),
-  realName: ['管理员', '张三', '李四', '王五', '赵六', '陈七', '周八'][i % 7],
-  email: `user${i + 1}@company.com`,
-  employeeId: i < 6 ? i + 1 : null,
-  employeeName: i < 6 ? ['张三', '李四', '王五', '赵六', '陈七', '周八'][i % 6] : null,
-  roles: [['admin'], ['sales_manager'], ['production_supervisor'], ['purchaser'], ['finance'], ['warehouse_keeper'], ['user']][i % 7],
-  status: i % 10 === 0 ? 'inactive' : 'active',
-  createdAt: `202${Math.min(4, i % 5)}-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')} ${String(i % 24).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:00`,
-}))
+const roleOptions: { label: string; value: string }[] = []
 
 // --------------- 状态 ---------------
 const loading = ref(false)
@@ -244,23 +217,20 @@ const rules: FormRules = {
 const dialogTitle = computed(() => (isEdit.value ? '编辑用户' : '新增用户'))
 
 // --------------- 方法 ---------------
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let list = [...mockUsers]
-
-    if (searchForm.username) {
-      list = list.filter((u) => u.username.includes(searchForm.username))
-    }
-    if (searchForm.status) {
-      list = list.filter((u) => u.status === searchForm.status)
-    }
-
-    pagination.total = list.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = list.slice(start, start + pagination.pageSize)
+  try {
+    const result = await api.page<User>('/system/users', pagination.page, pagination.pageSize, {
+      username: searchForm.username || undefined,
+      status: searchForm.status || undefined,
+    })
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取用户列表失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -301,11 +271,14 @@ function handleDelete(row: User) {
     type: 'warning',
     confirmButtonText: '确定',
     cancelButtonText: '取消',
-  }).then(() => {
-    const idx = mockUsers.findIndex((u) => u.id === row.id)
-    if (idx > -1) mockUsers.splice(idx, 1)
-    ElMessage.success('删除成功')
-    fetchData()
+  }).then(async () => {
+    try {
+      await api.del(`/system/users/${row.id}`)
+      ElMessage.success('删除成功')
+      fetchData()
+    } catch (e: any) {
+      ElMessage.error(e?.message || '删除失败')
+    }
   }).catch(() => {})
 }
 
@@ -314,9 +287,14 @@ function handleStatusChange(row: User, val: string) {
     `确定要${val === 'active' ? '禁用' : '启用'}用户「${row.username}」吗？`,
     '状态变更',
     { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' },
-  ).then(() => {
-    row.status = val
-    ElMessage.success('状态更新成功')
+  ).then(async () => {
+    try {
+      await api.put(`/system/users/${row.id}/status`, { status: val })
+      row.status = val
+      ElMessage.success('状态更新成功')
+    } catch (e: any) {
+      ElMessage.error(e?.message || '状态更新失败')
+    }
   }).catch(() => {})
 }
 
@@ -331,45 +309,35 @@ function handleResetPwd(row: User) {
 }
 
 function handleSubmit() {
-  formRef.value?.validate((valid) => {
+  formRef.value?.validate(async (valid) => {
     if (!valid) return
     submitLoading.value = true
-    setTimeout(() => {
+    try {
+      const payload: Record<string, unknown> = {
+        username: form.username,
+        realName: form.realName,
+        email: form.email,
+        employeeId: form.employeeId,
+        roles: form.roles,
+        status: form.status,
+      }
+      if (!isEdit.value) {
+        payload.password = form.password
+      }
       if (isEdit.value && editingId.value !== null) {
-        const item = mockUsers.find((u) => u.id === editingId.value)
-        if (item) {
-          const emp = employeeOptions.find((e) => e.id === form.employeeId)
-          Object.assign(item, {
-            username: form.username,
-            realName: form.realName,
-            email: form.email,
-            employeeId: form.employeeId,
-            employeeName: emp?.name ?? null,
-            roles: [...form.roles],
-            status: form.status,
-          })
-        }
+        await api.put(`/system/users/${editingId.value}`, payload)
         ElMessage.success('编辑成功')
       } else {
-        const newId = Math.max(...mockUsers.map((u) => u.id), 0) + 1
-        const emp = employeeOptions.find((e) => e.id === form.employeeId)
-        mockUsers.push({
-          id: newId,
-          username: form.username,
-          realName: form.realName,
-          email: form.email,
-          employeeId: form.employeeId,
-          employeeName: emp?.name ?? null,
-          roles: [...form.roles],
-          status: form.status,
-          createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        })
+        await api.post('/system/users', payload)
         ElMessage.success('新增成功')
       }
-      submitLoading.value = false
       dialogVisible.value = false
       fetchData()
-    }, 300)
+    } catch (e: any) {
+      ElMessage.error(e?.message || '保存失败')
+    } finally {
+      submitLoading.value = false
+    }
   })
 }
 

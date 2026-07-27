@@ -51,8 +51,8 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         class="table-pagination"
-        @current-change="fetchData"
-        @size-change="fetchData"
+        @current-change="applyFilters"
+        @size-change="applyFilters"
       />
     </el-card>
 
@@ -110,6 +110,7 @@ import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { ElTree } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -225,17 +226,10 @@ const permTreeData: PermTreeNode[] = [
 ]
 
 // --------------- Mock 数据 ---------------
-const mockRoles: Role[] = [
-  { id: 1, name: '系统管理员', code: 'admin', description: '拥有系统全部权限', userCount: 2, permissions: permTreeData.flatMap((g) => (g.children ?? []).map((c) => c.id)), createdAt: '2024-01-15 09:00:00' },
-  { id: 2, name: '销售经理', code: 'sales_manager', description: '管理销售订单的创建与审批', userCount: 5, permissions: ['sales:order:view', 'sales:order:create', 'sales:order:edit', 'sales:order:submit', 'sales:order:approve', 'delivery:order:view'], createdAt: '2024-01-15 10:30:00' },
-  { id: 3, name: '生产主管', code: 'production_supervisor', description: '管理生产计划与执行', userCount: 3, permissions: ['production:order:view', 'production:order:create', 'production:order:edit', 'production:order:submit', 'production:order:approve', 'inventory:stock:view'], createdAt: '2024-02-10 08:15:00' },
-  { id: 4, name: '采购员', code: 'purchaser', description: '负责采购下单与跟踪', userCount: 4, permissions: ['purchase:order:view', 'purchase:order:create', 'purchase:order:edit', 'purchase:order:submit', 'inventory:stock:view'], createdAt: '2024-02-20 14:00:00' },
-  { id: 5, name: '财务', code: 'finance', description: '财务审核与对账', userCount: 3, permissions: ['finance:order:view', 'finance:order:create', 'finance:order:edit', 'finance:order:submit', 'finance:order:approve'], createdAt: '2024-03-05 11:20:00' },
-  { id: 6, name: '仓管员', code: 'warehouse_keeper', description: '仓库出入库管理', userCount: 6, permissions: ['inventory:stock:view', 'inventory:stock:create', 'inventory:stock:edit', 'inventory:stock:delete', 'inventory:stock:submit'], createdAt: '2024-03-10 16:45:00' },
-  { id: 7, name: '普通用户', code: 'user', description: '基础查看权限', userCount: 18, permissions: ['sales:order:view', 'delivery:order:view', 'production:order:view', 'purchase:order:view', 'inventory:stock:view', 'finance:order:view'], createdAt: '2024-01-01 00:00:00' },
-]
+// (roles loaded from API)
 
 // --------------- 状态 ---------------
+const allRoles = ref<Role[]>([])
 const loading = ref(false)
 const submitLoading = ref(false)
 const dialogVisible = ref(false)
@@ -273,35 +267,42 @@ const rules: FormRules = {
 const dialogTitle = computed(() => (isEdit.value ? '编辑角色' : '新增角色'))
 
 // --------------- 方法 ---------------
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let list = [...mockRoles]
-
-    if (searchForm.name) {
-      list = list.filter((r) => r.name.includes(searchForm.name))
-    }
-    if (searchForm.code) {
-      list = list.filter((r) => r.code.includes(searchForm.code))
-    }
-
-    pagination.total = list.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = list.slice(start, start + pagination.pageSize)
+  try {
+    const roles = await api.get<Role[]>('/system/roles')
+    allRoles.value = roles
+    applyFilters()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取角色列表失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
+}
+
+function applyFilters() {
+  let list = [...allRoles.value]
+  if (searchForm.name) {
+    list = list.filter((r) => r.name.includes(searchForm.name))
+  }
+  if (searchForm.code) {
+    list = list.filter((r) => r.code.includes(searchForm.code))
+  }
+  pagination.total = list.length
+  const start = (pagination.page - 1) * pagination.pageSize
+  tableData.value = list.slice(start, start + pagination.pageSize)
 }
 
 function handleSearch() {
   pagination.page = 1
-  fetchData()
+  applyFilters()
 }
 
 function handleReset() {
   searchForm.name = ''
   searchForm.code = ''
   pagination.page = 1
-  fetchData()
+  applyFilters()
 }
 
 function handleAdd() {
@@ -329,11 +330,14 @@ function handleDelete(row: Role) {
     type: 'warning',
     confirmButtonText: '确定',
     cancelButtonText: '取消',
-  }).then(() => {
-    const idx = mockRoles.findIndex((r) => r.id === row.id)
-    if (idx > -1) mockRoles.splice(idx, 1)
-    ElMessage.success('删除成功')
-    fetchData()
+  }).then(async () => {
+    try {
+      await api.del(`/system/roles/${row.id}`)
+      ElMessage.success('删除成功')
+      fetchData()
+    } catch (e: any) {
+      ElMessage.error(e?.message || '删除失败')
+    }
   }).catch(() => {})
 }
 
@@ -357,31 +361,25 @@ function handlePermSubmit() {
 }
 
 function handleSubmit() {
-  formRef.value?.validate((valid) => {
+  formRef.value?.validate(async (valid) => {
     if (!valid) return
     submitLoading.value = true
-    setTimeout(() => {
+    try {
+      const payload = { name: form.name, code: form.code, description: form.description }
       if (isEdit.value && editingId.value !== null) {
-        const item = mockRoles.find((r) => r.id === editingId.value)
-        if (item) Object.assign(item, { ...form })
+        await api.put(`/system/roles/${editingId.value}`, payload)
         ElMessage.success('编辑成功')
       } else {
-        const newId = Math.max(...mockRoles.map((r) => r.id), 0) + 1
-        mockRoles.push({
-          id: newId,
-          name: form.name,
-          code: form.code,
-          description: form.description,
-          userCount: 0,
-          permissions: [],
-          createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        })
+        await api.post('/system/roles', payload)
         ElMessage.success('新增成功')
       }
-      submitLoading.value = false
       dialogVisible.value = false
       fetchData()
-    }, 300)
+    } catch (e: any) {
+      ElMessage.error(e?.message || '保存失败')
+    } finally {
+      submitLoading.value = false
+    }
   })
 }
 

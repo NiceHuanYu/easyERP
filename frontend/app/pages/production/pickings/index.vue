@@ -140,6 +140,7 @@
 <script setup lang="ts">
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -163,31 +164,6 @@ interface SearchForm {
   dateRange: [string, string] | null
 }
 
-// ==================== Mock 数据 ====================
-const materialNames = ['电阻 10KΩ', '电容 100μF', 'PCB 裸板', '锡膏', '散热片', 'LCD 面板', '背光模组', '排线 FPC']
-
-function generateMockData(): Picking[] {
-  const data: Picking[] = []
-  for (let i = 1; i <= 25; i++) {
-    const matCount = (i % 3) + 1
-    const summary = matCount === 1
-      ? materialNames[i % materialNames.length]
-      : `${materialNames[i % materialNames.length]} 等${matCount}项`
-    data.push({
-      id: i,
-      pickingNo: `PK-${String(i).padStart(5, '0')}`,
-      orderId: i,
-      orderNo: `MO-${String(i).padStart(5, '0')}`,
-      materialSummary: summary,
-      pickingDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-      status: i % 3 === 0 ? 'draft' : 'picked',
-    })
-  }
-  return data
-}
-
-const allData = ref<Picking[]>(generateMockData())
-
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
   pickingNo: '',
@@ -205,36 +181,34 @@ const pagination = reactive({
   total: 0,
 })
 
-function fetchData() {
+function buildSearchQuery(): Record<string, string | number | undefined> {
+  const q: Record<string, string | number | undefined> = {}
+  if (searchForm.pickingNo) q.pickingNo = searchForm.pickingNo
+  if (searchForm.orderNo) q.orderNo = searchForm.orderNo
+  if (searchForm.status) q.status = searchForm.status
+  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+    q.startDate = searchForm.dateRange[0]
+    q.endDate = searchForm.dateRange[1]
+  }
+  return q
+}
+
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...allData.value]
-
-    if (searchForm.pickingNo) {
-      filtered = filtered.filter((p) =>
-        p.pickingNo.toLowerCase().includes(searchForm.pickingNo.toLowerCase()),
-      )
-    }
-    if (searchForm.orderNo) {
-      filtered = filtered.filter((p) =>
-        p.orderNo.toLowerCase().includes(searchForm.orderNo.toLowerCase()),
-      )
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter((p) => p.status === searchForm.status)
-    }
-    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      const [start, end] = searchForm.dateRange
-      filtered = filtered.filter(
-        (p) => p.pickingDate >= start && p.pickingDate <= end,
-      )
-    }
-
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = filtered.slice(start, start + pagination.pageSize)
+  try {
+    const result = await api.page<Picking>(
+      '/production/pickings',
+      pagination.page,
+      pagination.pageSize,
+      buildSearchQuery(),
+    )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch {
+    ElMessage.error('加载领料单列表失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -251,22 +225,24 @@ function handleReset() {
 }
 
 // ==================== 行操作 ====================
-function handleConfirm(row: Picking) {
-  const target = allData.value.find((p) => p.id === row.id)
-  if (target) {
-    target.status = 'picked'
+async function handleConfirm(row: Picking) {
+  try {
+    await api.post(`/production/pickings/confirm/${row.id}`)
+    ElMessage.success('确认领料成功')
+    fetchData()
+  } catch {
+    ElMessage.error('确认领料失败')
   }
-  ElMessage.success('确认领料成功')
-  fetchData()
 }
 
-function handleDelete(row: Picking) {
-  const idx = allData.value.findIndex((p) => p.id === row.id)
-  if (idx > -1) {
-    allData.value.splice(idx, 1)
+async function handleDelete(row: Picking) {
+  try {
+    await api.del(`/production/pickings/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch {
+    ElMessage.error('删除失败')
   }
-  ElMessage.success('删除成功')
-  fetchData()
 }
 
 // ==================== 初始化 ====================

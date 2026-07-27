@@ -3,14 +3,14 @@
     <!-- 页面标题 -->
     <div class="page-header">
       <el-button :icon="ArrowLeft" @click="router.push('/production/orders')">返回</el-button>
-      <h2 class="page-title">生产工单详情 - {{ order.orderNo }}</h2>
-      <el-tag :type="statusTagType(order.status)" size="large" style="margin-left: 12px">
+      <h2 class="page-title">生产工单详情 - {{ order?.orderNo }}</h2>
+      <el-tag v-if="order" :type="statusTagType(order.status)" size="large" style="margin-left: 12px">
         {{ statusLabel(order.status) }}
       </el-tag>
     </div>
 
     <!-- 操作按钮 -->
-    <div class="action-bar">
+    <div v-if="order" class="action-bar">
       <template v-if="order.status === 'pending'">
         <el-button
           v-permission="'production:order:edit'"
@@ -59,7 +59,7 @@
       <el-tabs v-model="activeTab">
         <!-- 基本信息 -->
         <el-tab-pane label="基本信息" name="info">
-          <el-descriptions :column="3" border>
+          <el-descriptions v-if="order" :column="3" border>
             <el-descriptions-item label="工单号">{{ order.orderNo }}</el-descriptions-item>
             <el-descriptions-item label="销售订单">
               <el-link
@@ -199,6 +199,7 @@
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -230,6 +231,24 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | '' {
 }
 
 // ==================== 类型 ====================
+interface Order {
+  id: number
+  orderNo: string
+  salesOrderId: number | null
+  salesOrderNo: string
+  materialId: number
+  materialName: string
+  planQuantity: number
+  finishedQuantity: number
+  planStartDate: string
+  planEndDate: string
+  workshopName: string
+  status: 'pending' | 'released' | 'running' | 'finishing' | 'completed'
+  remark: string
+  createdBy: string
+  createdAt: string
+}
+
 interface MaterialRequirement {
   materialId: number
   materialName: string
@@ -247,7 +266,7 @@ interface Picking {
   status: 'draft' | 'picked'
 }
 
-interface Finishing {
+interface FinishingRecord {
   id: number
   finishingNo: string
   finishingDate: string
@@ -263,89 +282,89 @@ interface History {
   time: string
 }
 
-// ==================== Mock 数据 ====================
-const order = ref({
-  id: 1,
-  orderNo: 'MO-00001',
-  salesOrderId: 1,
-  salesOrderNo: 'SO-00001',
-  materialId: 1,
-  materialName: 'PCB-001 主板基板',
-  planQuantity: 100,
-  finishedQuantity: 60,
-  planStartDate: '2025-06-15',
-  planEndDate: '2025-07-01',
-  workshopName: 'SMT 贴片车间',
-  status: 'running' as const,
-  remark: '紧急工单，请优先安排',
-  createdBy: '张三',
-  createdAt: '2025-06-14 09:30:00',
-})
-
-const materialRequirements = ref<MaterialRequirement[]>([
-  { materialId: 11, materialName: '电阻 10KΩ', unitUsage: 5, requiredQuantity: 500, pickedQuantity: 500, unpickedQuantity: 0 },
-  { materialId: 12, materialName: '电容 100μF', unitUsage: 3, requiredQuantity: 300, pickedQuantity: 200, unpickedQuantity: 100 },
-  { materialId: 13, materialName: 'PCB 裸板', unitUsage: 1, requiredQuantity: 100, pickedQuantity: 60, unpickedQuantity: 40 },
-  { materialId: 14, materialName: '锡膏', unitUsage: 0.02, requiredQuantity: 2, pickedQuantity: 1.5, unpickedQuantity: 0.5 },
-])
-
-const pickings = ref<Picking[]>([
-  { id: 1, pickingNo: 'PK-00001', pickingDate: '2025-06-16', warehouseName: '电子料仓', status: 'picked' },
-  { id: 2, pickingNo: 'PK-00002', pickingDate: '2025-06-18', warehouseName: '电子料仓', status: 'draft' },
-  { id: 3, pickingNo: 'PK-00003', pickingDate: '2025-06-18', warehouseName: '板材仓', status: 'picked' },
-])
-
-const finishings = ref<Finishing[]>([
-  { id: 1, finishingNo: 'FN-00001', finishingDate: '2025-06-20', warehouseName: '成品仓A', quantity: 30, status: 'finished' },
-  { id: 2, finishingNo: 'FN-00002', finishingDate: '2025-06-22', warehouseName: '成品仓A', quantity: 30, status: 'finished' },
-])
-
-const histories = ref<History[]>([
-  { id: 1, action: '创建工单', operator: '张三', time: '2025-06-14 09:30:00' },
-  { id: 2, action: '下达工单', operator: '李四', time: '2025-06-15 08:00:00' },
-  { id: 3, action: '开始执行', operator: '王五', time: '2025-06-15 08:30:00' },
-  { id: 4, action: '领料 (PK-00001)', operator: '王五', time: '2025-06-16 10:00:00' },
-  { id: 5, action: '完工入库 30 件 (FN-00001)', operator: '王五', time: '2025-06-20 16:00:00' },
-  { id: 6, action: '完工入库 30 件 (FN-00002)', operator: '赵六', time: '2025-06-22 14:00:00' },
-])
+// ==================== 数据 ====================
+const order = ref<Order | null>(null)
+const materialRequirements = ref<MaterialRequirement[]>([])
+const pickings = ref<Picking[]>([])
+const finishings = ref<FinishingRecord[]>([])
+const histories = ref<History[]>([])
 
 // ==================== 标签页 ====================
 const activeTab = ref('info')
 
+// ==================== 加载 ====================
+async function loadOrder(id: string) {
+  try {
+    const [orderData, materials, pickingList, finishingList, historyList] = await Promise.all([
+      api.get<Order>(`/production/orders/${id}`),
+      api.get<MaterialRequirement[]>(`/production/orders/material-requirements/${id}`),
+      api.get<Picking[]>(`/production/pickings?orderId=${id}`),
+      api.get<FinishingRecord[]>(`/production/finishings?orderId=${id}`),
+      api.get<History[]>(`/production/orders/${id}/history`),
+    ])
+    order.value = orderData
+    materialRequirements.value = materials
+    pickings.value = pickingList
+    finishings.value = finishingList
+    histories.value = historyList
+  } catch {
+    ElMessage.error('加载工单详情失败')
+  }
+}
+
 // ==================== 操作 ====================
-function handleDelete() {
-  ElMessage.success('删除成功')
-  router.push('/production/orders')
+async function handleDelete() {
+  try {
+    await api.del(`/production/orders/${route.params.id}`)
+    ElMessage.success('删除成功')
+    router.push('/production/orders')
+  } catch {
+    ElMessage.error('删除失败')
+  }
 }
 
-function handleRelease() {
-  order.value.status = 'released'
-  ElMessage.success('工单已下达')
+async function handleRelease() {
+  try {
+    await api.post(`/production/orders/release/${route.params.id}`)
+    ElMessage.success('工单已下达')
+    loadOrder(route.params.id as string)
+  } catch {
+    ElMessage.error('下达失败')
+  }
 }
 
-function handleStart() {
-  order.value.status = 'running'
-  ElMessage.success('工单已开始执行')
+async function handleStart() {
+  try {
+    await api.put(`/production/orders/${route.params.id}`, { status: 'running' })
+    ElMessage.success('工单已开始执行')
+    loadOrder(route.params.id as string)
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
 
-function handleFinish() {
-  order.value.status = 'finishing'
-  ElMessage.success('已提交完工入库')
+async function handleFinish() {
+  try {
+    await api.post(`/production/orders/${route.params.id}/finish`)
+    ElMessage.success('已提交完工入库')
+    loadOrder(route.params.id as string)
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
 
 function handleCreatePicking() {
-  router.push(`/production/pickings/create?fromOrder=${order.value.id}`)
+  router.push(`/production/pickings/create?fromOrder=${route.params.id}`)
 }
 
 function handleCreateFinishing() {
-  router.push(`/production/finishings/create?fromOrder=${order.value.id}`)
+  router.push(`/production/finishings/create?fromOrder=${route.params.id}`)
 }
 
-// ==================== 加载 ====================
+// ==================== 初始化 ====================
 onMounted(() => {
   const id = route.params.id as string
-  // 实际开发中根据 id 调用 API
-  console.log('Loading production order:', id)
+  loadOrder(id)
 })
 </script>
 

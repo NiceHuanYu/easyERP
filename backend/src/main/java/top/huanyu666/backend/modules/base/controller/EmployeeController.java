@@ -16,7 +16,7 @@ import top.huanyu666.backend.modules.base.mapper.EmployeeMapper;
  * 员工管理
  */
 @RestController
-@RequestMapping("/api/v1/base/employees")
+@RequestMapping({"/api/v1/base/employees", "/api/v1/base-data/employees"})
 @RequiredArgsConstructor
 public class EmployeeController {
 

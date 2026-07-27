@@ -85,11 +85,13 @@
       <el-pagination
         v-model:current-page="pagination.page"
         v-model:page-size="pagination.pageSize"
-        :total="filteredData.length"
+        :total="totalItems"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         background
         class="pagination"
+        @size-change="handleSearch"
+        @current-change="handleSearch"
       />
     </el-card>
 
@@ -181,6 +183,7 @@
 <script setup lang="ts">
 import { Search, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -223,71 +226,41 @@ const statusTagMap: Record<string, 'warning' | 'success' | 'info'> = {
   '已核销': 'success',
 }
 
-// ── Mock Data ──────────────────────────────────────
-function generateMockReceivables(): Receivable[] {
-  const customers = customerOptions.map((c) => c.value)
-  const statuses: Array<'未核销' | '部分核销' | '已核销'> = ['未核销', '部分核销', '已核销']
-
-  const data: Receivable[] = []
-  for (let i = 0; i < 30; i++) {
-    const customer = customers[Math.floor(Math.random() * customers.length)]
-    const date = new Date()
-    date.setDate(date.getDate() - Math.floor(Math.random() * 180) + 30)
-    const dueDate = date.toISOString().slice(0, 10)
-
-    const amount = Math.floor(Math.random() * 200000) + 5000
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    const receivedAmount =
-      status === '已核销'
-        ? amount
-        : status === '部分核销'
-          ? Math.floor(amount * (0.3 + Math.random() * 0.5))
-          : 0
-
-    data.push({
-      receivableNo: `AR-${String(i + 1).padStart(6, '0')}`,
-      customerName: customer,
-      deliveryNo: `SO-DLV-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}`,
-      amount,
-      receivedAmount,
-      unreceivedAmount: amount - receivedAmount,
-      dueDate,
-      status,
-    })
-  }
-
-  data.sort((a, b) => b.dueDate.localeCompare(a.dueDate))
-  return data
-}
-
-const mockData = ref<Receivable[]>(generateMockReceivables())
+// ── Data ───────────────────────────────────────────
+const allData = ref<Receivable[]>([])
+const totalItems = ref(0)
 const loading = ref(false)
 
 // ── Pagination ─────────────────────────────────────
 const pagination = reactive({ page: 1, pageSize: 10 })
 
-// ── Filtering ──────────────────────────────────────
-const filteredData = computed(() => {
-  let list = mockData.value
-
-  if (searchForm.customer) {
-    list = list.filter((item) => item.customerName === searchForm.customer)
+// ── Fetch ──────────────────────────────────────────
+async function fetchData() {
+  loading.value = true
+  try {
+    const extraQuery: Record<string, string | number | undefined> = {}
+    if (searchForm.customer) extraQuery.customer = searchForm.customer
+    if (searchForm.status) extraQuery.status = searchForm.status
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      extraQuery.startDate = searchForm.dateRange[0]
+      extraQuery.endDate = searchForm.dateRange[1]
+    }
+    const result = await api.page<Receivable>(
+      '/finance/receivables',
+      pagination.page,
+      pagination.pageSize,
+      extraQuery,
+    )
+    allData.value = result.list
+    totalItems.value = result.total
+  } catch {
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
   }
-  if (searchForm.status) {
-    list = list.filter((item) => item.status === searchForm.status)
-  }
-  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-    const [start, end] = searchForm.dateRange
-    list = list.filter((item) => item.dueDate >= start && item.dueDate <= end)
-  }
+}
 
-  return list
-})
-
-const paginatedData = computed(() => {
-  const start = (pagination.page - 1) * pagination.pageSize
-  return filteredData.value.slice(start, start + pagination.pageSize)
-})
+const paginatedData = computed(() => allData.value)
 
 // ── View Dialog ────────────────────────────────────
 const viewDialogVisible = ref(false)
@@ -305,13 +278,18 @@ const availablePayments = ref<Payment[]>([])
 const reconcileAmounts = reactive<Record<string, number>>({})
 const selectedPayments = ref<Payment[]>([])
 
-function generateAvailablePayments(customerName: string): Payment[] {
-  return [
-    { paymentNo: `RCV-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}`, amount: 35000, availableAmount: 35000 },
-    { paymentNo: `RCV-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}`, amount: 28000, availableAmount: 15000 },
-    { paymentNo: `RCV-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}`, amount: 50000, availableAmount: 50000 },
-    { paymentNo: `RCV-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0')}`, amount: 42000, availableAmount: 20000 },
-  ]
+async function fetchAvailablePayments(customerName: string) {
+  try {
+    const result = await api.get<any[]>('/finance/payments', { type: '收款', counterparty: customerName })
+    availablePayments.value = (result || []).map((p: any) => ({
+      paymentNo: p.paymentNo,
+      amount: p.amount,
+      availableAmount: (p.amount ?? 0) - (p.reconciledAmount ?? 0),
+    }))
+  } catch {
+    // Fallback: empty list
+    availablePayments.value = []
+  }
 }
 
 const totalReconcileAmount = computed(() =>
@@ -320,18 +298,25 @@ const totalReconcileAmount = computed(() =>
 
 function handleReconcile(row: Receivable) {
   reconcileRow.value = row
-  availablePayments.value = generateAvailablePayments(row.customerName)
+  fetchAvailablePayments(row.customerName)
 
   // Reset amounts
   for (const key of Object.keys(reconcileAmounts)) {
     delete reconcileAmounts[key]
   }
-  availablePayments.value.forEach((p) => {
-    reconcileAmounts[p.paymentNo] = 0
-  })
 
   reconcileDialogVisible.value = true
 }
+
+// Watch availablePayments to init amounts once loaded
+watch(availablePayments, (payments) => {
+  for (const key of Object.keys(reconcileAmounts)) {
+    delete reconcileAmounts[key]
+  }
+  payments.forEach((p) => {
+    reconcileAmounts[p.paymentNo] = 0
+  })
+})
 
 function handlePaymentSelection(selection: Payment[]) {
   selectedPayments.value = selection
@@ -344,7 +329,7 @@ function resetReconcileForm() {
   selectedPayments.value = []
 }
 
-function confirmReconcile() {
+async function confirmReconcile() {
   if (!reconcileRow.value) return
 
   const total = totalReconcileAmount.value
@@ -353,27 +338,26 @@ function confirmReconcile() {
     return
   }
 
-  // Update mock data
-  const item = mockData.value.find((r) => r.receivableNo === reconcileRow.value!.receivableNo)
-  if (item) {
-    item.receivedAmount += total
-    item.unreceivedAmount = item.amount - item.receivedAmount
-    if (item.unreceivedAmount <= 0) {
-      item.unreceivedAmount = 0
-      item.status = '已核销'
-    } else {
-      item.status = '部分核销'
-    }
+  try {
+    await api.post(`/finance/receivables/${reconcileRow.value.receivableNo}/reconcile`, {
+      reconcileAmount: total,
+      payments: Object.entries(reconcileAmounts)
+        .filter(([, amount]) => amount > 0)
+        .map(([paymentNo, amount]) => ({ paymentNo, amount })),
+    })
+    ElMessage.success(`核销成功，本次核销 ¥${total.toLocaleString()}`)
+    reconcileDialogVisible.value = false
+    resetReconcileForm()
+    fetchData()
+  } catch {
+    ElMessage.error('核销失败')
   }
-
-  ElMessage.success(`核销成功，本次核销 ¥${total.toLocaleString()}`)
-  reconcileDialogVisible.value = false
-  resetReconcileForm()
 }
 
 // ── Actions ────────────────────────────────────────
 function handleSearch() {
   pagination.page = 1
+  fetchData()
 }
 
 function handleReset() {
@@ -382,6 +366,11 @@ function handleReset() {
   searchForm.dateRange = null
   pagination.page = 1
 }
+
+// ── Init ───────────────────────────────────────────
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style scoped>

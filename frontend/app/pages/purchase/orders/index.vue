@@ -184,6 +184,7 @@
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { formatMoney } from '~/utils'
 import { ElMessage } from 'element-plus'
+import { api } from '../../../composables/useApi'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -229,35 +230,13 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | '' {
   return map[s] ?? 'info'
 }
 
-// ==================== 选项 ====================
+// ==================== 选项（TODO: 后续替换为 API 调用） ====================
 const supplierOptions = ref([
   { label: '深圳华强电子有限公司', value: 1 },
   { label: '广州万国元件有限公司', value: 2 },
   { label: '东莞正泰科技有限公司', value: 3 },
   { label: '上海锐拓半导体有限公司', value: 4 },
 ])
-
-// ==================== Mock 数据 ====================
-function generateMockData(): PurchaseOrder[] {
-  const suppliers = supplierOptions.value
-  const statuses: PurchaseOrder['status'][] = ['draft', 'issued', 'partial', 'completed']
-  const data: PurchaseOrder[] = []
-  for (let i = 1; i <= 30; i++) {
-    const supplier = suppliers[i % suppliers.length]
-    data.push({
-      id: i,
-      orderNo: `PO-${String(i).padStart(5, '0')}`,
-      supplierId: supplier.value,
-      supplierName: supplier.label,
-      orderDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-      totalAmount: parseFloat((Math.random() * 200000 + 10000).toFixed(2)),
-      status: statuses[i % statuses.length],
-    })
-  }
-  return data
-}
-
-const allData = ref<PurchaseOrder[]>(generateMockData())
 
 // ==================== 搜索 ====================
 const searchForm = reactive<SearchForm>({
@@ -276,34 +255,30 @@ const pagination = reactive({
   total: 0,
 })
 
-function fetchData() {
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...allData.value]
-
-    if (searchForm.orderNo) {
-      filtered = filtered.filter((o) =>
-        o.orderNo.toLowerCase().includes(searchForm.orderNo.toLowerCase()),
-      )
-    }
-    if (searchForm.supplierId) {
-      filtered = filtered.filter((o) => o.supplierId === searchForm.supplierId)
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter((o) => o.status === searchForm.status)
-    }
+  try {
+    const extraQuery: Record<string, string | number | undefined> = {}
+    if (searchForm.orderNo) extraQuery.orderNo = searchForm.orderNo
+    if (searchForm.supplierId) extraQuery.supplierId = searchForm.supplierId
+    if (searchForm.status) extraQuery.status = searchForm.status
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      const [start, end] = searchForm.dateRange
-      filtered = filtered.filter(
-        (o) => o.orderDate >= start && o.orderDate <= end,
-      )
+      extraQuery.startDate = searchForm.dateRange[0]
+      extraQuery.endDate = searchForm.dateRange[1]
     }
-
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    tableData.value = filtered.slice(start, start + pagination.pageSize)
+    const result = await api.page<PurchaseOrder>(
+      '/purchase/orders',
+      pagination.page,
+      pagination.pageSize,
+      extraQuery,
+    )
+    tableData.value = result.list
+    pagination.total = result.total
+  } catch {
+    ElMessage.error('加载数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleSearch() {
@@ -328,26 +303,34 @@ function handleEdit(row: PurchaseOrder) {
   router.push(`/purchase/orders/create?id=${row.id}`)
 }
 
-function handleDelete(row: PurchaseOrder) {
-  const idx = allData.value.findIndex((o) => o.id === row.id)
-  if (idx > -1) {
-    allData.value.splice(idx, 1)
+async function handleDelete(row: PurchaseOrder) {
+  try {
+    await api.del(`/purchase/orders/${row.id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch {
+    ElMessage.error('删除失败')
   }
-  ElMessage.success('删除成功')
-  fetchData()
 }
 
-function handleIssue(row: PurchaseOrder) {
-  const target = allData.value.find((o) => o.id === row.id)
-  if (target) {
-    target.status = 'issued'
+async function handleIssue(row: PurchaseOrder) {
+  try {
+    await api.post(`/purchase/orders/${row.id}/issue`)
+    ElMessage.success('采购订单已下达')
+    fetchData()
+  } catch {
+    ElMessage.error('下达失败')
   }
-  ElMessage.success('采购订单已下达')
-  fetchData()
 }
 
-function handleCreateReceiving(row: PurchaseOrder) {
-  router.push(`/purchase/receivings/create?fromOrder=${row.id}`)
+async function handleCreateReceiving(row: PurchaseOrder) {
+  try {
+    await api.post(`/purchase/orders/create-receiving/${row.id}`)
+    ElMessage.success('已生成收货单')
+    router.push(`/purchase/receivings/create?fromOrder=${row.id}`)
+  } catch {
+    ElMessage.error('生成收货单失败')
+  }
 }
 
 // ==================== 初始化 ====================

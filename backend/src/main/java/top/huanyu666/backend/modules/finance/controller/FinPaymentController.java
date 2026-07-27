@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
@@ -117,6 +118,32 @@ public class FinPaymentController {
 
         payment.setStatus("CONFIRMED");
         paymentMapper.updateById(payment);
+        return ApiResponse.ok();
+    }
+
+    // ==================== 编辑/删除 ====================
+
+    @SaCheckPermission("finance:payment:list")
+    @PutMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody FinPayment payment) {
+        FinPayment exist = paymentMapper.selectById(id);
+        if (exist == null) throw new BusinessException("收付款单不存在");
+        if (!"DRAFT".equals(exist.getStatus())) throw new BusinessException("只有草稿状态可编辑");
+        payment.setId(id);
+        paymentMapper.updateById(payment);
+        return ApiResponse.ok();
+    }
+
+    @SaCheckPermission("finance:payment:list")
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        FinPayment payment = paymentMapper.selectById(id);
+        if (payment == null) throw new BusinessException("收付款单不存在");
+        if (!"DRAFT".equals(payment.getStatus())) throw new BusinessException("只有草稿状态可删除");
+        paymentItemMapper.delete(new LambdaQueryWrapper<FinPaymentItem>().eq(FinPaymentItem::getPaymentId, id));
+        paymentMapper.deleteById(id);
         return ApiResponse.ok();
     }
 }

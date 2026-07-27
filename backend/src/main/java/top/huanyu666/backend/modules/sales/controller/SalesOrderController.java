@@ -6,6 +6,8 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
+import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
@@ -204,6 +206,36 @@ public class SalesOrderController {
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("deliveryId", delivery.getId());
         return ApiResponse.ok(result);
+    }
+
+    /**
+     * 删除（仅草稿）
+     */
+    @DeleteMapping("/{id}")
+    @SaCheckPermission("sales:order:delete")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        SalesOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BusinessException("订单不存在");
+        if (!"DRAFT".equals(order.getStatus())) throw new BusinessException("只有草稿状态可删除");
+        orderItemMapper.delete(new LambdaQueryWrapper<SalesOrderItem>().eq(SalesOrderItem::getOrderId, id));
+        orderMapper.deleteById(id);
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 反审核
+     */
+    @PostMapping("/{id}/unapprove")
+    @SaCheckPermission("sales:order:approve")
+    @Transactional
+    public ApiResponse<Void> unapprove(@PathVariable Long id) {
+        SalesOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BusinessException("订单不存在");
+        if (!"APPROVED".equals(order.getStatus())) throw new BusinessException("只有已审核状态可反审核");
+        order.setStatus("SUBMITTED");
+        orderMapper.updateById(order);
+        return ApiResponse.ok();
     }
 
     // ---- 简单的 Map → Entity 转换 ----

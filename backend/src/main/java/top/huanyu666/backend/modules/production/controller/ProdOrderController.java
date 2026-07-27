@@ -220,4 +220,45 @@ public class ProdOrderController {
         log.info("工单 {} 创建完工入库单 {}", order.getOrderNo(), finish.getFinishNo());
         return ApiResponse.ok(finish);
     }
+
+    /**
+     * 修改（仅草稿）
+     */
+    @PutMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody ProdOrder order) {
+        ProdOrder exist = orderMapper.selectById(id);
+        if (exist == null) throw new BusinessException("工单不存在");
+        if (!"DRAFT".equals(exist.getStatus())) throw new BusinessException("只有草稿状态可编辑");
+        order.setId(id);
+        orderMapper.updateById(order);
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 删除（仅草稿）
+     */
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        ProdOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BusinessException("工单不存在");
+        if (!"DRAFT".equals(order.getStatus())) throw new BusinessException("只有草稿状态可删除");
+        orderBomMapper.delete(new LambdaQueryWrapper<ProdOrderBom>().eq(ProdOrderBom::getOrderId, id));
+        orderMapper.deleteById(id);
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 完工
+     */
+    @PostMapping("/{id}/finish")
+    @Transactional
+    public ApiResponse<Void> finish(@PathVariable Long id) {
+        ProdOrder order = orderMapper.selectById(id);
+        if (order == null) throw new BusinessException("工单不存在");
+        order.setStatus("COMPLETED");
+        orderMapper.updateById(order);
+        return ApiResponse.ok();
+    }
 }
