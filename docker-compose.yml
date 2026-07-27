@@ -5,7 +5,7 @@ services:
     image: mysql:8.0
     container_name: erp-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: zsy666219
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: EasyERP
       TZ: Asia/Shanghai
     ports:
@@ -33,7 +33,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/EasyERP?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: zsy666219
+      SPRING_DATASOURCE_PASSWORD: root
     depends_on:
       mysql:
         condition: service_healthy

@@ -2,7 +2,6 @@ import { defineEventHandler, readBody, getHeaders } from 'h3'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const target = `${config.backendUrl}${event.path}`
 
   const forwardHeaders: Record<string, string> = {}
   const incoming = getHeaders(event)
@@ -10,13 +9,10 @@ export default defineEventHandler(async (event) => {
     if (incoming[key]) forwardHeaders[key] = incoming[key]
   }
 
-  const body =
-    ['POST', 'PUT', 'PATCH'].includes(event.method)
-      ? await readBody(event).catch(() => undefined)
-      : undefined
+  const body = await readBody(event)
 
-  return await $fetch(target, {
-    method: event.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+  return await $fetch(`${config.backendUrl}${event.path}`, {
+    method: 'POST',
     headers: forwardHeaders,
     body,
     ignoreResponseError: true,
