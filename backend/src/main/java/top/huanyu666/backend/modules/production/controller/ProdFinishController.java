@@ -54,6 +54,17 @@ public class ProdFinishController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    /** 详情（含明细） */
+    @SaCheckPermission("production:order:view")
+    @GetMapping("/{id}")
+    public ApiResponse<java.util.Map<String, Object>> detail(@PathVariable Long id) {
+        ProdFinish finish = finishMapper.selectById(id);
+        if (finish == null) throw new BusinessException("完工入库单不存在");
+        List<ProdFinishItem> items = finishItemMapper.selectList(
+                new LambdaQueryWrapper<ProdFinishItem>().eq(ProdFinishItem::getFinishId, id));
+        return ApiResponse.ok(java.util.Map.of("finishing", finish, "items", items));
+    }
+
     @SaCheckPermission("production:order:create")
     @PostMapping
     public ApiResponse<ProdFinish> create(@RequestBody ProdFinish finish) {

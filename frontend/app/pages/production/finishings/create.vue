@@ -148,6 +148,7 @@ async function loadOptions() {
     orderOptions.value = orderPage.list.map((o) => ({
       label: o.orderNo,
       value: o.id,
+    }))
     warehouseOptions.value = warehouses.list.map((w) => ({ label: w.name, value: w.id }))
   } catch {
     // options load silently

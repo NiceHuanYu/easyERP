@@ -78,7 +78,7 @@ public class ProdOrderController {
 
     @SaCheckPermission("production:order:view")
     @GetMapping("/{id}/materials")
-    public ApiResponse<List<ProdOrderBom>> materials(@PathVariable Long id) {
+    public ApiResponse<List<Map<String, Object>>> materials(@PathVariable Long id) {
         return materialRequirements(id);
     }
 
@@ -112,7 +112,7 @@ public class ProdOrderController {
 
     @SaCheckPermission("production:order:view")
     @GetMapping("/material-requirements/{id}")
-    public ApiResponse<List<ProdOrderBom>> materialRequirements(@PathVariable Long id) {
+    public ApiResponse<List<Map<String, Object>>> materialRequirements(@PathVariable Long id) {
         return ApiResponse.ok(orderService.getMaterialRequirements(id));
     }
 

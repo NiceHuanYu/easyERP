@@ -9,8 +9,10 @@ import top.huanyu666.backend.common.enums.DocumentStatus;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.modules.base.entity.BomDetail;
 import top.huanyu666.backend.modules.base.entity.BomHeader;
+import top.huanyu666.backend.modules.base.entity.Material;
 import top.huanyu666.backend.modules.base.mapper.BomDetailMapper;
 import top.huanyu666.backend.modules.base.mapper.BomHeaderMapper;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 
@@ -18,7 +20,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 生产工单服务 —— 封装下达、领料、完工等核心业务逻辑。
@@ -36,6 +41,7 @@ public class ProdOrderService {
     private final ProdFinishItemMapper finishItemMapper;
     private final BomHeaderMapper bomHeaderMapper;
     private final BomDetailMapper bomDetailMapper;
+    private final MaterialMapper materialMapper;
 
     /**
      * 下达工单：DRAFT → RELEASED，从 BOM 生成物料需求。
@@ -194,8 +200,20 @@ public class ProdOrderService {
                 new LambdaQueryWrapper<ProdFinish>().eq(ProdFinish::getOrderId, orderId));
     }
 
-    public List<ProdOrderBom> getMaterialRequirements(Long orderId) {
-        return orderBomMapper.selectList(
+    public List<Map<String, Object>> getMaterialRequirements(Long orderId) {
+        List<ProdOrderBom> boms = orderBomMapper.selectList(
                 new LambdaQueryWrapper<ProdOrderBom>().eq(ProdOrderBom::getOrderId, orderId));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ProdOrderBom bom : boms) {
+            Material m = materialMapper.selectById(bom.getMaterialId());
+            Map<String, Object> item = new HashMap<>();
+            item.put("materialId", bom.getMaterialId());
+            item.put("materialName", m != null ? m.getName() : "未知");
+            item.put("requiredQuantity", bom.getRequiredQty());
+            item.put("pickedQuantity", bom.getPickedQty() != null ? bom.getPickedQty() : BigDecimal.ZERO);
+            item.put("unit", m != null ? m.getUnit() : "");
+            result.add(item);
+        }
+        return result;
     }
 }

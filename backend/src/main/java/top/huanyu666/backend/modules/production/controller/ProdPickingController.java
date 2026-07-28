@@ -54,6 +54,17 @@ public class ProdPickingController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    /** 详情（含明细） */
+    @SaCheckPermission("production:order:view")
+    @GetMapping("/{id}")
+    public ApiResponse<java.util.Map<String, Object>> detail(@PathVariable Long id) {
+        ProdPicking picking = pickingMapper.selectById(id);
+        if (picking == null) throw new BusinessException("领料单不存在");
+        List<ProdPickingItem> items = pickingItemMapper.selectList(
+                new LambdaQueryWrapper<ProdPickingItem>().eq(ProdPickingItem::getPickingId, id));
+        return ApiResponse.ok(java.util.Map.of("picking", picking, "items", items));
+    }
+
     @SaCheckPermission("production:order:create")
     @PostMapping
     public ApiResponse<ProdPicking> create(@RequestBody ProdPicking picking) {

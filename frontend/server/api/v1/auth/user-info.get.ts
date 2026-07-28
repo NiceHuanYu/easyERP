@@ -12,5 +12,6 @@ export default defineEventHandler(async (event) => {
   return await $fetch(`${config.backendUrl}${event.path}`, {
     method: 'GET',
     headers: forwardHeaders,
+    ignoreResponseError: true,
   })
 })

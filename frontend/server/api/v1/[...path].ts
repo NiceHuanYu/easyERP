@@ -18,5 +18,6 @@ export default defineEventHandler(async (event) => {
     method: event.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     headers: forwardHeaders,
     body,
+    ignoreResponseError: true,
   })
 })
