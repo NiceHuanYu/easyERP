@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import top.huanyu666.backend.common.enums.DocumentStatus;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.modules.base.entity.BomDetail;
 import top.huanyu666.backend.modules.base.entity.BomHeader;
@@ -42,7 +43,7 @@ public class ProdOrderService {
     @Transactional
     public void release(Long id) {
         ProdOrder order = getOrder(id);
-        if (!"DRAFT".equals(order.getStatus())) {
+        if (!DocumentStatus.DRAFT.eq(order.getStatus())) {
             throw new BusinessException("仅草稿状态的工单可下达");
         }
 
@@ -78,7 +79,7 @@ public class ProdOrderService {
             orderBomMapper.insert(bom);
         }
 
-        order.setStatus("RELEASED");
+        order.setStatus(DocumentStatus.RELEASED.getCode());
         orderMapper.updateById(order);
         log.info("工单 {} 已下达，生成 {} 条物料需求", order.getOrderNo(), details.size());
     }
@@ -100,7 +101,7 @@ public class ProdOrderService {
         }
 
         picking.setOrderId(orderId);
-        picking.setStatus("DRAFT");
+        picking.setStatus(DocumentStatus.DRAFT.getCode());
         picking.setPickingDate(LocalDate.now());
         pickingMapper.insert(picking);
 
@@ -128,7 +129,7 @@ public class ProdOrderService {
         ProdOrder order = getOrder(orderId);
 
         finish.setOrderId(orderId);
-        finish.setStatus("DRAFT");
+        finish.setStatus(DocumentStatus.DRAFT.getCode());
         finish.setFinishDate(LocalDate.now());
         finishMapper.insert(finish);
 
@@ -150,7 +151,7 @@ public class ProdOrderService {
     @Transactional
     public void finish(Long id) {
         ProdOrder order = getOrder(id);
-        order.setStatus("COMPLETED");
+        order.setStatus(DocumentStatus.COMPLETED.getCode());
         orderMapper.updateById(order);
         log.info("工单 {} 已完工", order.getOrderNo());
     }
@@ -161,7 +162,7 @@ public class ProdOrderService {
     @Transactional
     public void delete(Long id) {
         ProdOrder order = getOrder(id);
-        if (!"DRAFT".equals(order.getStatus())) {
+        if (!DocumentStatus.DRAFT.eq(order.getStatus())) {
             throw new BusinessException("只有草稿状态可删除");
         }
         orderBomMapper.delete(new LambdaQueryWrapper<ProdOrderBom>().eq(ProdOrderBom::getOrderId, id));

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import top.huanyu666.backend.common.enums.DocumentStatus;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.modules.finance.entity.FinReceivable;
 import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
@@ -32,7 +33,7 @@ public class FinReceivableService {
         receivable.setCustomerId(customerId);
         receivable.setReceivableAmount(amount);
         receivable.setReceivedAmount(BigDecimal.ZERO);
-        receivable.setStatus("PENDING");
+        receivable.setStatus(DocumentStatus.PENDING.getCode());
         receivableMapper.insert(receivable);
         log.info("创建应收台账: deliveryId={}, customerId={}, amount={}", deliveryId, customerId, amount);
         return receivable;
@@ -65,9 +66,9 @@ public class FinReceivableService {
     // ---- private ----
 
     private String deriveStatus(BigDecimal received, BigDecimal total) {
-        if (received.compareTo(total) >= 0) return "FULLY_PAID";
-        if (received.compareTo(BigDecimal.ZERO) > 0) return "PARTIALLY_PAID";
-        return "PENDING";
+        if (received.compareTo(total) >= 0) return DocumentStatus.FULLY_PAID.getCode();
+        if (received.compareTo(BigDecimal.ZERO) > 0) return DocumentStatus.PARTIALLY_PAID.getCode();
+        return DocumentStatus.PENDING.getCode();
     }
 
     private static BigDecimal nvl(BigDecimal val) {

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import top.huanyu666.backend.common.enums.DocumentStatus;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.modules.finance.entity.FinPayable;
 import top.huanyu666.backend.modules.finance.mapper.FinPayableMapper;
@@ -32,7 +33,7 @@ public class FinPayableService {
         payable.setSupplierId(supplierId);
         payable.setPayableAmount(amount);
         payable.setPaidAmount(BigDecimal.ZERO);
-        payable.setStatus("UNPAID");
+        payable.setStatus(DocumentStatus.UNPAID.getCode());
         payableMapper.insert(payable);
         log.info("创建应付台账: receivingId={}, supplierId={}, amount={}", receivingId, supplierId, amount);
         return payable;
@@ -65,9 +66,9 @@ public class FinPayableService {
     // ---- private ----
 
     private String deriveStatus(BigDecimal paid, BigDecimal total) {
-        if (paid.compareTo(total) >= 0) return "FULLY_PAID";
-        if (paid.compareTo(BigDecimal.ZERO) > 0) return "PARTIALLY_PAID";
-        return "UNPAID";
+        if (paid.compareTo(total) >= 0) return DocumentStatus.FULLY_PAID.getCode();
+        if (paid.compareTo(BigDecimal.ZERO) > 0) return DocumentStatus.PARTIALLY_PAID.getCode();
+        return DocumentStatus.UNPAID.getCode();
     }
 
     private static BigDecimal nvl(BigDecimal val) {

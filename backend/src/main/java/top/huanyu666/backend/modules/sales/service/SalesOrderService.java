@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import top.huanyu666.backend.common.enums.DocumentStatus;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.modules.sales.entity.SalesOrder;
@@ -43,7 +44,7 @@ public class SalesOrderService {
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         order.setTotalAmount(totalAmount);
-        order.setStatus("DRAFT");
+        order.setStatus(DocumentStatus.DRAFT.getCode());
 
         // 自动生成订单号
         if (order.getOrderNo() == null || order.getOrderNo().isBlank()) {
@@ -77,10 +78,10 @@ public class SalesOrderService {
     @Transactional
     public void submit(Long id) {
         SalesOrder order = getOrder(id);
-        if (!"DRAFT".equals(order.getStatus())) {
+        if (!DocumentStatus.DRAFT.eq(order.getStatus())) {
             throw new BusinessException("只有草稿状态的订单才能提交");
         }
-        order.setStatus("SUBMITTED");
+        order.setStatus(DocumentStatus.SUBMITTED.getCode());
         orderMapper.updateById(order);
         log.info("提交销售订单: orderId={}", id);
     }
@@ -91,10 +92,10 @@ public class SalesOrderService {
     @Transactional
     public void approve(Long id) {
         SalesOrder order = getOrder(id);
-        if (!"SUBMITTED".equals(order.getStatus())) {
+        if (!DocumentStatus.SUBMITTED.eq(order.getStatus())) {
             throw new BusinessException("只有已提交状态的订单才能审核");
         }
-        order.setStatus("APPROVED");
+        order.setStatus(DocumentStatus.APPROVED.getCode());
         orderMapper.updateById(order);
         log.info("审核销售订单: orderId={}", id);
     }
@@ -105,10 +106,10 @@ public class SalesOrderService {
     @Transactional
     public void reject(Long id) {
         SalesOrder order = getOrder(id);
-        if (!"SUBMITTED".equals(order.getStatus())) {
+        if (!DocumentStatus.SUBMITTED.eq(order.getStatus())) {
             throw new BusinessException("只有已提交状态的订单才能驳回");
         }
-        order.setStatus("DRAFT");
+        order.setStatus(DocumentStatus.DRAFT.getCode());
         orderMapper.updateById(order);
         log.info("驳回销售订单: orderId={}", id);
     }
@@ -119,10 +120,10 @@ public class SalesOrderService {
     @Transactional
     public void close(Long id) {
         SalesOrder order = getOrder(id);
-        if (!"APPROVED".equals(order.getStatus())) {
+        if (!DocumentStatus.APPROVED.eq(order.getStatus())) {
             throw new BusinessException("只有已审核状态的订单才能关闭");
         }
-        order.setStatus("CLOSED");
+        order.setStatus(DocumentStatus.CLOSED.getCode());
         orderMapper.updateById(order);
         log.info("关闭销售订单: orderId={}", id);
     }
@@ -132,7 +133,7 @@ public class SalesOrderService {
      */
     public List<SalesOrderItem> getDeliverableItems(Long orderId) {
         SalesOrder order = getOrder(orderId);
-        if (!"APPROVED".equals(order.getStatus())) {
+        if (!DocumentStatus.APPROVED.eq(order.getStatus())) {
             throw new BusinessException("只有已审核状态的订单才能查询可发货明细");
         }
         return orderItemMapper.selectList(

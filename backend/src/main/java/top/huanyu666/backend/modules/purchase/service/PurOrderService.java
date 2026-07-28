@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import top.huanyu666.backend.common.enums.DocumentStatus;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.modules.purchase.entity.*;
 import top.huanyu666.backend.modules.purchase.mapper.*;
@@ -44,7 +45,7 @@ public class PurOrderService {
         }
 
         receiving.setOrderId(orderId);
-        receiving.setStatus("DRAFT");
+        receiving.setStatus(DocumentStatus.DRAFT.getCode());
         receiving.setReceivingDate(LocalDate.now());
         receivingMapper.insert(receiving);
 
@@ -73,10 +74,10 @@ public class PurOrderService {
     @Transactional
     public void issue(Long id) {
         PurOrder order = getOrder(id);
-        if (!"DRAFT".equals(order.getStatus()) && !"SUBMITTED".equals(order.getStatus())) {
+        if (!DocumentStatus.DRAFT.eq(order.getStatus()) && !DocumentStatus.SUBMITTED.eq(order.getStatus())) {
             throw new BusinessException("只有草稿或已提交状态可下达");
         }
-        order.setStatus("APPROVED");
+        order.setStatus(DocumentStatus.APPROVED.getCode());
         orderMapper.updateById(order);
         log.info("采购订单 {} 已下达", order.getOrderNo());
     }
@@ -87,7 +88,7 @@ public class PurOrderService {
     @Transactional
     public void delete(Long id) {
         PurOrder order = getOrder(id);
-        if (!"DRAFT".equals(order.getStatus())) {
+        if (!DocumentStatus.DRAFT.eq(order.getStatus())) {
             throw new BusinessException("只有草稿状态可删除");
         }
         orderItemMapper.delete(new LambdaQueryWrapper<PurOrderItem>().eq(PurOrderItem::getOrderId, id));
