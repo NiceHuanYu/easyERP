@@ -1,5 +1,6 @@
 package top.huanyu666.backend.modules.system.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +27,7 @@ public class DictController {
     private final SysDictMapper dictMapper;
     private final SysDictItemMapper dictItemMapper;
 
+    @SaCheckPermission("system:dict:view")
     @GetMapping
     public ApiResponse<List<SysDictItem>> getByCode(@RequestParam String code) {
         SysDict dict = dictMapper.selectOne(
@@ -43,6 +45,7 @@ public class DictController {
         return ApiResponse.ok(items);
     }
 
+    @SaCheckPermission("system:dict:view")
     @GetMapping("/all")
     public ApiResponse<Map<String, List<SysDictItem>>> all() {
         List<SysDict> dicts = dictMapper.selectList(
@@ -61,12 +64,14 @@ public class DictController {
         return ApiResponse.ok(result);
     }
 
+    @SaCheckPermission("system:dict:create")
     @PostMapping("/types")
     public ApiResponse<SysDict> createType(@RequestBody SysDict dict) {
         dictMapper.insert(dict);
         return ApiResponse.ok(dict);
     }
 
+    @SaCheckPermission("system:dict:edit")
     @PutMapping("/types/{id}")
     public ApiResponse<Void> updateType(@PathVariable Long id, @RequestBody SysDict dict) {
         dict.setId(id);
@@ -74,12 +79,14 @@ public class DictController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("system:dict:delete")
     @DeleteMapping("/types/{id}")
     public ApiResponse<Void> deleteType(@PathVariable Long id) {
         dictMapper.deleteById(id);
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("system:dict:view")
     @GetMapping("/{typeCode}/items")
     public ApiResponse<List<SysDictItem>> getItemsByTypeCode(@PathVariable String typeCode) {
         SysDict dict = dictMapper.selectOne(
@@ -96,6 +103,7 @@ public class DictController {
         return ApiResponse.ok(items);
     }
 
+    @SaCheckPermission("system:dict:create")
     @PostMapping("/{typeCode}/items")
     public ApiResponse<SysDictItem> createItem(@PathVariable String typeCode, @RequestBody SysDictItem item) {
         SysDict dict = dictMapper.selectOne(new LambdaQueryWrapper<SysDict>().eq(SysDict::getCode, typeCode));
@@ -105,6 +113,7 @@ public class DictController {
         return ApiResponse.ok(item);
     }
 
+    @SaCheckPermission("system:dict:edit")
     @PutMapping("/{typeCode}/items/{itemId}")
     public ApiResponse<Void> updateItem(@PathVariable String typeCode, @PathVariable Long itemId, @RequestBody SysDictItem item) {
         item.setId(itemId);
@@ -112,6 +121,7 @@ public class DictController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("system:dict:delete")
     @DeleteMapping("/{typeCode}/items/{itemId}")
     public ApiResponse<Void> deleteItem(@PathVariable String typeCode, @PathVariable Long itemId) {
         dictItemMapper.deleteById(itemId);

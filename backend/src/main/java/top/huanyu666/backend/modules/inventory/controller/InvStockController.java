@@ -1,5 +1,6 @@
 package top.huanyu666.backend.modules.inventory.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class InvStockController {
     private final InvStockMapper stockMapper;
     private final MaterialMapper materialMapper;
 
+    @SaCheckPermission("inventory:stock:view")
     @GetMapping("/warning-count")
     public ApiResponse<Long> warningCount() {
         // 统计库存数量低于安全库存的物料数
@@ -40,6 +42,7 @@ public class InvStockController {
         return ApiResponse.ok(count);
     }
 
+    @SaCheckPermission("inventory:stock:view")
     @GetMapping
     public ApiResponse<PageResult<InvStock>> list(PageParam param,
                                                    @RequestParam(required = false) Long materialId,

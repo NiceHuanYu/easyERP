@@ -1,5 +1,6 @@
 package top.huanyu666.backend.modules.inventory.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class InvTransactionController {
 
     private final InvTransactionMapper transactionMapper;
 
+    @SaCheckPermission("inventory:stock:view")
     @GetMapping
     public ApiResponse<PageResult<InvTransaction>> list(PageParam param,
                                                          @RequestParam(required = false) Long materialId,
