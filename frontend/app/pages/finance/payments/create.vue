@@ -254,11 +254,11 @@ const totalWriteOffAmount = computed(() =>
 async function fetchOpenItems(counterparty: string) {
   try {
     if (form.type === '收款') {
-      const result = await api.get<any[]>('/finance/receivables', {
+      const result = await api.page<any>('/finance/receivables', 1, 200, {
         customer: counterparty,
         status: '未核销',
       })
-      openItems.value = (result || []).map((r: any) => ({
+      openItems.value = result.list.map((r: any) => ({
         receivableNo: r.receivableNo,
         deliveryNo: r.deliveryNo,
         totalAmount: r.amount,
@@ -266,11 +266,11 @@ async function fetchOpenItems(counterparty: string) {
         dueDate: r.dueDate,
       }))
     } else {
-      const result = await api.get<any[]>('/finance/payables', {
+      const result = await api.page<any>('/finance/payables', 1, 200, {
         supplier: counterparty,
         status: '未核销',
       })
-      openItems.value = (result || []).map((r: any) => ({
+      openItems.value = result.list.map((r: any) => ({
         payableNo: r.payableNo,
         receivingNo: r.receivingNo,
         totalAmount: r.amount,

@@ -287,17 +287,16 @@ const activeTab = ref('info')
 // ==================== 加载 ====================
 async function loadOrder(id: string) {
   try {
-    const [orderData, materials, pickingList, finishingList, historyList] = await Promise.all([
+    const [orderData, materials, pickingPage, finishingPage] = await Promise.all([
       api.get<Order>(`/production/orders/${id}`),
       api.get<MaterialRequirement[]>(`/production/orders/material-requirements/${id}`),
-      api.get<Picking[]>(`/production/pickings?orderId=${id}`),
-      api.get<FinishingRecord[]>(`/production/finishings?orderId=${id}`),
-      api.get<History[]>(`/production/orders/${id}/history`),
+      api.page<Picking>('/production/pickings', 1, 200, { orderId: id }),
+      api.page<FinishingRecord>('/production/finishings', 1, 200, { orderId: id }),
     ])
     order.value = orderData
     materialRequirements.value = materials
-    pickings.value = pickingList
-    finishings.value = finishingList
+    pickings.value = pickingPage.list
+    finishings.value = finishingPage.list
     histories.value = historyList
   } catch {
     ElMessage.error('加载工单详情失败')

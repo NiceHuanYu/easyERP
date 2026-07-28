@@ -88,22 +88,6 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="生产车间" prop="workshopId">
-              <el-select
-                v-model="form.workshopId"
-                placeholder="请选择生产车间"
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="w in workshopOptions"
-                  :key="w.value"
-                  :label="w.label"
-                  :value="w.value"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
           <el-col :span="24">
             <el-form-item label="备注" prop="remark">
               <el-input
@@ -191,21 +175,18 @@ const isEdit = computed(() => !!route.query.id)
 // ==================== 选项数据（从后端加载） ====================
 const salesOrderOptions = ref<{ label: string; value: number }[]>([])
 const bomProductOptions = ref<{ label: string; value: number }[]>([])
-const workshopOptions = ref<{ label: string; value: number }[]>([])
 
 async function loadOptions() {
   try {
-    const [orders, products, workshops] = await Promise.all([
-      api.get<{ id: number; orderNo: string; customerName: string; productName: string }[]>('/sales/orders?status=confirmed'),
-      api.get<{ id: number; name: string }[]>('/production/materials'),
-      api.get<{ id: number; name: string }[]>('/system/workshops'),
+    const [orderPage, products] = await Promise.all([
+      api.page<{ id: number; orderNo: string }>('/sales/orders', 1, 200, { status: 'APPROVED' }),
+      api.get<{ id: number; name: string }[]>('/production/orders/bom-products'),
     ])
-    salesOrderOptions.value = orders.map((o) => ({
-      label: `${o.orderNo} / ${o.customerName} - ${o.productName}`,
+    salesOrderOptions.value = orderPage.list.map((o) => ({
+      label: o.orderNo,
       value: o.id,
     }))
     bomProductOptions.value = products.map((p) => ({ label: p.name, value: p.id }))
-    workshopOptions.value = workshops.map((w) => ({ label: w.name, value: w.id }))
   } catch {
     // options load silently
   }
@@ -229,7 +210,7 @@ async function recalcBom() {
     return
   }
   try {
-    const data = await api.get<BomLine[]>(`/production/materials/${form.materialId}/bom`)
+    const data = await api.get<BomLine[]>(`/production/orders/bom-products/${form.materialId}/bom`)
     bomLines.value = data.map((l) => ({
       ...l,
       requiredQuantity: parseFloat((l.unitUsage * form.planQuantity).toFixed(4)),
@@ -247,7 +228,6 @@ interface OrderForm {
   planQuantity: number
   planStartDate: string
   planEndDate: string
-  workshopId: number | null
   remark: string
 }
 
@@ -258,7 +238,6 @@ const form = reactive<OrderForm>({
   planQuantity: 100,
   planStartDate: formatDate(new Date(), 'YYYY-MM-DD'),
   planEndDate: '',
-  workshopId: null,
   remark: '',
 })
 
@@ -268,16 +247,15 @@ const rules = {
   planQuantity: [{ required: true, message: '请输入计划数量', trigger: 'blur' }],
   planStartDate: [{ required: true, message: '请选择计划开始日期', trigger: 'change' }],
   planEndDate: [{ required: true, message: '请选择计划结束日期', trigger: 'change' }],
-  workshopId: [{ required: true, message: '请选择生产车间', trigger: 'change' }],
 }
 
 // ==================== 事件处理 ====================
 async function onSalesOrderChange(val: number | null) {
   if (!val) return
   try {
-    const so = await api.get<{ productId: number }>(`/sales/orders/${val}`)
-    if (so?.productId) {
-      form.materialId = so.productId
+    const so = await api.get<{ materialId: number }>(`/sales/orders/${val}`)
+    if (so?.materialId) {
+      form.materialId = so.materialId
       recalcBom()
     }
   } catch {

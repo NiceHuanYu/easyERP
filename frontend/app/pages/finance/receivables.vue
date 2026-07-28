@@ -281,8 +281,8 @@ const selectedPayments = ref<Payment[]>([])
 
 async function fetchAvailablePayments(customerName: string) {
   try {
-    const result = await api.get<any[]>('/finance/payments', { type: '收款', counterparty: customerName })
-    availablePayments.value = (result || []).map((p: any) => ({
+    const result = await api.page<any>('/finance/payments', 1, 200, { type: '收款', counterparty: customerName })
+    availablePayments.value = result.list.map((p: any) => ({
       paymentNo: p.paymentNo,
       amount: p.amount,
       availableAmount: (p.amount ?? 0) - (p.reconciledAmount ?? 0),

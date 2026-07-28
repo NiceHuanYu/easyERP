@@ -141,14 +141,13 @@ const warehouseOptions = ref<{ label: string; value: number }[]>([])
 
 async function loadOptions() {
   try {
-    const [orders, warehouses] = await Promise.all([
-      api.get<{ id: number; orderNo: string; productName: string; status: string }[]>('/production/orders?status=RELEASED'),
+    const [orderPage, warehouses] = await Promise.all([
+      api.page<{ id: number; orderNo: string }>('/production/orders', 1, 200, { status: 'RELEASED' }),
       api.page<{ id: number; name: string }>('/base/warehouses', 1, 1000),
     ])
-    orderOptions.value = orders.map((o) => {
-      const statusLabel = o.status === 'RELEASED' ? '已下达' : o.status
-      return { label: `${o.orderNo} / ${o.productName}（${statusLabel}）`, value: o.id }
-    })
+    orderOptions.value = orderPage.list.map((o) => ({
+      label: o.orderNo,
+      value: o.id,
     warehouseOptions.value = warehouses.list.map((w) => ({ label: w.name, value: w.id }))
   } catch {
     // options load silently

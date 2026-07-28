@@ -12,6 +12,12 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import top.huanyu666.backend.modules.base.entity.BomDetail;
+import top.huanyu666.backend.modules.base.entity.BomHeader;
+import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.mapper.BomDetailMapper;
+import top.huanyu666.backend.modules.base.mapper.BomHeaderMapper;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 import top.huanyu666.backend.modules.production.service.ProdOrderService;
@@ -31,6 +37,9 @@ public class ProdOrderController {
 
     private final ProdOrderMapper orderMapper;
     private final ProdOrderService orderService;
+    private final BomHeaderMapper bomHeaderMapper;
+    private final BomDetailMapper bomDetailMapper;
+    private final MaterialMapper materialMapper;
 
     // ==================== 基础 CRUD ====================
 
@@ -149,5 +158,46 @@ public class ProdOrderController {
     public ApiResponse<Void> finish(@PathVariable Long id) {
         orderService.finish(id);
         return ApiResponse.ok();
+    }
+
+    // ==================== 辅助查询 ====================
+
+    /** 查询所有已配置 BOM 的成品物料，供工单创建时选择 */
+    @SaCheckPermission("production:order:view")
+    @GetMapping("/bom-products")
+    public ApiResponse<List<Map<String, Object>>> bomProducts() {
+        List<BomHeader> headers = bomHeaderMapper.selectList(
+                new LambdaQueryWrapper<BomHeader>().eq(BomHeader::getStatus, 1));
+        List<Long> materialIds = headers.stream().map(BomHeader::getProductMaterialId).distinct().toList();
+        if (materialIds.isEmpty()) return ApiResponse.ok(List.of());
+        List<Material> materials = materialMapper.selectBatchIds(materialIds);
+        return ApiResponse.ok(materials.stream()
+                .filter(m -> m.getStatus() == 1)
+                .map(m -> Map.<String, Object>of("id", m.getId(), "name", m.getName(), "code", m.getCode()))
+                .toList());
+    }
+
+    /** 查询某物料的 BOM 明细，供创建时预览 */
+    @SaCheckPermission("production:order:view")
+    @GetMapping("/bom-products/{materialId}/bom")
+    public ApiResponse<List<Map<String, Object>>> bomDetail(@PathVariable Long materialId) {
+        BomHeader header = bomHeaderMapper.selectOne(
+                new LambdaQueryWrapper<BomHeader>()
+                        .eq(BomHeader::getProductMaterialId, materialId)
+                        .eq(BomHeader::getStatus, 1)
+                        .orderByDesc(BomHeader::getCreateTime)
+                        .last("LIMIT 1"));
+        if (header == null) return ApiResponse.ok(List.of());
+        return ApiResponse.ok(bomDetailMapper.selectList(
+                new LambdaQueryWrapper<BomDetail>()
+                        .eq(BomDetail::getBomId, header.getId()))
+                .stream().map(d -> {
+                    Material m = materialMapper.selectById(d.getMaterialId());
+                    return Map.<String, Object>of(
+                            "materialId", d.getMaterialId(),
+                            "materialName", m != null ? m.getName() : "未知",
+                            "unitUsage", d.getQuantity(),
+                            "unit", d.getUnit() != null ? d.getUnit() : "");
+                }).toList());
     }
 }
