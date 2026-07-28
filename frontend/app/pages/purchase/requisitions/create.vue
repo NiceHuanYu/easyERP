@@ -358,7 +358,7 @@ async function handleSaveDraft() {
   if (!validateLines()) return
 
   try {
-    const payload = { ...form, status: 'draft' }
+    const payload = { ...form, status: 'DRAFT' }
     if (isEdit.value) {
       await api.put(`/purchase/requisitions/${route.query.id}`, payload)
     } else {
@@ -377,7 +377,7 @@ async function handleSubmit() {
   if (!validateLines()) return
 
   try {
-    const payload = { ...form, status: 'submitted' }
+    const payload = { ...form, status: 'SUBMITTED' }
     if (isEdit.value) {
       await api.put(`/purchase/requisitions/${route.query.id}`, payload)
     } else {

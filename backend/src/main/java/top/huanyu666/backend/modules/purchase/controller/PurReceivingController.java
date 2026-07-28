@@ -12,10 +12,7 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.finance.entity.FinPayable;
 import top.huanyu666.backend.modules.finance.mapper.FinPayableMapper;
-import top.huanyu666.backend.modules.inventory.entity.InvStock;
-import top.huanyu666.backend.modules.inventory.entity.InvTransaction;
-import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
-import top.huanyu666.backend.modules.inventory.mapper.InvTransactionMapper;
+import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.purchase.entity.*;
 import top.huanyu666.backend.modules.purchase.mapper.*;
 
@@ -37,8 +34,7 @@ public class PurReceivingController {
     private final PurReceivingItemMapper receivingItemMapper;
     private final PurOrderMapper orderMapper;
     private final PurOrderItemMapper orderItemMapper;
-    private final InvStockMapper stockMapper;
-    private final InvTransactionMapper transactionMapper;
+    private final InvStockService stockService;
     private final FinPayableMapper payableMapper;
 
     // ==================== 基础 CRUD ====================
@@ -118,39 +114,9 @@ public class PurReceivingController {
                 throw new BusinessException("收货明细数量必须大于0");
             }
 
-            // 增加库存（不存在则创建）
-            LambdaQueryWrapper<InvStock> stockQw = new LambdaQueryWrapper<>();
-            stockQw.eq(InvStock::getMaterialId, item.getMaterialId());
-            stockQw.eq(InvStock::getWarehouseId, receiving.getWarehouseId());
-            InvStock stock = stockMapper.selectOne(stockQw);
-            if (stock == null) {
-                stock = new InvStock();
-                stock.setMaterialId(item.getMaterialId());
-                stock.setWarehouseId(receiving.getWarehouseId());
-                stock.setQuantity(BigDecimal.ZERO);
-                stock.setAvailableQty(BigDecimal.ZERO);
-                stock.setLockedQty(BigDecimal.ZERO);
-                stock.setCreateTime(LocalDateTime.now());
-                stock.setUpdateTime(LocalDateTime.now());
-                stockMapper.insert(stock);
-            }
-
-            stock.setQuantity(stock.getQuantity().add(item.getQuantity()));
-            stock.setAvailableQty(stock.getAvailableQty().add(item.getQuantity()));
-            stock.setUpdateTime(LocalDateTime.now());
-            stockMapper.updateById(stock);
-
-            // 记录库存流水
-            InvTransaction tx = new InvTransaction();
-            tx.setMaterialId(item.getMaterialId());
-            tx.setWarehouseId(receiving.getWarehouseId());
-            tx.setType("PURCHASE_IN");
-            tx.setQuantity(item.getQuantity());
-            tx.setCurrentStock(stock.getQuantity());
-            tx.setSourceNo(receiving.getReceivingNo());
-            tx.setSourceType("PUR_RECEIVING");
-            tx.setCreateTime(LocalDateTime.now());
-            transactionMapper.insert(tx);
+            // 增加库存（统一由 InvStockService 处理）
+            stockService.receive(item.getMaterialId(), receiving.getWarehouseId(),
+                    item.getQuantity(), receiving.getReceivingNo(), "PURCHASE_IN");
 
             // 更新订单明细已收数量
             if (item.getOrderItemId() != null) {

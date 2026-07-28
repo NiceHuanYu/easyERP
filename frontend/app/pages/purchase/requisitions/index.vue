@@ -33,9 +33,9 @@
             clearable
             style="width: 140px"
           >
-            <el-option label="草稿" value="draft" />
-            <el-option label="已提交" value="submitted" />
-            <el-option label="已审核" value="approved" />
+            <el-option label="草稿" value="DRAFT" />
+            <el-option label="已提交" value="SUBMITTED" />
+            <el-option label="已审核" value="APPROVED" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -96,7 +96,7 @@
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <template v-if="row.status === 'draft'">
+            <template v-if="row.status === 'DRAFT'">
               <el-button
                 type="primary"
                 size="small"
@@ -138,7 +138,7 @@
               </el-popconfirm>
             </template>
 
-            <template v-else-if="row.status === 'submitted'">
+            <template v-else-if="row.status === 'SUBMITTED'">
               <el-button type="primary" size="small" link @click="handleView(row)">
                 查看
               </el-button>
@@ -159,7 +159,7 @@
               </el-popconfirm>
             </template>
 
-            <template v-else-if="row.status === 'approved'">
+            <template v-else-if="row.status === 'APPROVED'">
               <el-button type="primary" size="small" link @click="handleView(row)">
                 查看
               </el-button>
@@ -210,7 +210,7 @@ interface Requisition {
   reqDate: string
   materialSummary: string
   totalQuantity: number
-  status: 'draft' | 'submitted' | 'approved'
+  status: string
 }
 
 interface SearchForm {
@@ -222,9 +222,9 @@ interface SearchForm {
 
 // ==================== 状态工具 ====================
 const statusMap: Record<string, string> = {
-  draft: '草稿',
-  submitted: '已提交',
-  approved: '已审核',
+  DRAFT: '草稿',
+  SUBMITTED: '已提交',
+  APPROVED: '已审核',
 }
 
 function statusLabel(s: string): string {
@@ -233,9 +233,9 @@ function statusLabel(s: string): string {
 
 function statusTagType(s: string): 'info' | 'warning' | 'success' | 'default' {
   const map: Record<string, 'info' | 'warning' | 'success' | 'default'> = {
-    draft: 'info',
-    submitted: 'warning',
-    approved: 'success',
+    DRAFT: 'info',
+    SUBMITTED: 'warning',
+    APPROVED: 'success',
   }
   return map[s] ?? 'default'
 }
@@ -333,7 +333,7 @@ async function handleDelete(row: Requisition) {
 
 async function handleSubmit(row: Requisition) {
   try {
-    await api.put(`/purchase/requisitions/${row.id}`, { status: 'submitted' })
+    await api.put(`/purchase/requisitions/${row.id}`, { status: 'SUBMITTED' })
     ElMessage.success('提交成功')
     fetchData()
   } catch {
@@ -343,7 +343,7 @@ async function handleSubmit(row: Requisition) {
 
 async function handleApprove(row: Requisition) {
   try {
-    await api.put(`/purchase/requisitions/${row.id}`, { status: 'approved' })
+    await api.put(`/purchase/requisitions/${row.id}`, { status: 'APPROVED' })
     ElMessage.success('审核通过')
     fetchData()
   } catch {

@@ -12,10 +12,7 @@ import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.finance.entity.FinReceivable;
-import top.huanyu666.backend.modules.inventory.entity.InvStock;
-import top.huanyu666.backend.modules.inventory.entity.InvTransaction;
-import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
-import top.huanyu666.backend.modules.inventory.mapper.InvTransactionMapper;
+import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.sales.entity.*;
 import top.huanyu666.backend.modules.sales.mapper.*;
 
@@ -36,8 +33,7 @@ public class SalesDeliveryController {
     private final SalesDeliveryItemMapper deliveryItemMapper;
     private final SalesOrderMapper orderMapper;
     private final SalesOrderItemMapper orderItemMapper;
-    private final InvStockMapper invStockMapper;
-    private final InvTransactionMapper invTransactionMapper;
+    private final InvStockService invStockService;
     // FinReceivable 没有 Mapper，通过 BaseMapper 注入；此处声明类型引用，
     // 实际使用时通过 com.baomidou.mybatisplus.core.mapper.BaseMapper<FinReceivable> 操作
     private final com.baomidou.mybatisplus.core.mapper.BaseMapper<FinReceivable> finReceivableMapper;
@@ -74,10 +70,10 @@ public class SalesDeliveryController {
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SalesDelivery delivery) {
         SalesDelivery existing = deliveryMapper.selectById(id);
         if (existing == null) {
-            return ApiResponse.error("发货单不存在");
+            throw new BusinessException("发货单不存在");
         }
         if (!"DRAFT".equals(existing.getStatus())) {
-            return ApiResponse.error("只有草稿状态的发货单才能修改");
+            throw new BusinessException("只有草稿状态的发货单才能修改");
         }
         delivery.setId(id);
         deliveryMapper.updateById(delivery);
@@ -133,44 +129,9 @@ public class SalesDeliveryController {
             orderItem.setUpdateTime(LocalDateTime.now());
             orderItemMapper.updateById(orderItem);
 
-            // 3. 扣减库存
-            InvStock stock = invStockMapper.selectOne(
-                    new LambdaQueryWrapper<InvStock>()
-                            .eq(InvStock::getMaterialId, deliveryItem.getMaterialId())
-                            .eq(InvStock::getWarehouseId, delivery.getWarehouseId())
-            );
-
-            if (stock == null) {
-                throw new BusinessException("库存记录不存在: materialId=" + deliveryItem.getMaterialId()
-                        + ", warehouseId=" + delivery.getWarehouseId());
-            }
-
-            if (stock.getAvailableQty().compareTo(deliveryItem.getQuantity()) < 0) {
-                throw new BusinessException("库存不足: materialId=" + deliveryItem.getMaterialId()
-                        + ", 可用=" + stock.getAvailableQty() + ", 需要=" + deliveryItem.getQuantity());
-            }
-
-            // 扣减可用库存
-            stock.setAvailableQty(stock.getAvailableQty().subtract(deliveryItem.getQuantity()));
-            stock.setQuantity(stock.getQuantity().subtract(deliveryItem.getQuantity()));
-            stock.setUpdateTime(LocalDateTime.now());
-            invStockMapper.updateById(stock);
-
-            // 4. 记录库存流水
-            InvTransaction transaction = new InvTransaction();
-            transaction.setMaterialId(deliveryItem.getMaterialId());
-            transaction.setWarehouseId(delivery.getWarehouseId());
-            transaction.setType("SALES_OUT");
-            transaction.setQuantity(deliveryItem.getQuantity().negate());
-            transaction.setCurrentStock(stock.getQuantity());
-            transaction.setSourceNo(delivery.getDeliveryNo());
-            transaction.setSourceType("SALES_DELIVERY");
-            transaction.setCreateTime(LocalDateTime.now());
-            invTransactionMapper.insert(transaction);
-
-            log.info("扣减库存: materialId={}, warehouseId={}, qty={}, currentStock={}",
-                    deliveryItem.getMaterialId(), delivery.getWarehouseId(),
-                    deliveryItem.getQuantity(), stock.getQuantity());
+            // 3. 扣减库存（统一由 InvStockService 处理）
+            invStockService.deduct(deliveryItem.getMaterialId(), delivery.getWarehouseId(),
+                    deliveryItem.getQuantity(), delivery.getDeliveryNo(), "SALES_OUT");
         }
 
         // 5. 检查订单是否全部发货，更新订单状态
@@ -202,6 +163,21 @@ public class SalesDeliveryController {
         finReceivableMapper.insert(receivable);
 
         log.info("确认发货成功: deliveryId={}, orderId={}", id, order.getId());
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 删除发货单（仅草稿）
+     */
+    @SaCheckPermission("delivery:order:delete")
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        SalesDelivery delivery = deliveryMapper.selectById(id);
+        if (delivery == null) throw new BusinessException("发货单不存在");
+        if (!"DRAFT".equals(delivery.getStatus())) throw new BusinessException("只有草稿状态可删除");
+        deliveryItemMapper.delete(new LambdaQueryWrapper<SalesDeliveryItem>().eq(SalesDeliveryItem::getDeliveryId, id));
+        deliveryMapper.deleteById(id);
         return ApiResponse.ok();
     }
 }

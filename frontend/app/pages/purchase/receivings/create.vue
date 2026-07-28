@@ -180,7 +180,7 @@ const orderOptions = ref<{ label: string; value: number }[]>([])
 async function fetchOrderOptions() {
   try {
     const result = await api.page<{ id: number; orderNo: string; supplierName: string }>(
-      '/purchase/orders', 1, 1000, { status: 'issued' },
+      '/purchase/orders', 1, 1000, { status: 'APPROVED' },
     )
     orderOptions.value = result.list.map((o) => ({
       label: `${o.orderNo} / ${o.supplierName}`,
@@ -301,7 +301,7 @@ async function handleSaveDraft() {
   if (!validateLines()) return
 
   try {
-    const payload = { ...form, status: 'draft', totalAmount: totalAmount.value }
+    const payload = { ...form, status: 'DRAFT', totalAmount: totalAmount.value }
     if (isEdit.value) {
       await api.put(`/purchase/receivings/${route.query.id}`, payload)
     } else {
@@ -320,7 +320,7 @@ async function handleSubmit() {
   if (!validateLines()) return
 
   try {
-    const payload = { ...form, status: 'received', totalAmount: totalAmount.value }
+    const payload = { ...form, status: 'CONFIRMED', totalAmount: totalAmount.value }
     if (isEdit.value) {
       await api.put(`/purchase/receivings/${route.query.id}`, payload)
     } else {

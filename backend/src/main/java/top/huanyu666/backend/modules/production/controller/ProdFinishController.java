@@ -11,10 +11,7 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
-import top.huanyu666.backend.modules.inventory.entity.InvStock;
-import top.huanyu666.backend.modules.inventory.entity.InvTransaction;
-import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
-import top.huanyu666.backend.modules.inventory.mapper.InvTransactionMapper;
+import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 
@@ -34,8 +31,7 @@ public class ProdFinishController {
     private final ProdFinishMapper finishMapper;
     private final ProdFinishItemMapper finishItemMapper;
     private final ProdOrderMapper orderMapper;
-    private final InvStockMapper stockMapper;
-    private final InvTransactionMapper transactionMapper;
+    private final InvStockService stockService;
 
     // ==================== 基础 CRUD ====================
 
@@ -111,39 +107,9 @@ public class ProdFinishController {
                 throw new BusinessException("完工入库明细数量必须大于0");
             }
 
-            // 增加库存（不存在则创建）
-            LambdaQueryWrapper<InvStock> stockQw = new LambdaQueryWrapper<>();
-            stockQw.eq(InvStock::getMaterialId, item.getMaterialId());
-            stockQw.eq(InvStock::getWarehouseId, finish.getWarehouseId());
-            InvStock stock = stockMapper.selectOne(stockQw);
-            if (stock == null) {
-                stock = new InvStock();
-                stock.setMaterialId(item.getMaterialId());
-                stock.setWarehouseId(finish.getWarehouseId());
-                stock.setQuantity(BigDecimal.ZERO);
-                stock.setAvailableQty(BigDecimal.ZERO);
-                stock.setLockedQty(BigDecimal.ZERO);
-                stock.setCreateTime(LocalDateTime.now());
-                stock.setUpdateTime(LocalDateTime.now());
-                stockMapper.insert(stock);
-            }
-
-            stock.setQuantity(stock.getQuantity().add(item.getQuantity()));
-            stock.setAvailableQty(stock.getAvailableQty().add(item.getQuantity()));
-            stock.setUpdateTime(LocalDateTime.now());
-            stockMapper.updateById(stock);
-
-            // 记录库存流水
-            InvTransaction tx = new InvTransaction();
-            tx.setMaterialId(item.getMaterialId());
-            tx.setWarehouseId(finish.getWarehouseId());
-            tx.setType("FINISH_IN");
-            tx.setQuantity(item.getQuantity());
-            tx.setCurrentStock(stock.getQuantity());
-            tx.setSourceNo(finish.getFinishNo());
-            tx.setSourceType("PROD_FINISH");
-            tx.setCreateTime(LocalDateTime.now());
-            transactionMapper.insert(tx);
+            // 增加库存（统一由 InvStockService 处理）
+            stockService.receive(item.getMaterialId(), finish.getWarehouseId(),
+                    item.getQuantity(), finish.getFinishNo(), "FINISH_IN");
         }
 
         // 更新工单完工数量

@@ -33,10 +33,8 @@
             clearable
             style="width: 140px"
           >
-            <el-option label="草稿" value="draft" />
-            <el-option label="已下达" value="issued" />
-            <el-option label="部分收货" value="partial" />
-            <el-option label="已完成" value="completed" />
+            <el-option label="草稿" value="DRAFT" />
+            <el-option label="已下达" value="APPROVED" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -96,7 +94,7 @@
         </el-table-column>
         <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
-            <template v-if="row.status === 'draft'">
+            <template v-if="row.status === 'DRAFT'">
               <el-button
                 type="primary"
                 size="small"
@@ -210,7 +208,7 @@ interface PurchaseOrder {
   supplierName: string
   orderDate: string
   totalAmount: number
-  status: 'draft' | 'issued' | 'partial' | 'completed'
+  status: string
 }
 
 interface SearchForm {
@@ -222,8 +220,8 @@ interface SearchForm {
 
 // ==================== 状态工具 ====================
 const statusMap: Record<string, string> = {
-  draft: '草稿',
-  issued: '已下达',
+  DRAFT: '草稿',
+  APPROVED: '已下达',
   partial: '部分收货',
   completed: '已完成',
 }
@@ -234,8 +232,8 @@ function statusLabel(s: string): string {
 
 function statusTagType(s: string): 'info' | 'warning' | 'success' | '' {
   const map: Record<string, 'info' | 'warning' | 'success' | ''> = {
-    draft: 'info',
-    issued: 'warning',
+    DRAFT: 'info',
+    APPROVED: 'warning',
     partial: '',
     completed: 'success',
   }

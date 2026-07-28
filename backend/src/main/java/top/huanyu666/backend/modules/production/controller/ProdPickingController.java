@@ -11,10 +11,7 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
-import top.huanyu666.backend.modules.inventory.entity.InvStock;
-import top.huanyu666.backend.modules.inventory.entity.InvTransaction;
-import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
-import top.huanyu666.backend.modules.inventory.mapper.InvTransactionMapper;
+import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 
@@ -34,8 +31,7 @@ public class ProdPickingController {
     private final ProdPickingMapper pickingMapper;
     private final ProdPickingItemMapper pickingItemMapper;
     private final ProdOrderBomMapper orderBomMapper;
-    private final InvStockMapper stockMapper;
-    private final InvTransactionMapper transactionMapper;
+    private final InvStockService stockService;
 
     // ==================== 基础 CRUD ====================
 
@@ -111,34 +107,9 @@ public class ProdPickingController {
                 throw new BusinessException("领料明细实际数量必须大于0");
             }
 
-            // 扣减库存
-            LambdaQueryWrapper<InvStock> stockQw = new LambdaQueryWrapper<>();
-            stockQw.eq(InvStock::getMaterialId, item.getMaterialId());
-            stockQw.eq(InvStock::getWarehouseId, picking.getWarehouseId());
-            InvStock stock = stockMapper.selectOne(stockQw);
-            if (stock == null) {
-                throw new BusinessException("物料库存不存在，materialId=" + item.getMaterialId());
-            }
-            if (stock.getAvailableQty().compareTo(item.getActualQty()) < 0) {
-                throw new BusinessException("可用库存不足，materialId=" + item.getMaterialId());
-            }
-
-            stock.setQuantity(stock.getQuantity().subtract(item.getActualQty()));
-            stock.setAvailableQty(stock.getAvailableQty().subtract(item.getActualQty()));
-            stock.setUpdateTime(LocalDateTime.now());
-            stockMapper.updateById(stock);
-
-            // 记录库存流水
-            InvTransaction tx = new InvTransaction();
-            tx.setMaterialId(item.getMaterialId());
-            tx.setWarehouseId(picking.getWarehouseId());
-            tx.setType("PICKING_OUT");
-            tx.setQuantity(item.getActualQty().negate());
-            tx.setCurrentStock(stock.getQuantity());
-            tx.setSourceNo(picking.getPickingNo());
-            tx.setSourceType("PROD_PICKING");
-            tx.setCreateTime(LocalDateTime.now());
-            transactionMapper.insert(tx);
+            // 扣减库存（统一由 InvStockService 处理）
+            stockService.deduct(item.getMaterialId(), picking.getWarehouseId(),
+                    item.getActualQty(), picking.getPickingNo(), "PICKING_OUT");
 
             // 更新工单BOM已领数量
             LambdaQueryWrapper<ProdOrderBom> bomQw = new LambdaQueryWrapper<>();

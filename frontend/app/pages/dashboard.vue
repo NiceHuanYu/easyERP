@@ -136,13 +136,13 @@ const stats = reactive({
 async function fetchStats() {
   // 待审核销售订单
   try {
-    const orders = await api.page('/sales/orders', 1, 1, { status: 'submitted' })
+    const orders = await api.page('/sales/orders', 1, 1, { status: 'SUBMITTED' })
     stats.pendingOrders = orders.total
   } catch { /* keep default */ }
 
   // 待处理生产工单
   try {
-    const productions = await api.page('/production/orders', 1, 1, { status: 'pending' })
+    const productions = await api.page('/production/orders', 1, 1, { status: 'DRAFT' })
     stats.pendingProductions = productions.total
   } catch { /* keep default */ }
 
