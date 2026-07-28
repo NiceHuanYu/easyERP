@@ -10,8 +10,7 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
-import top.huanyu666.backend.modules.finance.entity.FinPayable;
-import top.huanyu666.backend.modules.finance.mapper.FinPayableMapper;
+import top.huanyu666.backend.modules.finance.service.FinPayableService;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.purchase.entity.*;
 import top.huanyu666.backend.modules.purchase.mapper.*;
@@ -35,7 +34,7 @@ public class PurReceivingController {
     private final PurOrderMapper orderMapper;
     private final PurOrderItemMapper orderItemMapper;
     private final InvStockService stockService;
-    private final FinPayableMapper payableMapper;
+    private final FinPayableService payableService;
 
     // ==================== 基础 CRUD ====================
 
@@ -139,13 +138,7 @@ public class PurReceivingController {
 
         // 创建应付台账
         if (order != null && totalPayable.compareTo(BigDecimal.ZERO) > 0) {
-            FinPayable payable = new FinPayable();
-            payable.setReceivingId(id);
-            payable.setSupplierId(order.getSupplierId());
-            payable.setPayableAmount(totalPayable);
-            payable.setPaidAmount(BigDecimal.ZERO);
-            payable.setStatus("UNPAID");
-            payableMapper.insert(payable);
+            payableService.createFromReceiving(id, order.getSupplierId(), totalPayable);
         }
 
         receiving.setStatus("CONFIRMED");

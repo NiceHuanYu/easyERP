@@ -11,7 +11,7 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
-import top.huanyu666.backend.modules.finance.entity.FinReceivable;
+import top.huanyu666.backend.modules.finance.service.FinReceivableService;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.sales.entity.*;
 import top.huanyu666.backend.modules.sales.mapper.*;
@@ -34,9 +34,7 @@ public class SalesDeliveryController {
     private final SalesOrderMapper orderMapper;
     private final SalesOrderItemMapper orderItemMapper;
     private final InvStockService invStockService;
-    // FinReceivable 没有 Mapper，通过 BaseMapper 注入；此处声明类型引用，
-    // 实际使用时通过 com.baomidou.mybatisplus.core.mapper.BaseMapper<FinReceivable> 操作
-    private final com.baomidou.mybatisplus.core.mapper.BaseMapper<FinReceivable> finReceivableMapper;
+    private final FinReceivableService finReceivableService;
 
     /**
      * 分页列表
@@ -154,13 +152,7 @@ public class SalesDeliveryController {
         deliveryMapper.updateById(delivery);
 
         // 7. 创建应收台账
-        FinReceivable receivable = new FinReceivable();
-        receivable.setDeliveryId(delivery.getId());
-        receivable.setCustomerId(order.getCustomerId());
-        receivable.setReceivableAmount(order.getTotalAmount());
-        receivable.setReceivedAmount(BigDecimal.ZERO);
-        receivable.setStatus("PENDING");
-        finReceivableMapper.insert(receivable);
+        finReceivableService.createFromDelivery(delivery.getId(), order.getCustomerId(), order.getTotalAmount());
 
         log.info("确认发货成功: deliveryId={}, orderId={}", id, order.getId());
         return ApiResponse.ok();

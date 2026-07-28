@@ -10,14 +10,12 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
-import top.huanyu666.backend.modules.finance.entity.FinPayable;
 import top.huanyu666.backend.modules.finance.entity.FinPayment;
 import top.huanyu666.backend.modules.finance.entity.FinPaymentItem;
-import top.huanyu666.backend.modules.finance.entity.FinReceivable;
-import top.huanyu666.backend.modules.finance.mapper.FinPayableMapper;
 import top.huanyu666.backend.modules.finance.mapper.FinPaymentItemMapper;
 import top.huanyu666.backend.modules.finance.mapper.FinPaymentMapper;
-import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
+import top.huanyu666.backend.modules.finance.service.FinPayableService;
+import top.huanyu666.backend.modules.finance.service.FinReceivableService;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -36,8 +34,8 @@ public class FinPaymentController {
 
     private final FinPaymentMapper paymentMapper;
     private final FinPaymentItemMapper paymentItemMapper;
-    private final FinReceivableMapper receivableMapper;
-    private final FinPayableMapper payableMapper;
+    private final FinReceivableService receivableService;
+    private final FinPayableService payableService;
 
     @SaCheckPermission("finance:order:view")
     @GetMapping
@@ -88,31 +86,9 @@ public class FinPaymentController {
 
         for (FinPaymentItem item : items) {
             if (item.getReceivableId() != null) {
-                FinReceivable receivable = receivableMapper.selectById(item.getReceivableId());
-                if (receivable == null) {
-                    return ApiResponse.error("应收台账不存在: " + item.getReceivableId());
-                }
-                BigDecimal newReceived = receivable.getReceivedAmount().add(item.getAmount());
-                receivable.setReceivedAmount(newReceived);
-                if (newReceived.compareTo(receivable.getReceivableAmount()) >= 0) {
-                    receivable.setStatus("FULLY_PAID");
-                } else if (newReceived.compareTo(BigDecimal.ZERO) > 0) {
-                    receivable.setStatus("PARTIALLY_PAID");
-                }
-                receivableMapper.updateById(receivable);
+                receivableService.applyPayment(item.getReceivableId(), item.getAmount());
             } else if (item.getPayableId() != null) {
-                FinPayable payable = payableMapper.selectById(item.getPayableId());
-                if (payable == null) {
-                    return ApiResponse.error("应付台账不存在: " + item.getPayableId());
-                }
-                BigDecimal newPaid = payable.getPaidAmount().add(item.getAmount());
-                payable.setPaidAmount(newPaid);
-                if (newPaid.compareTo(payable.getPayableAmount()) >= 0) {
-                    payable.setStatus("FULLY_PAID");
-                } else if (newPaid.compareTo(BigDecimal.ZERO) > 0) {
-                    payable.setStatus("PARTIALLY_PAID");
-                }
-                payableMapper.updateById(payable);
+                payableService.applyPayment(item.getPayableId(), item.getAmount());
             }
         }
 
