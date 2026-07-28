@@ -40,3 +40,23 @@ services:
 
 volumes:
   mysql-data:
+
+  # === PostgreSQL 服务（切换到 PG 时取消注释，并注释 mysql 服务和 SPRING_PROFILES_ACTIVE 改为 postgres）===
+  # postgres:
+  #   image: postgres:16
+  #   container_name: erp-postgres
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: EasyERP
+  #     TZ: Asia/Shanghai
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - pg-data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-U", "postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  # pg-data:

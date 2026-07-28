@@ -11,8 +11,10 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
-import top.huanyu666.backend.modules.base.entity.Bom;
-import top.huanyu666.backend.modules.base.mapper.BomMapper;
+import top.huanyu666.backend.modules.base.entity.BomDetail;
+import top.huanyu666.backend.modules.base.entity.BomHeader;
+import top.huanyu666.backend.modules.base.mapper.BomDetailMapper;
+import top.huanyu666.backend.modules.base.mapper.BomHeaderMapper;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 
@@ -39,7 +41,8 @@ public class ProdOrderController {
     private final ProdPickingItemMapper pickingItemMapper;
     private final ProdFinishMapper finishMapper;
     private final ProdFinishItemMapper finishItemMapper;
-    private final BomMapper bomMapper;
+    private final BomHeaderMapper bomHeaderMapper;
+    private final BomDetailMapper bomDetailMapper;
 
     // ==================== 基础 CRUD ====================
 
@@ -115,26 +118,31 @@ public class ProdOrderController {
             throw new BusinessException("仅草稿状态的工单可下达");
         }
 
-        // 从 t_base_bom 查 BOM
-        LambdaQueryWrapper<Bom> bomQw = new LambdaQueryWrapper<>();
-        bomQw.eq(Bom::getParentMaterialId, order.getMaterialId());
-        List<Bom> bomList = bomMapper.selectList(bomQw);
+        // 从新 BOM 头行结构查物料需求
+        BomHeader bomHeader = bomHeaderMapper.selectOne(
+                new LambdaQueryWrapper<BomHeader>()
+                        .eq(BomHeader::getProductMaterialId, order.getMaterialId())
+                        .eq(BomHeader::getStatus, 1)
+                        .orderByDesc(BomHeader::getCreateTime)
+                        .last("LIMIT 1"));
 
-        if (bomList.isEmpty()) {
+        if (bomHeader == null) {
             throw new BusinessException("该物料未配置 BOM，无法下达");
         }
 
-        // 生成工单物料需求
-        for (Bom bom : bomList) {
+        List<BomDetail> details = bomDetailMapper.selectList(
+                new LambdaQueryWrapper<BomDetail>().eq(BomDetail::getBomId, bomHeader.getId()));
+
+        if (details.isEmpty()) {
+            throw new BusinessException("BOM 无明细，无法下达");
+        }
+
+        for (BomDetail detail : details) {
             ProdOrderBom orderBom = new ProdOrderBom();
             orderBom.setOrderId(id);
-            orderBom.setMaterialId(bom.getChildMaterialId());
-            // requiredQty = planQuantity * bom.quantity * (1 + lossRate)
-            BigDecimal lossFactor = BigDecimal.ONE.add(
-                    bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO);
+            orderBom.setMaterialId(detail.getMaterialId());
             BigDecimal requiredQty = order.getPlanQuantity()
-                    .multiply(bom.getQuantity())
-                    .multiply(lossFactor)
+                    .multiply(detail.getQuantity())
                     .setScale(4, RoundingMode.HALF_UP);
             orderBom.setRequiredQty(requiredQty);
             orderBom.setPickedQty(BigDecimal.ZERO);
@@ -146,7 +154,7 @@ public class ProdOrderController {
         order.setStatus("RELEASED");
         orderMapper.updateById(order);
 
-        log.info("工单 {} 已下达，生成 {} 条物料需求", order.getOrderNo(), bomList.size());
+        log.info("工单 {} 已下达，生成 {} 条物料需求", order.getOrderNo(), details.size());
         return ApiResponse.ok("下达成功");
     }
 

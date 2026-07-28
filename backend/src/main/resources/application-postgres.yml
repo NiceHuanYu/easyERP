@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/EasyERP
+    username: postgres
+    password: ${DB_PASSWORD:postgres}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/postgresql
+    baseline-on-migrate: true
+
+mybatis-plus:
+  db-type: POSTGRE_SQL

@@ -9,9 +9,6 @@
             placeholder="请选择成品物料"
             clearable
             filterable
-            remote
-            :remote-method="remoteSearchMaterial"
-            :loading="materialSearchLoading"
           >
             <el-option
               v-for="m in materialOptions"
@@ -39,9 +36,12 @@
         </el-button>
       </div>
       <el-table :data="tableData" v-loading="loading" border stripe>
-        <el-table-column prop="bomNo" label="BOM编号" width="130" />
-        <el-table-column prop="productMaterialCode" label="成品物料" width="130" />
-        <el-table-column prop="productMaterialName" label="成品名称" width="160" />
+        <el-table-column prop="bomNo" label="BOM编号" width="150" />
+        <el-table-column label="成品物料" width="180">
+          <template #default="{ row }">
+            {{ getMaterialName(row.productMaterialId) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="version" label="版本号" width="100" />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
@@ -106,7 +106,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="版本号" prop="version">
-              <el-input v-model="form.version" placeholder="请输入版本号" :disabled="isView" />
+              <el-input v-model="form.version" placeholder="如 V20240727" :disabled="isView" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -122,13 +122,7 @@
       <div class="bom-details-section">
         <div class="bom-details-header">
           <span class="bom-details-title">BOM 明细</span>
-          <el-button
-            v-if="!isView"
-            type="primary"
-            size="small"
-            :icon="Plus"
-            @click="addDetailRow"
-          >
+          <el-button v-if="!isView" type="primary" size="small" :icon="Plus" @click="addDetailRow">
             添加明细
           </el-button>
         </div>
@@ -158,27 +152,18 @@
             <template #default="{ row: detail }">
               <el-input-number
                 v-model="detail.quantity"
-                :min="0"
-                :precision="4"
-                size="small"
+                :min="0" :precision="4"
                 style="width: 100%"
                 :disabled="isView"
               />
             </template>
           </el-table-column>
           <el-table-column label="单位" width="80">
-            <template #default="{ row: detail }">
-              {{ detail.unit }}
-            </template>
+            <template #default="{ row: detail }">{{ detail.unit }}</template>
           </el-table-column>
           <el-table-column label="备注" min-width="160">
             <template #default="{ row: detail }">
-              <el-input
-                v-model="detail.remark"
-                placeholder="可选备注"
-                size="small"
-                :disabled="isView"
-              />
+              <el-input v-model="detail.remark" placeholder="可选备注" :disabled="isView" />
             </template>
           </el-table-column>
           <el-table-column v-if="!isView" label="操作" width="70" fixed="right">
@@ -203,39 +188,27 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../composables/useApi'
 
-definePageMeta({ middleware: 'auth' })
-
-// --------------- 常量 ---------------
 const BOM_API_PATH = '/base/boms'
 const MATERIAL_API_PATH = '/base/materials'
 
 // --------------- 类型 ---------------
-interface MaterialOption {
-  id: number
-  code: string
-  name: string
-  unit: string
-  category: string
+interface MaterialOption { id: number; code: string; name: string; spec: string; unit: string; category: number }
+
+interface BomHeader {
+  id: number; bomNo: string; productMaterialId: number; version: string; status: number
 }
 
 interface BomDetail {
-  materialId: number | null
-  materialCode: string
-  materialName: string
-  quantity: number
-  unit: string
-  remark: string
+  id?: number; materialId: number | null; materialCode: string; materialName: string
+  quantity: number; unit: string; remark: string
 }
 
-interface Bom {
-  id: number
-  bomNo: string
-  productMaterialId: number
-  productMaterialCode: string
-  productMaterialName: string
-  version: string
-  status: number
+interface BomWithDetails extends BomHeader {
   details: BomDetail[]
+}
+
+interface BomDetailDto {
+  materialId: number; quantity: number; unit: string; remark: string
 }
 
 // --------------- 状态 ---------------
@@ -246,12 +219,21 @@ const isEdit = ref(false)
 const isView = ref(false)
 const editingId = ref<number | null>(null)
 const formRef = ref<FormInstance>()
-const materialSearchLoading = ref(false)
 
-const searchForm = reactive({
-  productMaterialId: null as number | null,
-  bomNo: '',
+const allMaterials = ref<MaterialOption[]>([])
+const materialOptions = ref<MaterialOption[]>([])
+const materialNameMap = computed(() => {
+  const map: Record<number, string> = {}
+  for (const m of allMaterials.value) map[m.id] = `${m.code} - ${m.name}`
+  return map
 })
+function getMaterialName(id: number): string { return materialNameMap.value[id] ?? String(id) }
+
+const rawMaterialOptions = computed(() =>
+  allMaterials.value.filter((m) => m.category === 1 || m.category === 2)
+)
+
+const searchForm = reactive({ productMaterialId: null as number | null, bomNo: '' })
 
 const form = reactive({
   productMaterialId: null as number | null,
@@ -261,20 +243,11 @@ const form = reactive({
 })
 
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
-const tableData = ref<Bom[]>([])
-
-// 所有物料选项（用于搜索和表单的 select）
-const allMaterials = ref<MaterialOption[]>([])
-const materialOptions = ref<MaterialOption[]>([])
-// 原材料选项（用于 BOM 明细）
-const rawMaterialOptions = computed(() =>
-  allMaterials.value.filter((m) => m.category === 'raw' || m.category === 'semi')
-)
+const tableData = ref<BomHeader[]>([])
 
 const rules: FormRules = {
   productMaterialId: [{ required: true, message: '请选择成品物料', trigger: 'change' }],
   version: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
-  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
 // --------------- 计算 ---------------
@@ -289,162 +262,120 @@ async function fetchAllMaterials() {
     const result = await api.page<MaterialOption>(MATERIAL_API_PATH, 1, 1000)
     allMaterials.value = result.list
     materialOptions.value = result.list
-  } catch {
-    // ignore fetch error for options
-  }
+  } catch { /* ignore */ }
 }
 
 async function fetchData() {
   loading.value = true
   try {
-    const extraQuery: Record<string, string | number | undefined> = {
-      bomNo: searchForm.bomNo || undefined,
-    }
-    if (searchForm.productMaterialId) {
-      extraQuery.productMaterialId = searchForm.productMaterialId
-    }
-    const result = await api.page<Bom>(BOM_API_PATH, pagination.page, pagination.pageSize, extraQuery)
+    const q: Record<string, string | number | undefined> = {}
+    if (searchForm.productMaterialId) q.productMaterialId = searchForm.productMaterialId
+    if (searchForm.bomNo) q.bomNo = searchForm.bomNo
+    const result = await api.page<BomHeader>(BOM_API_PATH, pagination.page, pagination.pageSize, q)
     tableData.value = result.list
     pagination.total = result.total
   } catch (e: any) {
     ElMessage.error(e?.message || '获取数据失败')
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 }
 
-function handleSearch() {
-  pagination.page = 1
-  fetchData()
-}
-
-function handleReset() {
-  searchForm.productMaterialId = null
-  searchForm.bomNo = ''
-  pagination.page = 1
-  fetchData()
-}
-
-function remoteSearchMaterial(query: string) {
-  materialSearchLoading.value = true
-  try {
-    if (query) {
-      materialOptions.value = allMaterials.value.filter(
-        (m) => m.code.includes(query) || m.name.includes(query)
-      )
-    } else {
-      materialOptions.value = allMaterials.value
-    }
-  } finally {
-    materialSearchLoading.value = false
-  }
-}
+function handleSearch() { pagination.page = 1; fetchData() }
+function handleReset() { searchForm.productMaterialId = null; searchForm.bomNo = ''; pagination.page = 1; fetchData() }
 
 function handleAdd() {
-  isEdit.value = false
-  isView.value = false
-  editingId.value = null
+  isEdit.value = false; isView.value = false; editingId.value = null
   resetForm()
+  form.version = 'V' + new Date().toISOString().slice(0, 10).replace(/-/g, '')
   dialogVisible.value = true
 }
 
-function handleView(row: Bom) {
-  isEdit.value = false
-  isView.value = true
-  editingId.value = row.id
-  form.productMaterialId = row.productMaterialId
-  form.version = row.version
-  form.status = row.status
-  form.details = row.details.map((d) => ({ ...d }))
+async function handleEdit(row: BomHeader) {
+  isEdit.value = true; isView.value = false; editingId.value = row.id
+  await loadBomData(row.id)
   dialogVisible.value = true
 }
 
-function handleEdit(row: Bom) {
-  isEdit.value = true
-  isView.value = false
-  editingId.value = row.id
-  form.productMaterialId = row.productMaterialId
-  form.version = row.version
-  form.status = row.status
-  form.details = row.details.map((d) => ({ ...d }))
+async function handleView(row: BomHeader) {
+  isEdit.value = false; isView.value = true; editingId.value = row.id
+  await loadBomData(row.id)
   dialogVisible.value = true
 }
 
-async function handleDelete(row: Bom) {
+async function loadBomData(id: number) {
+  try {
+    const data = await api.get<BomWithDetails>(`${BOM_API_PATH}/${id}`)
+    form.productMaterialId = data.productMaterialId
+    form.version = data.version
+    form.status = data.status
+    form.details = (data.details || []).map((d) => ({
+      materialId: d.materialId,
+      materialCode: '',
+      materialName: '',
+      quantity: d.quantity,
+      unit: d.unit || '',
+      remark: d.remark || '',
+    }))
+    for (const d of form.details) {
+      const m = allMaterials.value.find((mat) => mat.id === d.materialId)
+      if (m) { d.materialCode = m.code; d.materialName = m.name; d.unit = d.unit || m.unit || '' }
+    }
+  } catch {
+    ElMessage.error('加载BOM详情失败')
+  }
+}
+
+async function handleDelete(row: BomHeader) {
   try {
     await ElMessageBox.confirm(`确定要删除 BOM「${row.bomNo}」吗？`, '删除确认', {
-      type: 'warning',
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+      type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消',
     })
     await api.del(`${BOM_API_PATH}/${row.id}`)
     ElMessage.success('删除成功')
     fetchData()
   } catch (e: any) {
-    if (e !== 'cancel' && e?.message) {
-      ElMessage.error(e.message || '删除失败')
-    }
+    if (e !== 'cancel' && e?.message) ElMessage.error(e.message || '删除失败')
   }
 }
 
-function onProductMaterialChange(val: number | null) {
-  // 自动填充成品物料信息（由后端处理）
+function onProductMaterialChange(_val: number) {
+  if (!isEdit.value && !form.version) {
+    form.version = 'V' + new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  }
 }
 
-function onDetailMaterialChange(val: number | null, detail: BomDetail) {
+function onDetailMaterialChange(val: number, detail: BomDetail) {
   const mat = allMaterials.value.find((m) => m.id === val)
   if (mat) {
     detail.materialCode = mat.code
     detail.materialName = mat.name
-    detail.unit = mat.unit
-  } else {
-    detail.materialCode = ''
-    detail.materialName = ''
-    detail.unit = ''
+    detail.unit = mat.unit || ''
   }
 }
 
 function addDetailRow() {
-  form.details.push({
-    materialId: null,
-    materialCode: '',
-    materialName: '',
-    quantity: 0,
-    unit: '',
-    remark: '',
-  })
+  form.details.push({ materialId: null, materialCode: '', materialName: '', quantity: 0, unit: '', remark: '' })
 }
 
-function removeDetailRow(index: number) {
-  form.details.splice(index, 1)
-}
+function removeDetailRow(index: number) { form.details.splice(index, 1) }
 
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
-  if (form.details.length === 0) {
-    ElMessage.warning('请至少添加一条 BOM 明细')
-    return
-  }
-  // 校验明细
-  const hasEmptyDetail = form.details.some((d) => !d.materialId || d.quantity <= 0)
-  if (hasEmptyDetail) {
-    ElMessage.warning('请完善 BOM 明细（原材料和用量必填）')
-    return
+  if (form.details.length === 0) { ElMessage.warning('请至少添加一条 BOM 明细'); return }
+  if (form.details.some((d) => !d.materialId || d.quantity <= 0)) {
+    ElMessage.warning('请完善 BOM 明细（原材料和用量必填）'); return
   }
 
   submitLoading.value = true
   try {
-    const productMat = allMaterials.value.find((m) => m.id === form.productMaterialId)
     const body: Record<string, unknown> = {
-      productMaterialId: form.productMaterialId!,
-      productMaterialCode: productMat?.code ?? '',
-      productMaterialName: productMat?.name ?? '',
+      productMaterialId: form.productMaterialId,
       version: form.version,
       status: form.status,
-      details: form.details.map((d) => ({ ...d })),
+      details: form.details.map((d) => ({
+        materialId: d.materialId, quantity: d.quantity, unit: d.unit, remark: d.remark,
+      } as BomDetailDto)),
     }
-
     if (isEdit.value && editingId.value !== null) {
       await api.put(`${BOM_API_PATH}/${editingId.value}`, body)
       ElMessage.success('编辑成功')
@@ -456,21 +387,12 @@ async function handleSubmit() {
     fetchData()
   } catch (e: any) {
     ElMessage.error(e?.message || '保存失败')
-  } finally {
-    submitLoading.value = false
-  }
+  } finally { submitLoading.value = false }
 }
 
-function handleDialogClosed() {
-  resetForm()
-  formRef.value?.resetFields()
-}
-
+function handleDialogClosed() { resetForm(); formRef.value?.resetFields() }
 function resetForm() {
-  form.productMaterialId = null
-  form.version = ''
-  form.status = 1
-  form.details = []
+  form.productMaterialId = null; form.version = ''; form.status = 1; form.details = []
 }
 
 // --------------- 初始化 ---------------
@@ -480,39 +402,11 @@ fetchData()
 </script>
 
 <style scoped>
-.page-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.search-card :deep(.el-card__body) {
-  padding-bottom: 0;
-}
-
-.table-toolbar {
-  margin-bottom: 12px;
-}
-
-.table-pagination {
-  margin-top: 16px;
-  justify-content: flex-end;
-}
-
-.bom-details-section {
-  margin-top: 16px;
-}
-
-.bom-details-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.bom-details-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
-}
+.page-container { display: flex; flex-direction: column; gap: 16px; }
+.search-card :deep(.el-card__body) { padding-bottom: 0; }
+.table-toolbar { margin-bottom: 12px; }
+.table-pagination { margin-top: 12px; justify-content: flex-end; }
+.bom-details-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #ebeef5; }
+.bom-details-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.bom-details-title { font-size: 14px; font-weight: 600; color: #303133; }
 </style>

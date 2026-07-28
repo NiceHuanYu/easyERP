@@ -66,6 +66,13 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
 
+        <!-- PostgreSQL 驱动 (runtime) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- ==================== 认证授权 ==================== -->
 
         <!-- Sa-Token: 轻量 RBAC 权限认证 -->

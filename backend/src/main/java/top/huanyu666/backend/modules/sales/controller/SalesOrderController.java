@@ -21,8 +21,10 @@ import top.huanyu666.backend.modules.sales.mapper.SalesOrderItemMapper;
 import top.huanyu666.backend.modules.sales.mapper.SalesOrderMapper;
 import top.huanyu666.backend.modules.sales.service.SalesOrderService;
 
-import java.util.List;
-import java.util.Map;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
+import top.huanyu666.backend.modules.base.entity.Material;
+
+import java.util.*;
 
 /**
  * 销售订单管理
@@ -38,6 +40,7 @@ public class SalesOrderController {
     private final SalesDeliveryMapper deliveryMapper;
     private final SalesDeliveryItemMapper deliveryItemMapper;
     private final SalesOrderService orderService;
+    private final MaterialMapper materialMapper;
 
     /**
      * 分页列表
@@ -76,7 +79,7 @@ public class SalesOrderController {
     }
 
     /**
-     * 详情（含明细），返回 Map 包装
+     * 详情（含明细），返回扁平结构匹配前端 OrderForm
      */
     @SaCheckPermission("sales:order:view")
     @GetMapping("/{id}/detail")
@@ -90,9 +93,26 @@ public class SalesOrderController {
                         .eq(SalesOrderItem::getOrderId, id)
                         .orderByAsc(SalesOrderItem::getLineNo)
         );
-        Map<String, Object> result = new java.util.HashMap<>();
-        result.put("order", order);
-        result.put("items", items);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("customerId", order.getCustomerId());
+        result.put("orderDate", order.getOrderDate() != null ? order.getOrderDate().toString() : null);
+        result.put("deliveryDate", order.getDeliveryDate() != null ? order.getDeliveryDate().toString() : null);
+        result.put("remark", order.getRemark());
+        result.put("lines", items.stream().map(item -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("materialId", item.getMaterialId());
+            m.put("quantity", item.getQuantity());
+            m.put("price", item.getPrice());
+            m.put("amount", item.getAmount());
+            // 附带 materialName
+            if (item.getMaterialId() != null) {
+                Material mat = materialMapper.selectById(item.getMaterialId());
+                m.put("materialName", mat != null ? mat.getName() : "");
+            } else {
+                m.put("materialName", "");
+            }
+            return m;
+        }).toList());
         return ApiResponse.ok(result);
     }
 
@@ -102,15 +122,12 @@ public class SalesOrderController {
     @SaCheckPermission("sales:order:create")
     @PostMapping
     public ApiResponse<SalesOrder> create(@RequestBody Map<String, Object> body) {
+        SalesOrder order = mapToOrder(body);
         @SuppressWarnings("unchecked")
-        Map<String, Object> orderMap = (Map<String, Object>) body.get("order");
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> itemList = (List<Map<String, Object>>) body.get("items");
-
-        SalesOrder order = mapToOrder(orderMap);
-        List<SalesOrderItem> items = itemList.stream()
-                .map(this::mapToOrderItem)
-                .toList();
+        List<Map<String, Object>> itemList = (List<Map<String, Object>>) body.get("lines");
+        List<SalesOrderItem> items = itemList != null
+                ? itemList.stream().map(this::mapToOrderItem).toList()
+                : List.of();
 
         SalesOrder created = orderService.createOrder(order, items);
         return ApiResponse.ok(created);
@@ -121,7 +138,8 @@ public class SalesOrderController {
      */
     @SaCheckPermission("sales:order:edit")
     @PutMapping("/{id}")
-    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SalesOrder order) {
+    @Transactional
+    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         SalesOrder existing = orderMapper.selectById(id);
         if (existing == null) {
             return ApiResponse.error("订单不存在");
@@ -129,8 +147,21 @@ public class SalesOrderController {
         if (!"DRAFT".equals(existing.getStatus())) {
             return ApiResponse.error("只有草稿状态的订单才能修改");
         }
+        SalesOrder order = mapToOrder(body);
         order.setId(id);
         orderMapper.updateById(order);
+
+        // 更新明细：删旧插新
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> itemList = (List<Map<String, Object>>) body.get("lines");
+        if (itemList != null) {
+            orderItemMapper.delete(new LambdaQueryWrapper<SalesOrderItem>().eq(SalesOrderItem::getOrderId, id));
+            for (Map<String, Object> itemMap : itemList) {
+                SalesOrderItem item = mapToOrderItem(itemMap);
+                item.setOrderId(id);
+                orderItemMapper.insert(item);
+            }
+        }
         return ApiResponse.ok();
     }
 

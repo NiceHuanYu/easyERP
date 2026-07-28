@@ -25,8 +25,16 @@ public class MaterialController {
     @SaCheckPermission("base-data:material:view")
     @GetMapping
     public ApiResponse<PageResult<Material>> list(PageParam param,
+                                                   @RequestParam(required = false) String code,
+                                                   @RequestParam(required = false) String name,
+                                                   @RequestParam(required = false) Integer category,
+                                                   @RequestParam(required = false) Integer status,
                                                    @RequestParam(required = false) String keyword) {
         LambdaQueryWrapper<Material> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(code)) wrapper.eq(Material::getCode, code);
+        if (StringUtils.hasText(name)) wrapper.like(Material::getName, name);
+        if (category != null) wrapper.eq(Material::getCategory, category);
+        if (status != null) wrapper.eq(Material::getStatus, status);
         if (StringUtils.hasText(keyword)) {
             wrapper.and(w -> w.like(Material::getName, keyword)
                     .or().like(Material::getCode, keyword));
