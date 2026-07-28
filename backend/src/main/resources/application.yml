@@ -8,6 +8,7 @@ spring:
 app:
   init:
     create-admin: true
+    admin-password: ${ADMIN_INIT_PASSWORD:admin123}
 
 server:
   port: 8080

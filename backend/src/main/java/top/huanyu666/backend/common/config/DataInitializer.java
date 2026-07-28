@@ -27,6 +27,9 @@ public class DataInitializer implements ApplicationRunner {
     @Value("${app.init.create-admin:true}")
     private boolean createAdmin;
 
+    @Value("${app.init.admin-password:admin123}")
+    private String adminPassword;
+
     @Override
     public void run(ApplicationArguments args) {
         long count = userMapper.selectCount(new LambdaQueryWrapper<>());
@@ -41,7 +44,7 @@ public class DataInitializer implements ApplicationRunner {
             return;
         }
 
-        String passwordHash = BCrypt.hashpw("admin123");
+        String passwordHash = BCrypt.hashpw(adminPassword);
         SysUser admin = new SysUser();
         admin.setId(1L);
         admin.setUsername("admin");
@@ -56,6 +59,6 @@ public class DataInitializer implements ApplicationRunner {
         userRole.setRoleId(1L);
         userRoleMapper.insert(userRole);
 
-        log.info("管理员账号已创建: admin / admin123");
+        log.info("管理员账号已创建: admin，请立即修改密码");
     }
 }
