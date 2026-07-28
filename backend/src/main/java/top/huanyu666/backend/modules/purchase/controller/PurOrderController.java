@@ -14,6 +14,8 @@ import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.purchase.entity.*;
 import top.huanyu666.backend.modules.purchase.mapper.*;
 import top.huanyu666.backend.modules.purchase.service.PurOrderService;
+import top.huanyu666.backend.modules.base.entity.Supplier;
+import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
 
 import java.util.List;
 import cn.dev33.satoken.annotation.SaCheckPermission;
@@ -29,6 +31,7 @@ public class PurOrderController {
 
     private final PurOrderMapper orderMapper;
     private final PurOrderService orderService;
+    private final SupplierMapper supplierMapper;
 
     // ==================== 基础 CRUD ====================
 
@@ -47,6 +50,12 @@ public class PurOrderController {
         qw.orderByDesc(PurOrder::getCreateTime);
         Page<PurOrder> page = orderMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        page.getRecords().forEach(o -> {
+            if (o.getSupplierId() != null) {
+                Supplier s = supplierMapper.selectById(o.getSupplierId());
+                o.setSupplierName(s != null ? s.getName() : "");
+            }
+        });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 

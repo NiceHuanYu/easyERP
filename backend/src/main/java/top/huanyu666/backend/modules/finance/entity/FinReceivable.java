@@ -24,4 +24,7 @@ public class FinReceivable extends BaseEntity {
     private BigDecimal receivedAmount;
 
     private String status;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String customerName;
 }

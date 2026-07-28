@@ -26,4 +26,9 @@ public class PurReceiving extends BaseEntity {
     private String status;
 
     private String remark;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String orderNo;
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String supplierName;
 }

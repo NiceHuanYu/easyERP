@@ -12,6 +12,8 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.finance.entity.FinPayable;
 import top.huanyu666.backend.modules.finance.mapper.FinPayableMapper;
+import top.huanyu666.backend.modules.base.entity.Supplier;
+import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -27,6 +29,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 public class FinPayableController {
 
     private final FinPayableMapper payableMapper;
+    private final SupplierMapper supplierMapper;
 
     @SaCheckPermission("finance:order:view")
     @GetMapping
@@ -43,6 +46,12 @@ public class FinPayableController {
         qw.orderByDesc(FinPayable::getCreateTime);
         Page<FinPayable> page = payableMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        page.getRecords().forEach(p -> {
+            if (p.getSupplierId() != null) {
+                Supplier s = supplierMapper.selectById(p.getSupplierId());
+                p.setSupplierName(s != null ? s.getName() : "");
+            }
+        });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 

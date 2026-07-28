@@ -15,6 +15,8 @@ import top.huanyu666.backend.modules.finance.service.FinPayableService;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.purchase.entity.*;
 import top.huanyu666.backend.modules.purchase.mapper.*;
+import top.huanyu666.backend.modules.base.entity.Supplier;
+import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -36,6 +38,7 @@ public class PurReceivingController {
     private final PurOrderItemMapper orderItemMapper;
     private final InvStockService stockService;
     private final FinPayableService payableService;
+    private final SupplierMapper supplierMapper;
 
     // ==================== 基础 CRUD ====================
 
@@ -54,6 +57,18 @@ public class PurReceivingController {
         qw.orderByDesc(PurReceiving::getCreateTime);
         Page<PurReceiving> page = receivingMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        page.getRecords().forEach(r -> {
+            if (r.getOrderId() != null) {
+                PurOrder o = orderMapper.selectById(r.getOrderId());
+                if (o != null) {
+                    r.setOrderNo(o.getOrderNo());
+                    if (o.getSupplierId() != null) {
+                        Supplier s = supplierMapper.selectById(o.getSupplierId());
+                        r.setSupplierName(s != null ? s.getName() : "");
+                    }
+                }
+            }
+        });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 

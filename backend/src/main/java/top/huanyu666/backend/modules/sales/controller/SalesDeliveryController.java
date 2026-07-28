@@ -51,6 +51,12 @@ public class SalesDeliveryController {
                 new Page<>(param.getPage(), param.getSize()),
                 new LambdaQueryWrapper<SalesDelivery>().orderByDesc(SalesDelivery::getCreateTime)
         );
+        for (SalesDelivery d : page.getRecords()) {
+            if (d.getOrderId() != null) {
+                SalesOrder order = orderMapper.selectById(d.getOrderId());
+                d.setOrderNo(order != null ? order.getOrderNo() : "");
+            }
+        }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 

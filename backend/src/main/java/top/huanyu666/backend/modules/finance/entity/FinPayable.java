@@ -24,4 +24,7 @@ public class FinPayable extends BaseEntity {
     private BigDecimal paidAmount;
 
     private String status;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String supplierName;
 }

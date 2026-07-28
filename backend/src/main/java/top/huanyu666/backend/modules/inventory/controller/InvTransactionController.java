@@ -11,6 +11,8 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.inventory.entity.InvTransaction;
 import top.huanyu666.backend.modules.inventory.mapper.InvTransactionMapper;
+import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 
 import java.time.LocalDateTime;
 
@@ -24,6 +26,7 @@ import java.time.LocalDateTime;
 public class InvTransactionController {
 
     private final InvTransactionMapper transactionMapper;
+    private final MaterialMapper materialMapper;
 
     @SaCheckPermission("inventory:stock:view")
     @GetMapping
@@ -52,6 +55,10 @@ public class InvTransactionController {
         qw.orderByDesc(InvTransaction::getCreateTime);
         Page<InvTransaction> page = transactionMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        page.getRecords().forEach(t -> {
+            Material m = materialMapper.selectById(t.getMaterialId());
+            t.setMaterialName(m != null ? m.getName() : "");
+        });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 }

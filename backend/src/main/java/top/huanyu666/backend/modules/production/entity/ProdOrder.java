@@ -33,4 +33,7 @@ public class ProdOrder extends BaseEntity {
     private String status;
 
     private String remark;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String materialName;
 }

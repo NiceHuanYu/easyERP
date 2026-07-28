@@ -57,6 +57,10 @@ public class InvStockController {
         qw.orderByDesc(InvStock::getCreateTime);
         Page<InvStock> page = stockMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        page.getRecords().forEach(s -> {
+            Material m = materialMapper.selectById(s.getMaterialId());
+            s.setMaterialName(m != null ? m.getName() : "");
+        });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 }

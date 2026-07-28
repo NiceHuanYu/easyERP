@@ -36,4 +36,7 @@ public class InvTransaction implements Serializable {
     private LocalDateTime createTime;
 
     private Long createBy;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String materialName;
 }

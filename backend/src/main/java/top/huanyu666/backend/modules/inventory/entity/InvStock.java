@@ -32,4 +32,7 @@ public class InvStock implements Serializable {
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String materialName;
 }

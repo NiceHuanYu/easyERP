@@ -12,6 +12,8 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.finance.entity.FinReceivable;
 import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
+import top.huanyu666.backend.modules.base.entity.Customer;
+import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -27,6 +29,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 public class FinReceivableController {
 
     private final FinReceivableMapper receivableMapper;
+    private final CustomerMapper customerMapper;
 
     @SaCheckPermission("finance:order:view")
     @GetMapping
@@ -43,6 +46,12 @@ public class FinReceivableController {
         qw.orderByDesc(FinReceivable::getCreateTime);
         Page<FinReceivable> page = receivableMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        page.getRecords().forEach(r -> {
+            if (r.getCustomerId() != null) {
+                Customer c = customerMapper.selectById(r.getCustomerId());
+                r.setCustomerName(c != null ? c.getName() : "");
+            }
+        });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 

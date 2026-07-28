@@ -58,6 +58,12 @@ public class ProdOrderController {
         qw.orderByDesc(ProdOrder::getCreateTime);
         Page<ProdOrder> page = orderMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        page.getRecords().forEach(o -> {
+            if (o.getMaterialId() != null) {
+                Material m = materialMapper.selectById(o.getMaterialId());
+                o.setMaterialName(m != null ? m.getName() : "");
+            }
+        });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
