@@ -194,12 +194,14 @@ async function fetchOrderOptions() {
 
 // ==================== 类型 ====================
 interface DeliveryLine {
+  orderItemId: number
   materialId: number
   materialName: string
   orderQuantity: number
   deliverableQuantity: number
-  deliveryQuantity: number
   price: number
+  unit: string
+  deliveryQuantity: number
   subtotal: number
 }
 

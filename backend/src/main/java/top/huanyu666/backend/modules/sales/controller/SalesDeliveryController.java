@@ -18,8 +18,12 @@ import top.huanyu666.backend.modules.sales.entity.*;
 import top.huanyu666.backend.modules.sales.mapper.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 销售发货单管理
@@ -51,11 +55,28 @@ public class SalesDeliveryController {
     }
 
     /**
-     * 创建发货单
+     * 详情（含明细）
+     */
+    @SaCheckPermission("delivery:order:view")
+    @GetMapping("/{id}")
+    public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
+        SalesDelivery delivery = deliveryMapper.selectById(id);
+        if (delivery == null) throw new BusinessException("发货单不存在");
+        List<SalesDeliveryItem> items = deliveryItemMapper.selectList(
+                new LambdaQueryWrapper<SalesDeliveryItem>().eq(SalesDeliveryItem::getDeliveryId, id));
+        Map<String, Object> result = new HashMap<>();
+        result.put("delivery", delivery);
+        result.put("items", items);
+        return ApiResponse.ok(result);
+    }
+
+    /**
+     * 创建发货单 + 明细
      */
     @SaCheckPermission("delivery:order:create")
     @PostMapping
-    public ApiResponse<SalesDelivery> create(@RequestBody SalesDelivery delivery) {
+    public ApiResponse<SalesDelivery> create(@RequestBody Map<String, Object> body) {
+        SalesDelivery delivery = mapToDelivery(body);
         delivery.setStatus("DRAFT");
         if (delivery.getDeliveryNo() == null || delivery.getDeliveryNo().isBlank()) {
             delivery.setDeliveryNo(CodeGenerator.generate("SD", () -> {
@@ -68,24 +89,35 @@ public class SalesDeliveryController {
             }));
         }
         deliveryMapper.insert(delivery);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
+        if (lines != null) {
+            saveDeliveryItems(delivery.getId(), lines);
+        }
         return ApiResponse.ok(delivery);
     }
 
     /**
-     * 修改发货单
+     * 修改发货单 + 明细
      */
     @SaCheckPermission("delivery:order:create")
     @PutMapping("/{id}")
-    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SalesDelivery delivery) {
+    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         SalesDelivery existing = deliveryMapper.selectById(id);
-        if (existing == null) {
-            throw new BusinessException("发货单不存在");
-        }
-        if (!"DRAFT".equals(existing.getStatus())) {
-            throw new BusinessException("只有草稿状态的发货单才能修改");
-        }
+        if (existing == null) throw new BusinessException("发货单不存在");
+        if (!"DRAFT".equals(existing.getStatus())) throw new BusinessException("只有草稿状态的发货单才能修改");
+
+        SalesDelivery delivery = mapToDelivery(body);
         delivery.setId(id);
         deliveryMapper.updateById(delivery);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
+        if (lines != null) {
+            deliveryItemMapper.delete(new LambdaQueryWrapper<SalesDeliveryItem>().eq(SalesDeliveryItem::getDeliveryId, id));
+            saveDeliveryItems(id, lines);
+        }
         return ApiResponse.ok();
     }
 
@@ -117,6 +149,9 @@ public class SalesDeliveryController {
         SalesOrder order = orderMapper.selectById(delivery.getOrderId());
         if (order == null) {
             throw new BusinessException("关联的销售订单不存在");
+        }
+        if (!"APPROVED".equals(order.getStatus())) {
+            throw new BusinessException("销售订单未审核，无法发货: " + order.getOrderNo());
         }
 
         for (SalesDeliveryItem deliveryItem : deliveryItems) {
@@ -182,5 +217,34 @@ public class SalesDeliveryController {
         deliveryItemMapper.delete(new LambdaQueryWrapper<SalesDeliveryItem>().eq(SalesDeliveryItem::getDeliveryId, id));
         deliveryMapper.deleteById(id);
         return ApiResponse.ok();
+    }
+
+    // ---- helpers ----
+
+    @SuppressWarnings("unchecked")
+    private SalesDelivery mapToDelivery(Map<String, Object> body) {
+        SalesDelivery d = new SalesDelivery();
+        if (body.containsKey("id")) d.setId(Long.valueOf(body.get("id").toString()));
+        if (body.containsKey("deliveryNo")) d.setDeliveryNo((String) body.get("deliveryNo"));
+        if (body.containsKey("orderId")) d.setOrderId(Long.valueOf(body.get("orderId").toString()));
+        if (body.containsKey("warehouseId")) d.setWarehouseId(Long.valueOf(body.get("warehouseId").toString()));
+        if (body.containsKey("deliveryDate")) d.setDeliveryDate(LocalDate.parse(body.get("deliveryDate").toString()));
+        if (body.containsKey("status")) d.setStatus((String) body.get("status"));
+        if (body.containsKey("remark")) d.setRemark((String) body.get("remark"));
+        return d;
+    }
+
+    private void saveDeliveryItems(Long deliveryId, List<Map<String, Object>> lines) {
+        for (Map<String, Object> line : lines) {
+            SalesDeliveryItem item = new SalesDeliveryItem();
+            item.setDeliveryId(deliveryId);
+            if (line.containsKey("id")) item.setId(Long.valueOf(line.get("id").toString()));
+            item.setOrderItemId(Long.valueOf(line.get("orderItemId").toString()));
+            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            item.setQuantity(new BigDecimal(line.get("deliveryQuantity").toString()));
+            item.setCreateTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            deliveryItemMapper.insert(item);
+        }
     }
 }

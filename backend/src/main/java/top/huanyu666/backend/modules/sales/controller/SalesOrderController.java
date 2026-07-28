@@ -22,6 +22,7 @@ import top.huanyu666.backend.modules.sales.mapper.SalesOrderMapper;
 import top.huanyu666.backend.modules.sales.service.SalesOrderService;
 
 import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
+import top.huanyu666.backend.modules.sales.dto.DeliverableItem;
 import top.huanyu666.backend.modules.base.entity.Material;
 
 import java.util.*;
@@ -210,7 +211,7 @@ public class SalesOrderController {
      */
     @SaCheckPermission("sales:order:view")
     @GetMapping("/{id}/deliverable-items")
-    public ApiResponse<List<SalesOrderItem>> deliverableItems(@PathVariable Long id) {
+    public ApiResponse<List<DeliverableItem>> deliverableItems(@PathVariable Long id) {
         return ApiResponse.ok(orderService.getDeliverableItems(id));
     }
 
@@ -220,19 +221,18 @@ public class SalesOrderController {
     @SaCheckPermission("delivery:order:create")
     @PostMapping("/{id}/create-delivery")
     public ApiResponse<Map<String, Object>> createDelivery(@PathVariable Long id, @RequestBody SalesDelivery delivery) {
-        List<SalesOrderItem> deliverableItems = orderService.getDeliverableItems(id);
+        List<DeliverableItem> deliverableItems = orderService.getDeliverableItems(id);
 
         delivery.setOrderId(id);
         delivery.setStatus("DRAFT");
         deliveryMapper.insert(delivery);
 
-        for (SalesOrderItem orderItem : deliverableItems) {
+        for (DeliverableItem di : deliverableItems) {
             SalesDeliveryItem deliveryItem = new SalesDeliveryItem();
             deliveryItem.setDeliveryId(delivery.getId());
-            deliveryItem.setOrderItemId(orderItem.getId());
-            deliveryItem.setMaterialId(orderItem.getMaterialId());
-            deliveryItem.setQuantity(orderItem.getQuantity().subtract(
-                    orderItem.getShippedQty() != null ? orderItem.getShippedQty() : java.math.BigDecimal.ZERO));
+            deliveryItem.setOrderItemId(di.getOrderItemId());
+            deliveryItem.setMaterialId(di.getMaterialId());
+            deliveryItem.setQuantity(di.getDeliverableQuantity());
             deliveryItemMapper.insert(deliveryItem);
         }
 

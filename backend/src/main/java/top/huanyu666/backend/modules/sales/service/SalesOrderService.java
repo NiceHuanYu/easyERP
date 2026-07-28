@@ -8,12 +8,16 @@ import org.springframework.transaction.annotation.Transactional;
 import top.huanyu666.backend.common.enums.DocumentStatus;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.utils.CodeGenerator;
+import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
+import top.huanyu666.backend.modules.sales.dto.DeliverableItem;
 import top.huanyu666.backend.modules.sales.entity.SalesOrder;
 import top.huanyu666.backend.modules.sales.entity.SalesOrderItem;
 import top.huanyu666.backend.modules.sales.mapper.SalesOrderItemMapper;
 import top.huanyu666.backend.modules.sales.mapper.SalesOrderMapper;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -26,6 +30,7 @@ public class SalesOrderService {
 
     private final SalesOrderMapper orderMapper;
     private final SalesOrderItemMapper orderItemMapper;
+    private final MaterialMapper materialMapper;
 
     /**
      * 创建订单（含明细）
@@ -129,18 +134,31 @@ public class SalesOrderService {
     }
 
     /**
-     * 查询可发货明细（已审核订单中 shippedQty < quantity 的明细）
+     * 查询可发货明细（含物料名、可发货数量）
      */
-    public List<SalesOrderItem> getDeliverableItems(Long orderId) {
+    public List<DeliverableItem> getDeliverableItems(Long orderId) {
         SalesOrder order = getOrder(orderId);
         if (!DocumentStatus.APPROVED.eq(order.getStatus())) {
             throw new BusinessException("只有已审核状态的订单才能查询可发货明细");
         }
-        return orderItemMapper.selectList(
+        List<SalesOrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<SalesOrderItem>()
                         .eq(SalesOrderItem::getOrderId, orderId)
-                        .apply("shipped_qty < quantity")
-        );
+                        .apply("shipped_qty < quantity"));
+        List<DeliverableItem> result = new ArrayList<>();
+        for (SalesOrderItem item : items) {
+            Material material = materialMapper.selectById(item.getMaterialId());
+            BigDecimal shipped = item.getShippedQty() != null ? item.getShippedQty() : BigDecimal.ZERO;
+            result.add(new DeliverableItem(
+                    item.getId(),
+                    item.getMaterialId(),
+                    material != null ? material.getName() : "未知物料",
+                    item.getQuantity(),
+                    item.getQuantity().subtract(shipped),
+                    item.getPrice(),
+                    item.getUnit()));
+        }
+        return result;
     }
 
     private SalesOrder getOrder(Long id) {

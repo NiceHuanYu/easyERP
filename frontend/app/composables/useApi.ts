@@ -1,5 +1,5 @@
 import { useAuthStore } from '../../stores/auth'
-import { toPageParam, fromPageResult, type PageData } from '../../shared/types/api'
+import { toPageParam, fromPageResult, ApiError, type PageData } from '../../shared/types/api'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
 
@@ -32,7 +32,7 @@ async function request<T>(
     { method, body, headers },
   )
   if (res.code !== 200) {
-    throw new Error(res.message || `请求失败 (${res.code})`)
+    throw new ApiError(res.message || `请求失败 (${res.code})`, res.code)
   }
   return res.data
 }
