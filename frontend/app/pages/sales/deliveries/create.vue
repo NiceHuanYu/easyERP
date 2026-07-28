@@ -328,9 +328,6 @@ function prefillFromOrder(orderId: string) {
 onMounted(async () => {
   fetchWarehouseOptions()
   fetchOrderOptions()
-  if (!route.query.id) {
-    form.deliveryNo = generateCode('delivery')
-  }
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }

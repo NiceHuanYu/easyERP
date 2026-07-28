@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
@@ -56,6 +57,16 @@ public class SalesDeliveryController {
     @PostMapping
     public ApiResponse<SalesDelivery> create(@RequestBody SalesDelivery delivery) {
         delivery.setStatus("DRAFT");
+        if (delivery.getDeliveryNo() == null || delivery.getDeliveryNo().isBlank()) {
+            delivery.setDeliveryNo(CodeGenerator.generate("SD", () -> {
+                SalesDelivery last = deliveryMapper.selectOne(
+                        new LambdaQueryWrapper<SalesDelivery>()
+                                .select(SalesDelivery::getDeliveryNo)
+                                .orderByDesc(SalesDelivery::getDeliveryNo)
+                                .last("LIMIT 1"));
+                return last != null ? last.getDeliveryNo() : null;
+            }));
+        }
         deliveryMapper.insert(delivery);
         return ApiResponse.ok(delivery);
     }

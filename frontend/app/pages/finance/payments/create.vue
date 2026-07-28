@@ -304,7 +304,6 @@ function handleCounterpartyChange() {
 
 // ── Init ───────────────────────────────────────────
 onMounted(() => {
-  form.paymentNo = generateCode('payment')
   fetchCustomerOptions()
   fetchSupplierOptions()
 })

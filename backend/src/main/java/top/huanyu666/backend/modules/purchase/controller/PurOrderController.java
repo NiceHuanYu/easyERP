@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
@@ -67,6 +68,16 @@ public class PurOrderController {
     @PostMapping
     public ApiResponse<PurOrder> create(@RequestBody PurOrder order) {
         order.setStatus("DRAFT");
+        if (order.getOrderNo() == null || order.getOrderNo().isBlank()) {
+            order.setOrderNo(CodeGenerator.generate("PO", () -> {
+                PurOrder last = orderMapper.selectOne(
+                        new LambdaQueryWrapper<PurOrder>()
+                                .select(PurOrder::getOrderNo)
+                                .orderByDesc(PurOrder::getOrderNo)
+                                .last("LIMIT 1"));
+                return last != null ? last.getOrderNo() : null;
+            }));
+        }
         orderMapper.insert(order);
         return ApiResponse.ok(order);
     }

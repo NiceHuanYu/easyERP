@@ -282,9 +282,6 @@ function prefillFromOrder(orderId: string) {
 // ==================== 初始化 ====================
 onMounted(() => {
   loadOptions()
-  if (!route.query.id) {
-    form.finishingNo = generateCode('finish')
-  }
   if (route.query.fromOrder) {
     prefillFromOrder(route.query.fromOrder as string)
   }

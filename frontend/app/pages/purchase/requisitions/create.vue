@@ -395,9 +395,6 @@ onMounted(() => {
   fetchEmployeeOptions()
   fetchMaterialOptions()
   fetchSupplierOptions()
-  if (!route.query.id) {
-    form.reqNo = generateCode('requisition')
-  }
   if (route.query.id) {
     loadRequisition(route.query.id as string)
   }

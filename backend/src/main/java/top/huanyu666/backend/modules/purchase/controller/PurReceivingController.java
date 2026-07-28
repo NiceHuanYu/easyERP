@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
@@ -60,6 +61,16 @@ public class PurReceivingController {
     @PostMapping
     public ApiResponse<PurReceiving> create(@RequestBody PurReceiving receiving) {
         receiving.setStatus("DRAFT");
+        if (receiving.getReceivingNo() == null || receiving.getReceivingNo().isBlank()) {
+            receiving.setReceivingNo(CodeGenerator.generate("RCV", () -> {
+                PurReceiving last = receivingMapper.selectOne(
+                        new LambdaQueryWrapper<PurReceiving>()
+                                .select(PurReceiving::getReceivingNo)
+                                .orderByDesc(PurReceiving::getReceivingNo)
+                                .last("LIMIT 1"));
+                return last != null ? last.getReceivingNo() : null;
+            }));
+        }
         receivingMapper.insert(receiving);
         return ApiResponse.ok(receiving);
     }

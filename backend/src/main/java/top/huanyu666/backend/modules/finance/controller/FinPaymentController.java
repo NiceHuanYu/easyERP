@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
@@ -50,6 +51,16 @@ public class FinPaymentController {
     @SaCheckPermission("finance:order:view")
     @PostMapping
     public ApiResponse<Void> create(@RequestBody FinPayment payment) {
+        if (payment.getPaymentNo() == null || payment.getPaymentNo().isBlank()) {
+            payment.setPaymentNo(CodeGenerator.generate("PAY", () -> {
+                FinPayment last = paymentMapper.selectOne(
+                        new LambdaQueryWrapper<FinPayment>()
+                                .select(FinPayment::getPaymentNo)
+                                .orderByDesc(FinPayment::getPaymentNo)
+                                .last("LIMIT 1"));
+                return last != null ? last.getPaymentNo() : null;
+            }));
+        }
         paymentMapper.insert(payment);
         return ApiResponse.ok();
     }

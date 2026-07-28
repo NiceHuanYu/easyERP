@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
@@ -53,6 +54,16 @@ public class PurRequisitionController {
     @PostMapping
     public ApiResponse<PurRequisition> create(@RequestBody PurRequisition requisition) {
         requisition.setStatus("DRAFT");
+        if (requisition.getRequisitionNo() == null || requisition.getRequisitionNo().isBlank()) {
+            requisition.setRequisitionNo(CodeGenerator.generate("PR", () -> {
+                PurRequisition last = requisitionMapper.selectOne(
+                        new LambdaQueryWrapper<PurRequisition>()
+                                .select(PurRequisition::getRequisitionNo)
+                                .orderByDesc(PurRequisition::getRequisitionNo)
+                                .last("LIMIT 1"));
+                return last != null ? last.getRequisitionNo() : null;
+            }));
+        }
         requisitionMapper.insert(requisition);
         return ApiResponse.ok(requisition);
     }

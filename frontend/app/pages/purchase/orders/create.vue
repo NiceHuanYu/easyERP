@@ -440,9 +440,6 @@ function prefillFromRequisition(reqId: string) {
 onMounted(() => {
   fetchSupplierOptions()
   fetchMaterialOptions()
-  if (!route.query.id) {
-    form.orderNo = generateCode('purchaseOrder')
-  }
   if (route.query.fromRequisition) {
     prefillFromRequisition(route.query.fromRequisition as string)
   }

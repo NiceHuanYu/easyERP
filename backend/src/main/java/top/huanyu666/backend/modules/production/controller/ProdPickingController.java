@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
@@ -57,6 +58,16 @@ public class ProdPickingController {
     @PostMapping
     public ApiResponse<ProdPicking> create(@RequestBody ProdPicking picking) {
         picking.setStatus("DRAFT");
+        if (picking.getPickingNo() == null || picking.getPickingNo().isBlank()) {
+            picking.setPickingNo(CodeGenerator.generate("PK", () -> {
+                ProdPicking last = pickingMapper.selectOne(
+                        new LambdaQueryWrapper<ProdPicking>()
+                                .select(ProdPicking::getPickingNo)
+                                .orderByDesc(ProdPicking::getPickingNo)
+                                .last("LIMIT 1"));
+                return last != null ? last.getPickingNo() : null;
+            }));
+        }
         pickingMapper.insert(picking);
         return ApiResponse.ok(picking);
     }

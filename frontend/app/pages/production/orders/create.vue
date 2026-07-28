@@ -343,9 +343,6 @@ function prefillFromSalesOrder(orderId: string) {
 // ==================== 初始化 ====================
 onMounted(() => {
   loadOptions()
-  if (!route.query.id) {
-    form.orderNo = generateCode('production')
-  }
   if (route.query.id) {
     loadOrder(route.query.id as string)
   }

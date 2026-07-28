@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import top.huanyu666.backend.common.utils.CodeGenerator;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
@@ -57,6 +58,16 @@ public class ProdFinishController {
     @PostMapping
     public ApiResponse<ProdFinish> create(@RequestBody ProdFinish finish) {
         finish.setStatus("DRAFT");
+        if (finish.getFinishNo() == null || finish.getFinishNo().isBlank()) {
+            finish.setFinishNo(CodeGenerator.generate("FI", () -> {
+                ProdFinish last = finishMapper.selectOne(
+                        new LambdaQueryWrapper<ProdFinish>()
+                                .select(ProdFinish::getFinishNo)
+                                .orderByDesc(ProdFinish::getFinishNo)
+                                .last("LIMIT 1"));
+                return last != null ? last.getFinishNo() : null;
+            }));
+        }
         finishMapper.insert(finish);
         return ApiResponse.ok(finish);
     }
