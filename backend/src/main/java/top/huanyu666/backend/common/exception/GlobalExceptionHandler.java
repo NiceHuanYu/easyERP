@@ -33,6 +33,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<Void> handleBusiness(BusinessException e) {
+        log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
         return ApiResponse.error(e.getCode(), e.getMessage());
     }
 
@@ -40,6 +41,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotLoginException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ApiResponse<Void> handleNotLogin(NotLoginException e) {
+        log.warn("未登录访问: {}", e.getMessage());
         return ApiResponse.error(401, "未登录或 token 已失效");
     }
 
@@ -47,6 +49,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotPermissionException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ApiResponse<Void> handleNotPermission(NotPermissionException e) {
+        log.warn("权限不足: {}", e.getMessage());
         return ApiResponse.error(403, "无操作权限");
     }
 

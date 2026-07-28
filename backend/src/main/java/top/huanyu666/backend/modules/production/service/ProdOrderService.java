@@ -167,6 +167,7 @@ public class ProdOrderService {
         }
         orderBomMapper.delete(new LambdaQueryWrapper<ProdOrderBom>().eq(ProdOrderBom::getOrderId, id));
         orderMapper.deleteById(id);
+        log.info("删除工单: orderId={}, orderNo={}", id, order.getOrderNo());
     }
 
     private ProdOrder getOrder(Long id) {

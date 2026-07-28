@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.modules.system.dto.LoginRequest;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final SysUserMapper userMapper;
@@ -36,12 +38,15 @@ public class AuthService {
                 new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.getUsername())
         );
         if (user == null || !BCrypt.checkpw(request.getPassword(), user.getPassword())) {
+            log.warn("登录失败: username={}, 原因=账号或密码错误", request.getUsername());
             throw new BusinessException("账号或密码错误");
         }
         if (user.getStatus() == 0) {
+            log.warn("登录失败: username={}, userId={}, 原因=账号已禁用", request.getUsername(), user.getId());
             throw new BusinessException("账号已被禁用");
         }
         StpUtil.login(user.getId());
+        log.info("登录成功: userId={}, username={}", user.getId(), user.getUsername());
         return StpUtil.getTokenValue();
     }
 

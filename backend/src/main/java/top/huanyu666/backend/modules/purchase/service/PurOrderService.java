@@ -93,6 +93,7 @@ public class PurOrderService {
         }
         orderItemMapper.delete(new LambdaQueryWrapper<PurOrderItem>().eq(PurOrderItem::getOrderId, id));
         orderMapper.deleteById(id);
+        log.info("删除采购订单: orderId={}, orderNo={}", id, order.getOrderNo());
     }
 
     private PurOrder getOrder(Long id) {
