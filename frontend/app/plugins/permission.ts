@@ -24,14 +24,29 @@ function checkPermission(
   const authStore = useAuthStore()
   const permissions: string[] = authStore.permissions ?? []
 
-  // If no permission data yet (e.g. still loading), don't remove the element
-  if (permissions.length === 0) return
-
-  // Super admin has all permissions
-  if (permissions.includes('*')) return
+  // 权限数据未加载完成 → 先隐藏，避免瞬间暴露未授权按钮
+  if (permissions.length === 0) {
+    hide(el)
+    return
+  }
 
   const hasPermission = required.some((perm) => permissions.includes(perm))
   if (!hasPermission) {
-    el.parentNode?.removeChild(el)
+    hide(el)
+  } else {
+    show(el)
   }
+}
+
+/** CSS 隐藏 + 标记 disabled，比 DOM 移除更难被 DevTools 绕过 */
+function hide(el: HTMLElement) {
+  el.style.display = 'none'
+  el.setAttribute('disabled', 'true')
+  el.setAttribute('aria-hidden', 'true')
+}
+
+function show(el: HTMLElement) {
+  el.style.display = ''
+  el.removeAttribute('disabled')
+  el.removeAttribute('aria-hidden')
 }
