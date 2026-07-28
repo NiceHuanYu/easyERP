@@ -13,10 +13,8 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.purchase.entity.*;
 import top.huanyu666.backend.modules.purchase.mapper.*;
+import top.huanyu666.backend.modules.purchase.service.PurOrderService;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 
@@ -30,9 +28,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 public class PurOrderController {
 
     private final PurOrderMapper orderMapper;
-    private final PurOrderItemMapper orderItemMapper;
-    private final PurReceivingMapper receivingMapper;
-    private final PurReceivingItemMapper receivingItemMapper;
+    private final PurOrderService orderService;
 
     // ==================== 基础 CRUD ====================
 
@@ -84,51 +80,12 @@ public class PurOrderController {
 
     // ==================== 业务操作 ====================
 
-    /**
-     * 生成收货单
-     */
     @SaCheckPermission("purchase:order:create")
     @PostMapping("/create-receiving/{id}")
     @Transactional
     public ApiResponse<PurReceiving> createReceiving(@PathVariable Long id,
                                                       @RequestBody PurReceiving receiving) {
-        PurOrder order = orderMapper.selectById(id);
-        if (order == null) {
-            throw new BusinessException("采购订单不存在");
-        }
-
-        // 查订单明细（未收完的）
-        LambdaQueryWrapper<PurOrderItem> itemQw = new LambdaQueryWrapper<>();
-        itemQw.eq(PurOrderItem::getOrderId, id);
-        itemQw.apply("quantity - received_qty > 0");
-        List<PurOrderItem> orderItems = orderItemMapper.selectList(itemQw);
-
-        if (orderItems.isEmpty()) {
-            throw new BusinessException("该订单没有待收货明细");
-        }
-
-        // 创建收货单
-        receiving.setOrderId(id);
-        receiving.setStatus("DRAFT");
-        receiving.setReceivingDate(LocalDate.now());
-        receivingMapper.insert(receiving);
-
-        // 创建收货明细
-        for (PurOrderItem orderItem : orderItems) {
-            BigDecimal remaining = orderItem.getQuantity().subtract(
-                    orderItem.getReceivedQty() != null ? orderItem.getReceivedQty() : BigDecimal.ZERO);
-            PurReceivingItem item = new PurReceivingItem();
-            item.setReceivingId(receiving.getId());
-            item.setOrderItemId(orderItem.getId());
-            item.setMaterialId(orderItem.getMaterialId());
-            item.setQuantity(remaining);
-            item.setCreateTime(LocalDateTime.now());
-            item.setUpdateTime(LocalDateTime.now());
-            receivingItemMapper.insert(item);
-        }
-
-        log.info("采购订单 {} 创建收货单 {}", order.getOrderNo(), receiving.getReceivingNo());
-        return ApiResponse.ok(receiving);
+        return ApiResponse.ok(orderService.createReceiving(id, receiving));
     }
 
     // ==================== 编辑/删除/下达 ====================
@@ -149,11 +106,7 @@ public class PurOrderController {
     @DeleteMapping("/{id}")
     @Transactional
     public ApiResponse<Void> delete(@PathVariable Long id) {
-        PurOrder order = orderMapper.selectById(id);
-        if (order == null) throw new BusinessException("采购订单不存在");
-        if (!"DRAFT".equals(order.getStatus())) throw new BusinessException("只有草稿状态可删除");
-        orderItemMapper.delete(new LambdaQueryWrapper<PurOrderItem>().eq(PurOrderItem::getOrderId, id));
-        orderMapper.deleteById(id);
+        orderService.delete(id);
         return ApiResponse.ok();
     }
 
@@ -161,12 +114,7 @@ public class PurOrderController {
     @PostMapping("/{id}/issue")
     @Transactional
     public ApiResponse<Void> issue(@PathVariable Long id) {
-        PurOrder order = orderMapper.selectById(id);
-        if (order == null) throw new BusinessException("采购订单不存在");
-        if (!"DRAFT".equals(order.getStatus()) && !"SUBMITTED".equals(order.getStatus()))
-            throw new BusinessException("只有草稿或已提交状态可下达");
-        order.setStatus("APPROVED");
-        orderMapper.updateById(order);
+        orderService.issue(id);
         return ApiResponse.ok();
     }
 }
