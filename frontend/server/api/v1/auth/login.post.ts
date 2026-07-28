@@ -11,10 +11,11 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
 
-  return await $fetch(`${config.backendUrl}${event.path}`, {
+  const res = await $fetch(`${config.backendUrl}${event.path}`, {
     method: 'POST',
     headers: forwardHeaders,
     body,
     ignoreResponseError: true,
   })
+  return res
 })

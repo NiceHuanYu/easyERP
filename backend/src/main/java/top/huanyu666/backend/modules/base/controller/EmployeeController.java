@@ -25,8 +25,16 @@ public class EmployeeController {
     @SaCheckPermission("base-data:employee:view")
     @GetMapping
     public ApiResponse<PageResult<Employee>> list(PageParam param,
+                                                   @RequestParam(required = false) String code,
+                                                   @RequestParam(required = false) String name,
+                                                   @RequestParam(required = false) String dept,
+                                                   @RequestParam(required = false) Integer status,
                                                    @RequestParam(required = false) String keyword) {
         LambdaQueryWrapper<Employee> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(code)) wrapper.eq(Employee::getCode, code);
+        if (StringUtils.hasText(name)) wrapper.like(Employee::getName, name);
+        if (StringUtils.hasText(dept)) wrapper.eq(Employee::getDept, dept);
+        if (status != null) wrapper.eq(Employee::getStatus, status);
         if (StringUtils.hasText(keyword)) {
             wrapper.and(w -> w.like(Employee::getName, keyword)
                     .or().like(Employee::getCode, keyword));

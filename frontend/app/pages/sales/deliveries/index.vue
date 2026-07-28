@@ -33,8 +33,8 @@
             clearable
             style="width: 140px"
           >
-            <el-option label="草稿" value="draft" />
-            <el-option label="已发货" value="shipped" />
+            <el-option label="草稿" value="DRAFT" />
+            <el-option label="已发货" value="CONFIRMED" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -83,12 +83,16 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="customerName" label="客户" width="180" />
+        <el-table-column label="客户" width="180">
+          <template #default="{ row }">
+            {{ getCustomerName(row.customerId) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="deliveryDate" label="发货日期" width="120" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'draft' ? 'info' : 'success'" size="small">
-              {{ row.status === 'draft' ? '草稿' : '已发货' }}
+            <el-tag :type="row.status === 'DRAFT' ? 'info' : 'success'" size="small">
+              {{ row.status === 'DRAFT' ? '草稿' : '已发货' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -103,7 +107,7 @@
             >
               查看
             </el-button>
-            <template v-if="row.status === 'draft'">
+            <template v-if="row.status === 'DRAFT'">
               <el-popconfirm
                 title="确认发货？"
                 confirm-button-text="确认"
@@ -159,7 +163,7 @@ interface Delivery {
   customerId: number
   customerName: string
   deliveryDate: string
-  status: 'draft' | 'shipped'
+  status: 'DRAFT' | 'CONFIRMED'
 }
 
 interface SearchForm {
@@ -179,6 +183,10 @@ async function fetchCustomerOptions() {
   } catch (e: any) {
     // options load silently
   }
+}
+
+function getCustomerName(id: number): string {
+  return customerOptions.value.find((c) => c.value === id)?.label ?? String(id)
 }
 
 // ==================== 搜索 ====================

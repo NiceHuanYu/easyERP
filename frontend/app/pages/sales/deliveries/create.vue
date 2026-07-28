@@ -181,6 +181,17 @@ async function fetchWarehouseOptions() {
   }
 }
 
+async function fetchOrderOptions() {
+  try {
+    const result = await api.page<{ id: number; orderNo: string }>(
+      '/sales/orders', 1, 200, { status: 'APPROVED' },
+    )
+    orderOptions.value = result.list.map((o) => ({ label: o.orderNo, value: o.id }))
+  } catch {
+    // options load silently
+  }
+}
+
 // ==================== 类型 ====================
 interface DeliveryLine {
   materialId: number
@@ -316,6 +327,7 @@ function prefillFromOrder(orderId: string) {
 // ==================== 初始化 ====================
 onMounted(async () => {
   fetchWarehouseOptions()
+  fetchOrderOptions()
   if (!route.query.id) {
     form.deliveryNo = generateCode('delivery')
   }

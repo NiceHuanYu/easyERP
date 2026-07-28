@@ -290,7 +290,7 @@ function onMaterialChange(_val: number | null) {
 }
 
 // ==================== 提交 ====================
-async function doSave(status: 'pending' | 'released') {
+async function doSave(status: 'DRAFT' | 'RELEASED') {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
@@ -303,11 +303,11 @@ async function doSave(status: 'pending' | 'released') {
     } else {
       await api.post('/production/orders', payload)
     }
-    if (status === 'released') {
+    if (status === 'RELEASED') {
       const savedId = id ?? (await api.get<{ id: number }>(`/production/orders/latest`)).id
       await api.post(`/production/orders/release/${savedId}`)
     }
-    const actionLabel = status === 'pending' ? '保存' : '下达'
+    const actionLabel = status === 'DRAFT' ? '保存' : '下达'
     ElMessage.success(`工单${actionLabel}成功`)
     router.push('/production/orders')
   } catch {
@@ -316,11 +316,11 @@ async function doSave(status: 'pending' | 'released') {
 }
 
 async function handleSave() {
-  await doSave('pending')
+  await doSave('DRAFT')
 }
 
 async function handleSaveAndRelease() {
-  await doSave('released')
+  await doSave('RELEASED')
 }
 
 // ==================== 编辑模式加载 ====================

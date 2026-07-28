@@ -26,8 +26,8 @@
             clearable
             style="width: 140px"
           >
-            <el-option label="草稿" value="draft" />
-            <el-option label="已领料" value="picked" />
+            <el-option label="草稿" value="DRAFT" />
+            <el-option label="已领料" value="CONFIRMED" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -82,8 +82,8 @@
         <el-table-column prop="pickingDate" label="领料日期" width="120" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'draft' ? 'info' : 'success'" size="small">
-              {{ row.status === 'draft' ? '草稿' : '已领料' }}
+            <el-tag :type="row.status === 'DRAFT' ? 'info' : 'success'" size="small">
+              {{ row.status === 'DRAFT' ? '草稿' : '已领料' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -97,7 +97,7 @@
             >
               查看
             </el-button>
-            <template v-if="row.status === 'draft'">
+            <template v-if="row.status === 'DRAFT'">
               <el-popconfirm
                 title="确认领料？"
                 confirm-button-text="确认"
@@ -152,7 +152,7 @@ interface Picking {
   orderNo: string
   materialSummary: string
   pickingDate: string
-  status: 'draft' | 'picked'
+  status: 'DRAFT' | 'CONFIRMED'
 }
 
 interface SearchForm {

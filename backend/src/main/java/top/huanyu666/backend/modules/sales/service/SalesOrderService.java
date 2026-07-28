@@ -60,8 +60,10 @@ public class SalesOrderService {
 
         orderMapper.insert(order);
 
-        for (SalesOrderItem item : items) {
+        for (int i = 0; i < items.size(); i++) {
+            SalesOrderItem item = items.get(i);
             item.setOrderId(order.getId());
+            if (item.getLineNo() == null) item.setLineNo(i + 1);
             orderItemMapper.insert(item);
         }
 

@@ -98,7 +98,11 @@
       >
         <el-table-column type="selection" width="50" align="center" />
         <el-table-column prop="orderNo" label="订单编号" width="160" />
-        <el-table-column prop="customerName" label="客户" width="160" />
+        <el-table-column label="客户" width="160">
+          <template #default="{ row }">
+            {{ getCustomerName(row.customerId) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="orderDate" label="订单日期" width="120" />
         <el-table-column prop="deliveryDate" label="交货日期" width="120" />
         <el-table-column prop="totalAmount" label="金额总计" width="140" align="right">
@@ -113,9 +117,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" min-width="300" fixed="right">
           <template #default="{ row }">
-            <template v-if="row.status === 'draft'">
+            <template v-if="row.status === 'DRAFT'">
               <el-button
                 v-permission="'sales:order:update'"
                 type="primary"
@@ -161,7 +165,7 @@
               </el-popconfirm>
             </template>
 
-            <template v-else-if="row.status === 'submitted'">
+            <template v-else-if="row.status === 'SUBMITTED'">
               <el-button type="primary" size="small" link @click="handleView(row)">
                 查看
               </el-button>
@@ -182,6 +186,12 @@
                   </el-button>
                 </template>
               </el-popconfirm>
+            </template>
+
+            <template v-else-if="row.status === 'APPROVED'">
+              <el-button type="primary" size="small" link @click="handleView(row)">
+                查看
+              </el-button>
               <el-popconfirm
                 title="确认反审核该订单？"
                 confirm-button-text="确认"
@@ -199,12 +209,6 @@
                   </el-button>
                 </template>
               </el-popconfirm>
-            </template>
-
-            <template v-else-if="row.status === 'approved'">
-              <el-button type="primary" size="small" link @click="handleView(row)">
-                查看
-              </el-button>
               <el-popconfirm
                 title="确认生成生产工单？"
                 confirm-button-text="确认"
@@ -227,7 +231,7 @@
               </el-button>
             </template>
 
-            <template v-else-if="row.status === 'closed'">
+            <template v-else-if="row.status === 'CLOSED'">
               <el-button type="primary" size="small" link @click="handleView(row)">
                 查看
               </el-button>
@@ -268,7 +272,7 @@ interface SalesOrder {
   orderDate: string
   deliveryDate: string
   totalAmount: number
-  status: 'draft' | 'submitted' | 'approved' | 'closed'
+  status: string
 }
 
 interface SearchForm {
@@ -280,10 +284,10 @@ interface SearchForm {
 
 // ==================== 状态工具 ====================
 const statusMap: Record<string, string> = {
-  draft: '草稿',
-  submitted: '已提交',
-  approved: '已审核',
-  closed: '已关闭',
+  DRAFT: '草稿',
+  SUBMITTED: '已提交',
+  APPROVED: '已审核',
+  CLOSED: '已关闭',
 }
 
 function statusLabel(s: string): string {
@@ -292,10 +296,10 @@ function statusLabel(s: string): string {
 
 function statusTagType(s: string): 'info' | 'warning' | 'success' | 'default' {
   const map: Record<string, 'info' | 'warning' | 'success' | 'default'> = {
-    draft: 'info',
-    submitted: 'warning',
-    approved: 'success',
-    closed: 'default',
+    DRAFT: 'info',
+    SUBMITTED: 'warning',
+    APPROVED: 'success',
+    CLOSED: 'default',
   }
   return map[s] ?? 'default'
 }
@@ -310,6 +314,10 @@ async function fetchCustomerOptions() {
   } catch (e: any) {
     // options load silently; the dropdown just stays empty
   }
+}
+
+function getCustomerName(id: number): string {
+  return customerOptions.value.find((c) => c.value === id)?.label ?? String(id)
 }
 
 // ==================== 搜索 ====================

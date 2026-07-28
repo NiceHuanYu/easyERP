@@ -279,9 +279,16 @@ public class SalesOrderController {
         SalesOrder o = new SalesOrder();
         if (map.containsKey("orderNo")) o.setOrderNo((String) map.get("orderNo"));
         if (map.containsKey("customerId")) o.setCustomerId(toLong(map.get("customerId")));
-        if (map.containsKey("orderDate")) o.setOrderDate(java.time.LocalDate.parse((String) map.get("orderDate")));
-        if (map.containsKey("deliveryDate") && map.get("deliveryDate") != null)
-            o.setDeliveryDate(java.time.LocalDate.parse((String) map.get("deliveryDate")));
+        if (map.containsKey("orderDate")) {
+            Object od = map.get("orderDate");
+            if (od != null && !od.toString().isBlank())
+                o.setOrderDate(java.time.LocalDate.parse(od.toString()));
+        }
+        if (map.containsKey("deliveryDate")) {
+            Object dd = map.get("deliveryDate");
+            if (dd != null && !dd.toString().isBlank())
+                o.setDeliveryDate(java.time.LocalDate.parse(dd.toString()));
+        }
         if (map.containsKey("remark")) o.setRemark((String) map.get("remark"));
         return o;
     }

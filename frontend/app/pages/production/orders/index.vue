@@ -42,11 +42,9 @@
             clearable
             style="width: 160px"
           >
-            <el-option label="待排产" value="pending" />
-            <el-option label="已下达" value="released" />
-            <el-option label="执行中" value="running" />
-            <el-option label="完工待入库" value="finishing" />
-            <el-option label="已完成" value="completed" />
+            <el-option label="待排产" value="DRAFT" />
+            <el-option label="已下达" value="RELEASED" />
+            <el-option label="已完成" value="COMPLETED" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -119,7 +117,7 @@
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <!-- 待排产 -->
-            <template v-if="row.status === 'pending'">
+            <template v-if="row.status === 'DRAFT'">
               <el-button
                 v-permission="'production:order:update'"
                 type="primary"
@@ -166,22 +164,7 @@
             </template>
 
             <!-- 已下达 -->
-            <template v-else-if="row.status === 'released'">
-              <el-button type="primary" size="small" link @click="handleView(row)">
-                查看
-              </el-button>
-              <el-button
-                type="success"
-                size="small"
-                link
-                @click="handleCreatePicking(row)"
-              >
-                创建领料单
-              </el-button>
-            </template>
-
-            <!-- 执行中 -->
-            <template v-else-if="row.status === 'running'">
+            <template v-else-if="row.status === 'RELEASED'">
               <el-button type="primary" size="small" link @click="handleView(row)">
                 查看
               </el-button>
@@ -212,15 +195,8 @@
               </el-popconfirm>
             </template>
 
-            <!-- 完工待入库 -->
-            <template v-else-if="row.status === 'finishing'">
-              <el-button type="primary" size="small" link @click="handleView(row)">
-                查看
-              </el-button>
-            </template>
-
             <!-- 已完成 -->
-            <template v-else-if="row.status === 'completed'">
+            <template v-else-if="row.status === 'COMPLETED'">
               <el-button type="primary" size="small" link @click="handleView(row)">
                 查看
               </el-button>
@@ -265,7 +241,7 @@ interface ProductionOrder {
   finishedQuantity: number
   planStartDate: string
   planEndDate: string
-  status: 'pending' | 'released' | 'running' | 'finishing' | 'completed'
+  status: string
 }
 
 interface SearchForm {
@@ -277,11 +253,9 @@ interface SearchForm {
 
 // ==================== 状态工具 ====================
 const statusMap: Record<string, string> = {
-  pending: '待排产',
-  released: '已下达',
-  running: '执行中',
-  finishing: '完工待入库',
-  completed: '已完成',
+  DRAFT: '待排产',
+  RELEASED: '已下达',
+  COMPLETED: '已完成',
 }
 
 function statusLabel(s: string): string {
@@ -290,11 +264,9 @@ function statusLabel(s: string): string {
 
 function statusTagType(s: string): 'info' | 'warning' | 'success' | '' {
   const map: Record<string, 'info' | 'warning' | 'success' | ''> = {
-    pending: 'info',
-    released: 'warning',
-    running: '',
-    finishing: 'warning',
-    completed: 'success',
+    DRAFT: 'info',
+    RELEASED: 'warning',
+    COMPLETED: 'success',
   }
   return map[s] ?? ''
 }

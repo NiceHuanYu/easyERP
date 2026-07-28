@@ -79,7 +79,7 @@
           </el-table-column>
           <el-table-column prop="materialName" label="物料" min-width="180" />
           <el-table-column prop="orderQuantity" label="工单数量" width="120" align="right" />
-          <el-table-column prop="finishedQuantity" label="已入库数量" width="120" align="right">
+          <el-table-column prop="finishedQuantity" label="已入库数量" width="160" align="right">
             <template #default="{ row }">
               <span :class="{ 'fulfilled': row.finishedQuantity >= row.orderQuantity }">
                 {{ row.finishedQuantity }}
@@ -142,11 +142,11 @@ const warehouseOptions = ref<{ label: string; value: number }[]>([])
 async function loadOptions() {
   try {
     const [orders, warehouses] = await Promise.all([
-      api.get<{ id: number; orderNo: string; productName: string; status: string }[]>('/production/orders?status=running&status=finishing'),
+      api.get<{ id: number; orderNo: string; productName: string; status: string }[]>('/production/orders?status=RELEASED'),
       api.page<{ id: number; name: string }>('/base/warehouses', 1, 1000),
     ])
     orderOptions.value = orders.map((o) => {
-      const statusLabel = o.status === 'running' ? '执行中' : '完工待入库'
+      const statusLabel = o.status === 'RELEASED' ? '已下达' : o.status
       return { label: `${o.orderNo} / ${o.productName}（${statusLabel}）`, value: o.id }
     })
     warehouseOptions.value = warehouses.list.map((w) => ({ label: w.name, value: w.id }))
@@ -233,7 +233,7 @@ function validateLines(): boolean {
 }
 
 // ==================== 提交 ====================
-async function doSubmit(status: 'draft' | 'finished') {
+async function doSubmit(status: 'DRAFT' | 'CONFIRMED') {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   if (!validateLines()) return
@@ -253,11 +253,11 @@ async function doSubmit(status: 'draft' | 'finished') {
       await api.put(`/production/finishings/${route.query.id}`, payload)
     } else {
       const result = await api.post<{ id: number }>('/production/finishings', payload)
-      if (status === 'finished') {
+      if (status === 'CONFIRMED') {
         await api.post(`/production/finishings/confirm/${result.id}`)
       }
     }
-    const actionLabel = status === 'draft' ? '保存草稿' : '确认入库'
+    const actionLabel = status === 'DRAFT' ? '保存草稿' : '确认入库'
     ElMessage.success(`${actionLabel}成功`)
     router.push('/production/finishings')
   } catch {
@@ -266,11 +266,11 @@ async function doSubmit(status: 'draft' | 'finished') {
 }
 
 async function handleSaveDraft() {
-  await doSubmit('draft')
+  await doSubmit('DRAFT')
 }
 
 async function handleConfirm() {
-  await doSubmit('finished')
+  await doSubmit('CONFIRMED')
 }
 
 // ==================== 预填逻辑 ====================

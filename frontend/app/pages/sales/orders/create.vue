@@ -104,16 +104,13 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="数量" width="140">
+          <el-table-column label="数量" width="160">
             <template #default="{ row, $index }">
-              <el-input-number
-                v-model="row.quantity"
-                :min="0"
-                :precision="0"
-                style="width: 100%"
-                @change="recalcLine($index)"
-              />
+              <el-input-number v-model="row.quantity" :min="0" :precision="0" style="width:100%" @change="recalcLine($index)" />
             </template>
+          </el-table-column>
+          <el-table-column label="单位" width="80">
+            <template #default="{ row }">{{ row.unit }}</template>
           </el-table-column>
           <el-table-column label="单价" width="140">
             <template #default="{ row, $index }">
@@ -200,7 +197,7 @@ const isEdit = computed(() => !!route.query.id)
 
 // ==================== 选项数据 ====================
 const customerOptions = ref<{ label: string; value: number }[]>([])
-const materialOptions = ref<{ label: string; value: number }[]>([])
+const materialOptions = ref<{ label: string; value: number; unit: string }[]>([])
 
 async function fetchCustomerOptions() {
   try {
@@ -213,8 +210,8 @@ async function fetchCustomerOptions() {
 
 async function fetchMaterialOptions() {
   try {
-    const result = await api.page<{ id: number; name: string; spec: string }>('/base/materials', 1, 1000)
-    materialOptions.value = result.list.map((item) => ({ label: item.name, value: item.id }))
+    const result = await api.page<{ id: number; name: string; spec: string; unit: string }>('/base/materials', 1, 1000)
+    materialOptions.value = result.list.map((item) => ({ label: item.name, value: item.id, unit: item.unit || '' }))
   } catch (e: any) {
     // options load silently
   }
@@ -225,6 +222,7 @@ interface OrderLine {
   materialId: number | null
   materialName: string
   quantity: number
+  unit: string
   price: number
   amount: number
 }
@@ -242,6 +240,7 @@ function createEmptyLine(): OrderLine {
     materialId: null,
     materialName: '',
     quantity: 0,
+    unit: '',
     price: 0,
     amount: 0,
   }
@@ -300,8 +299,10 @@ function onMaterialChange(index: number, val: number | null) {
   if (val) {
     const mat = materialOptions.value.find((m) => m.value === val)
     form.lines[index].materialName = mat?.label ?? ''
+    form.lines[index].unit = mat?.unit ?? ''
   } else {
     form.lines[index].materialName = ''
+    form.lines[index].unit = ''
   }
   recalcLine(index)
 }
@@ -368,6 +369,7 @@ async function handleSubmit() {
       orderId = route.query.id as string
     } else {
       const created = await api.post<{ id: number }>('/sales/orders', form)
+      if (!created?.id) throw new Error('创建订单失败：未返回订单ID')
       orderId = created.id
     }
     await api.post(`/sales/orders/${orderId}/submit`)

@@ -31,6 +31,9 @@ async function request<T>(
     `/api/v1${path}${qs}`,
     { method, body, headers },
   )
+  if (res.code !== 200) {
+    throw new Error(res.message || `请求失败 (${res.code})`)
+  }
   return res.data
 }
 

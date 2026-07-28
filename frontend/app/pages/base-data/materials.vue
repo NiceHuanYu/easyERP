@@ -10,7 +10,7 @@
           <el-input v-model="searchForm.name" placeholder="请输入物料名称" clearable />
         </el-form-item>
         <el-form-item label="物料分类">
-          <el-select v-model="searchForm.category" placeholder="请选择分类" clearable>
+          <el-select v-model="searchForm.category" placeholder="请选择分类" clearable style="width: 120px">
             <el-option label="原材料" :value="1" />
             <el-option label="半成品" :value="2" />
             <el-option label="成品" :value="3" />
@@ -18,7 +18,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 100px">
             <el-option label="启用" :value="1" />
             <el-option label="禁用" :value="0" />
           </el-select>
@@ -169,7 +169,7 @@ const searchForm = reactive({
   code: '',
   name: '',
   category: undefined as number | undefined,
-  status: '',
+  status: undefined as number | undefined,
 })
 
 const form = reactive({
@@ -207,7 +207,7 @@ async function fetchData() {
       code: searchForm.code || undefined,
       name: searchForm.name || undefined,
       category: searchForm.category || undefined,
-      status: searchForm.status || undefined,
+      status: searchForm.status ?? undefined,
     })
     tableData.value = result.list
     pagination.total = result.total
@@ -227,7 +227,7 @@ function handleReset() {
   searchForm.code = ''
   searchForm.name = ''
   searchForm.category = undefined
-  searchForm.status = ''
+  searchForm.status = undefined
   pagination.page = 1
   fetchData()
 }

@@ -11,7 +11,7 @@
 
     <!-- 操作按钮 -->
     <div v-if="order" class="action-bar">
-      <template v-if="order.status === 'pending'">
+      <template v-if="order.status === 'DRAFT'">
         <el-button
           v-permission="'production:order:update'"
           type="primary"
@@ -31,16 +31,10 @@
         </el-popconfirm>
       </template>
 
-      <template v-else-if="order.status === 'released'">
-        <el-button type="success" @click="handleCreatePicking">创建领料单</el-button>
-        <el-popconfirm title="确认开始执行？" @confirm="handleStart">
-          <template #reference>
-            <el-button type="primary">开始执行</el-button>
-          </template>
-        </el-popconfirm>
-      </template>
-
-      <template v-else-if="order.status === 'running'">
+      <template v-else-if="order.status === 'RELEASED'">
+        <el-button type="primary" @click="router.push(`/production/orders/create?id=${order.id}`)">
+          查看
+        </el-button>
         <el-button type="success" @click="handleCreatePicking">创建领料单</el-button>
         <el-popconfirm title="确认完工入库？" @confirm="handleFinish">
           <template #reference>
@@ -49,8 +43,10 @@
         </el-popconfirm>
       </template>
 
-      <template v-else-if="order.status === 'finishing'">
-        <el-button type="primary" @click="handleCreateFinishing">创建入库单</el-button>
+      <template v-else-if="order.status === 'COMPLETED'">
+        <el-button type="primary" @click="router.push(`/production/orders/create?id=${order.id}`)">
+          查看
+        </el-button>
       </template>
     </div>
 
@@ -123,8 +119,8 @@
             <el-table-column prop="warehouseName" label="领料仓库" width="140" />
             <el-table-column prop="status" label="状态" width="100" align="center">
               <template #default="{ row }">
-                <el-tag :type="row.status === 'draft' ? 'info' : 'success'" size="small">
-                  {{ row.status === 'draft' ? '草稿' : '已领料' }}
+                <el-tag :type="row.status === 'DRAFT' ? 'info' : 'success'" size="small">
+                  {{ row.status === 'DRAFT' ? '草稿' : '已领料' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -153,8 +149,8 @@
             <el-table-column prop="quantity" label="入库数量" width="120" align="right" />
             <el-table-column prop="status" label="状态" width="100" align="center">
               <template #default="{ row }">
-                <el-tag :type="row.status === 'draft' ? 'info' : 'success'" size="small">
-                  {{ row.status === 'draft' ? '草稿' : '已入库' }}
+                <el-tag :type="row.status === 'DRAFT' ? 'info' : 'success'" size="small">
+                  {{ row.status === 'DRAFT' ? '草稿' : '已入库' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -208,11 +204,9 @@ const route = useRoute()
 
 // ==================== 状态工具 ====================
 const statusMap: Record<string, string> = {
-  pending: '待排产',
-  released: '已下达',
-  running: '执行中',
-  finishing: '完工待入库',
-  completed: '已完成',
+  DRAFT: '待排产',
+  RELEASED: '已下达',
+  COMPLETED: '已完成',
 }
 
 function statusLabel(s: string): string {
@@ -221,11 +215,9 @@ function statusLabel(s: string): string {
 
 function statusTagType(s: string): 'info' | 'warning' | 'success' | '' {
   const map: Record<string, 'info' | 'warning' | 'success' | ''> = {
-    pending: 'info',
-    released: 'warning',
-    running: '',
-    finishing: 'warning',
-    completed: 'success',
+    DRAFT: 'info',
+    RELEASED: 'warning',
+    COMPLETED: 'success',
   }
   return map[s] ?? ''
 }
@@ -243,7 +235,7 @@ interface Order {
   planStartDate: string
   planEndDate: string
   workshopName: string
-  status: 'pending' | 'released' | 'running' | 'finishing' | 'completed'
+  status: string
   remark: string
   createdBy: string
   createdAt: string
@@ -263,7 +255,7 @@ interface Picking {
   pickingNo: string
   pickingDate: string
   warehouseName: string
-  status: 'draft' | 'picked'
+  status: 'DRAFT' | 'CONFIRMED'
 }
 
 interface FinishingRecord {
@@ -272,7 +264,7 @@ interface FinishingRecord {
   finishingDate: string
   warehouseName: string
   quantity: number
-  status: 'draft' | 'finished'
+  status: 'DRAFT' | 'CONFIRMED'
 }
 
 interface History {
@@ -333,16 +325,6 @@ async function handleRelease() {
   }
 }
 
-async function handleStart() {
-  try {
-    await api.put(`/production/orders/${route.params.id}`, { status: 'running' })
-    ElMessage.success('工单已开始执行')
-    loadOrder(route.params.id as string)
-  } catch {
-    ElMessage.error('操作失败')
-  }
-}
-
 async function handleFinish() {
   try {
     await api.post(`/production/orders/${route.params.id}/finish`)
@@ -355,10 +337,6 @@ async function handleFinish() {
 
 function handleCreatePicking() {
   router.push(`/production/pickings/create?fromOrder=${route.params.id}`)
-}
-
-function handleCreateFinishing() {
-  router.push(`/production/finishings/create?fromOrder=${route.params.id}`)
 }
 
 // ==================== 初始化 ====================

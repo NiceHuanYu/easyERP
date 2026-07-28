@@ -41,10 +41,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(credentials: LoginCredentials): Promise<void> {
-    const res = await $fetch<{ code: number; data: string }>('/api/v1/auth/login', {
+    const res = await $fetch<{ code: number; data: string; message?: string }>('/api/v1/auth/login', {
       method: 'POST',
       body: credentials,
     })
+    if (res.code !== 200 || !res.data) {
+      throw new Error(res.message || '登录失败')
+    }
     token.value = res.data
     await fetchUserInfo()
   }
