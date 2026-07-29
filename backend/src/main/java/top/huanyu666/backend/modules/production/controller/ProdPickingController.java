@@ -12,6 +12,8 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
@@ -33,6 +35,8 @@ public class ProdPickingController {
     private final ProdPickingMapper pickingMapper;
     private final ProdPickingItemMapper pickingItemMapper;
     private final ProdOrderBomMapper orderBomMapper;
+    private final ProdOrderMapper orderMapper;
+    private final MaterialMapper materialMapper;
     private final InvStockService stockService;
 
     // ==================== 基础 CRUD ====================

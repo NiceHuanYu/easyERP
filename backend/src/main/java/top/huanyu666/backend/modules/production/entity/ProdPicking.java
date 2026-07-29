@@ -1,5 +1,6 @@
 package top.huanyu666.backend.modules.production.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -26,4 +27,12 @@ public class ProdPicking extends BaseEntity {
     private String status;
 
     private String remark;
+
+    /** 工单号（列表展示用，非 DB 字段） */
+    @TableField(exist = false)
+    private String orderNo;
+
+    /** 领料物料汇总（列表展示用，非 DB 字段） */
+    @TableField(exist = false)
+    private String materialSummary;
 }

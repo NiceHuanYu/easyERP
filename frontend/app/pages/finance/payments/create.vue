@@ -71,11 +71,7 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="银行账户" prop="bankAccount">
-              <el-select v-model="form.bankAccount" placeholder="请选择银行账户" style="width: 100%">
-                <el-option label="工商银行 6222****8891" value="工商银行 6222****8891" />
-                <el-option label="建设银行 6217****5623" value="建设银行 6217****5623" />
-                <el-option label="中国银行 6216****3401" value="中国银行 6216****3401" />
-              </el-select>
+              <el-input v-model="form.bankAccount" placeholder="请输入银行账户" />
             </el-form-item>
           </el-col>
           <el-col :span="8">

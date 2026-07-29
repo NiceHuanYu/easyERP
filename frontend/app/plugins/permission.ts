@@ -24,9 +24,9 @@ function checkPermission(
   const authStore = useAuthStore()
   const permissions: string[] = authStore.permissions ?? []
 
-  // 权限数据未加载完成 → 先隐藏，避免瞬间暴露未授权按钮
+  // 权限数据未加载完成 → 占位不可点击，避免闪烁
   if (permissions.length === 0) {
-    hide(el)
+    dim(el)
     return
   }
 
@@ -38,6 +38,14 @@ function checkPermission(
   }
 }
 
+/** 权限未加载时半透明占位，避免按钮闪烁 */
+function dim(el: HTMLElement) {
+  el.style.opacity = '0.4'
+  el.style.pointerEvents = 'none'
+  el.setAttribute('disabled', 'true')
+  el.setAttribute('aria-hidden', 'true')
+}
+
 /** CSS 隐藏 + 标记 disabled，比 DOM 移除更难被 DevTools 绕过 */
 function hide(el: HTMLElement) {
   el.style.display = 'none'
@@ -47,6 +55,8 @@ function hide(el: HTMLElement) {
 
 function show(el: HTMLElement) {
   el.style.display = ''
+  el.style.opacity = ''
+  el.style.pointerEvents = ''
   el.removeAttribute('disabled')
   el.removeAttribute('aria-hidden')
 }

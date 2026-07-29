@@ -208,6 +208,14 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
     }
   }
 
+  // 三级路径：追加"详情"或"编辑"等
+  if (parts.length >= 3) {
+    const parentPath = '/' + parts.slice(0, 2).join('/')
+    if (menuTitleMap[parentPath]) {
+      crumbs.push({ title: '详情', path: route.path })
+    }
+  }
+
   return crumbs
 })
 

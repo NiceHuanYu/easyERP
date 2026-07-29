@@ -2,6 +2,7 @@ package top.huanyu666.backend.modules.production.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -157,17 +158,14 @@ public class ProdFinishController {
                     item.getQuantity(), finish.getFinishNo(), "FINISH_IN");
         }
 
-        // 更新工单完工数量
-        ProdOrder order = orderMapper.selectById(finish.getOrderId());
-        if (order != null) {
-            BigDecimal totalFinishQty = items.stream()
-                    .map(ProdFinishItem::getQuantity)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal currentFinish = order.getFinishQuantity() != null
-                    ? order.getFinishQuantity() : BigDecimal.ZERO;
-            order.setFinishQuantity(currentFinish.add(totalFinishQty));
-            orderMapper.updateById(order);
-        }
+        // 更新工单完工数量（原子操作，防止并发覆盖）
+        BigDecimal totalFinishQty = items.stream()
+                .map(ProdFinishItem::getQuantity)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        orderMapper.update(null,
+                new LambdaUpdateWrapper<ProdOrder>()
+                        .eq(ProdOrder::getId, finish.getOrderId())
+                        .setSql("finish_quantity = COALESCE(finish_quantity, 0) + " + totalFinishQty));
 
         finish.setStatus("CONFIRMED");
         finishMapper.updateById(finish);
