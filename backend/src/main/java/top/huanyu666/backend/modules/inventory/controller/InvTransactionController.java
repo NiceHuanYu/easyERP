@@ -15,6 +15,7 @@ import top.huanyu666.backend.modules.base.entity.Material;
 import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 库存流水管理
@@ -55,10 +56,13 @@ public class InvTransactionController {
         qw.orderByDesc(InvTransaction::getCreateTime);
         Page<InvTransaction> page = transactionMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
-        page.getRecords().forEach(t -> {
-            Material m = materialMapper.selectById(t.getMaterialId());
-            t.setMaterialName(m != null ? m.getName() : "");
-        });
+        // 批量查物料名，避免 N+1
+        if (!page.getRecords().isEmpty()) {
+            List<Long> materialIds = page.getRecords().stream().map(InvTransaction::getMaterialId).distinct().toList();
+            java.util.Map<Long, String> nameMap = materialMapper.selectBatchIds(materialIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Material::getId, Material::getName, (a, b) -> a));
+            page.getRecords().forEach(t -> t.setMaterialName(nameMap.getOrDefault(t.getMaterialId(), "")));
+        }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 }

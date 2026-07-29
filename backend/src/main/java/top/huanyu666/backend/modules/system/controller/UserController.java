@@ -11,7 +11,9 @@ import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.system.entity.SysUser;
+import top.huanyu666.backend.modules.system.entity.SysUserRole;
 import top.huanyu666.backend.modules.system.mapper.SysUserMapper;
+import top.huanyu666.backend.modules.system.mapper.SysUserRoleMapper;
 
 import java.util.Map;
 
@@ -24,6 +26,7 @@ import java.util.Map;
 public class UserController {
 
     private final SysUserMapper userMapper;
+    private final SysUserRoleMapper userRoleMapper;
 
     @GetMapping
     @SaCheckPermission("system:user:view")
@@ -74,6 +77,7 @@ public class UserController {
     @DeleteMapping("/{id}")
     @SaCheckPermission("system:user:delete")
     public ApiResponse<Void> delete(@PathVariable Long id) {
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
         userMapper.deleteById(id);
         return ApiResponse.ok();
     }

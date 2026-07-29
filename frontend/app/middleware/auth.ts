@@ -1,8 +1,11 @@
 import { useAuthStore } from '../../stores/auth'
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  // Allow access to login page without authentication
-  if (to.path === '/login') return
+  // Allow access to login page; redirect logged-in users to home
+  if (to.path === '/login') {
+    if (authStore.isLoggedIn) return navigateTo('/')
+    return
+  }
 
   const authStore = useAuthStore()
 

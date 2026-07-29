@@ -223,7 +223,7 @@ async function fetchSupplierOptions() {
 
 const statusTagMap: Record<string, 'warning' | 'success' | 'info'> = {
   '未核销': 'warning',
-  '部分核销': '',
+  '部分核销': 'warning' as const,
   '已核销': 'success',
 }
 

@@ -272,17 +272,19 @@ async function doSave(status: 'DRAFT' | 'RELEASED') {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
-  const payload = { ...form }
+  const payload = { ...form, status }
 
   try {
     const id = route.query.id as string | undefined
+    let savedId: number
     if (id) {
       await api.put(`/production/orders/${id}`, payload)
+      savedId = Number(id)
     } else {
-      await api.post('/production/orders', payload)
+      const result = await api.post<{ id: number }>('/production/orders', payload)
+      savedId = result.id
     }
     if (status === 'RELEASED') {
-      const savedId = id ?? (await api.get<{ id: number }>(`/production/orders/latest`)).id
       await api.post(`/production/orders/release/${savedId}`)
     }
     const actionLabel = status === 'DRAFT' ? '保存' : '下达'

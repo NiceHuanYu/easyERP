@@ -36,10 +36,10 @@
             clearable
             style="width: 200px"
           >
-            <el-option label="草稿" value="draft" />
-            <el-option label="已提交" value="submitted" />
-            <el-option label="已审核" value="approved" />
-            <el-option label="已关闭" value="closed" />
+            <el-option label="草稿" value="DRAFT" />
+            <el-option label="已提交" value="SUBMITTED" />
+            <el-option label="已审核" value="APPROVED" />
+            <el-option label="已关闭" value="CLOSED" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -379,9 +379,7 @@ function handleReset() {
   handleSearch()
 }
 
-watch([() => pagination.page, () => pagination.pageSize], () => {
-  fetchData()
-})
+// 分页变化通过模板 @current-change/@size-change 事件触发 fetchData，无需额外 watch
 
 // ==================== 行操作 ====================
 const router = useRouter()

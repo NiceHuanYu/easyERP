@@ -323,17 +323,13 @@ async function handleSubmit() {
   if (!validateLines()) return
 
   try {
-    const payload = { ...form, status: 'CONFIRMED', totalAmount: totalAmount.value }
+    const payload = { ...form, totalAmount: totalAmount.value }
     if (isEdit.value) {
       await api.put(`/purchase/receivings/${route.query.id}`, payload)
     } else {
-      const result = await api.post<any>('/purchase/receivings', payload)
-      // Auto-confirm if creating new
-      if (result.id) {
-        await api.post(`/purchase/receivings/confirm/${result.id}`)
-      }
+      await api.post<any>('/purchase/receivings', payload)
     }
-    ElMessage.success('收货确认成功')
+    ElMessage.success(isEdit.value ? '保存成功' : '创建成功')
     router.push('/purchase/receivings')
   } catch {
     ElMessage.error('提交失败')

@@ -168,6 +168,7 @@ async function fetchData() {
     const query: Record<string, string | number | undefined> = {}
     if (searchForm.materialId) query.materialId = searchForm.materialId
     if (searchForm.warehouseId) query.warehouseId = searchForm.warehouseId
+    if (searchForm.onlyWithStock) query.minQuantity = 0
 
     const result = await api.page<StockItem>(
       '/inventory/stock',
@@ -175,11 +176,7 @@ async function fetchData() {
       pagination.pageSize,
       query,
     )
-    let list = result.list
-    if (searchForm.onlyWithStock) {
-      list = list.filter((item) => item.quantity > 0)
-    }
-    tableData.value = list
+    tableData.value = result.list
     pagination.total = result.total
   } catch (e: any) {
     ElMessage.error(e?.message || '加载失败')

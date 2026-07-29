@@ -4,12 +4,16 @@ import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import top.huanyu666.backend.common.model.ApiResponse;
+
+import java.time.format.DateTimeParseException;
 
 /**
  * 全局异常处理器
@@ -58,6 +62,33 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ApiResponse<Void> handleNoResource(NoResourceFoundException e) {
         return ApiResponse.error(404, "资源不存在");
+    }
+
+    /** GET 请求参数校验 */
+    @ExceptionHandler(BindException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleBind(BindException e) {
+        String msg = e.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .reduce((a, b) -> a + "; " + b)
+                .orElse("请求参数校验失败");
+        return ApiResponse.error(400, msg);
+    }
+
+    /** 请求体 JSON 解析失败 */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleNotReadable(HttpMessageNotReadableException e) {
+        log.warn("请求体解析失败: {}", e.getMessage());
+        return ApiResponse.error(400, "请求体格式错误");
+    }
+
+    /** 日期格式错误 */
+    @ExceptionHandler(DateTimeParseException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleDateTimeParse(DateTimeParseException e) {
+        log.warn("日期格式错误: {}", e.getMessage());
+        return ApiResponse.error(400, "日期格式不正确，请使用 yyyy-MM-dd 格式");
     }
 
     /** 兜底异常 */

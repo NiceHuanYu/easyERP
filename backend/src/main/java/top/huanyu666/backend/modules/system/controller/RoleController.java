@@ -7,7 +7,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.modules.system.entity.SysRole;
+import top.huanyu666.backend.modules.system.entity.SysRolePermission;
+import top.huanyu666.backend.modules.system.entity.SysUserRole;
 import top.huanyu666.backend.modules.system.mapper.SysRoleMapper;
+import top.huanyu666.backend.modules.system.mapper.SysRolePermissionMapper;
+import top.huanyu666.backend.modules.system.mapper.SysUserRoleMapper;
 
 import java.util.List;
 
@@ -20,6 +24,8 @@ import java.util.List;
 public class RoleController {
 
     private final SysRoleMapper roleMapper;
+    private final SysRolePermissionMapper rolePermissionMapper;
+    private final SysUserRoleMapper userRoleMapper;
 
     @GetMapping
     @SaCheckPermission("system:role:view")
@@ -47,6 +53,8 @@ public class RoleController {
     @DeleteMapping("/{id}")
     @SaCheckPermission("system:role:delete")
     public ApiResponse<Void> delete(@PathVariable Long id) {
+        rolePermissionMapper.delete(new LambdaQueryWrapper<SysRolePermission>().eq(SysRolePermission::getRoleId, id));
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getRoleId, id));
         roleMapper.deleteById(id);
         return ApiResponse.ok();
     }

@@ -86,6 +86,12 @@ public class SalesOrderService {
         if (!DocumentStatus.DRAFT.eq(order.getStatus())) {
             throw new BusinessException("只有草稿状态的订单才能提交");
         }
+        // 校验订单有明细行
+        long itemCount = orderItemMapper.selectCount(
+                new LambdaQueryWrapper<SalesOrderItem>().eq(SalesOrderItem::getOrderId, id));
+        if (itemCount == 0) {
+            throw new BusinessException("订单无明细，无法提交");
+        }
         order.setStatus(DocumentStatus.SUBMITTED.getCode());
         orderMapper.updateById(order);
         log.info("提交销售订单: orderId={}", id);
@@ -127,6 +133,14 @@ public class SalesOrderService {
         SalesOrder order = getOrder(id);
         if (!DocumentStatus.APPROVED.eq(order.getStatus())) {
             throw new BusinessException("只有已审核状态的订单才能关闭");
+        }
+        // 校验订单已全部发货
+        List<SalesOrderItem> items = orderItemMapper.selectList(
+                new LambdaQueryWrapper<SalesOrderItem>().eq(SalesOrderItem::getOrderId, id));
+        boolean allShipped = items.stream().allMatch(item ->
+                item.getShippedQty() != null && item.getShippedQty().compareTo(item.getQuantity()) >= 0);
+        if (!allShipped) {
+            throw new BusinessException("订单尚有未发货明细，无法关闭");
         }
         order.setStatus(DocumentStatus.CLOSED.getCode());
         orderMapper.updateById(order);

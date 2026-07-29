@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useAuthStore } from './auth'
 
 interface DictItem {
   label: string
@@ -25,9 +26,14 @@ export const useDictStore = defineStore('dict', () => {
   // ---- Actions ----
   async function fetchAllDicts(): Promise<void> {
     try {
+      const authStore = useAuthStore()
+      const headers: Record<string, string> = {}
+      if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
       const res = await $fetch<{ code: number; data: Record<string, DictItem[]> }>(
         '/api/v1/system/dicts/all',
+        { headers },
       )
+      if (res.code !== 200 || !res.data) throw new Error('加载字典失败')
       dictMap.value = res.data
       loaded.value = true
     } catch (error: any) {

@@ -90,7 +90,7 @@
           <el-icon><Plus /></el-icon>
           新建销售订单
         </el-button>
-        <el-button type="success" @click="navigateTo('/purchase/requisitions')">
+        <el-button type="success" @click="navigateTo('/purchase/requisitions/create')">
           <el-icon><Plus /></el-icon>
           新建采购申请
         </el-button>
@@ -152,13 +152,17 @@ async function fetchStats() {
     stats.inventoryAlerts = count ?? 0
   } catch { /* keep default */ }
 
-  // 应收+应付总额
+  // 应收+应付总额（取未核销金额汇总）
   try {
     const [ar, ap] = await Promise.all([
-      api.page('/finance/receivables', 1, 1),
-      api.page('/finance/payables', 1, 1),
+      api.page('/finance/receivables', 1, 1000),
+      api.page('/finance/payables', 1, 1000),
     ])
-    stats.totalARAP = (ar.total + ap.total) * 10000
+    const arUnpaid = (ar.list || []).reduce((sum: number, item: any) =>
+      sum + ((item.receivableAmount || 0) - (item.receivedAmount || 0)), 0)
+    const apUnpaid = (ap.list || []).reduce((sum: number, item: any) =>
+      sum + ((item.payableAmount || 0) - (item.paidAmount || 0)), 0)
+    stats.totalARAP = arUnpaid + apUnpaid
   } catch { /* keep default */ }
 }
 

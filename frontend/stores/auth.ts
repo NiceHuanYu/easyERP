@@ -65,6 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
       '/api/v1/auth/user-info',
       { headers: token.value ? { Authorization: `Bearer ${token.value}` } : {} },
     )
+    if (res.code !== 200 || !res.data) throw new Error(res.message || '获取用户信息失败')
     const d = res.data
     if (!d) throw new Error('后端返回空用户信息，请确认 token 有效')
     userInfo.value = {

@@ -82,6 +82,7 @@ public class DictController {
     @SaCheckPermission("system:dict:delete")
     @DeleteMapping("/types/{id}")
     public ApiResponse<Void> deleteType(@PathVariable Long id) {
+        dictItemMapper.delete(new LambdaQueryWrapper<SysDictItem>().eq(SysDictItem::getDictId, id));
         dictMapper.deleteById(id);
         return ApiResponse.ok();
     }

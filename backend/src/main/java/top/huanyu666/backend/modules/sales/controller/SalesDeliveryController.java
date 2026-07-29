@@ -56,7 +56,17 @@ public class SalesDeliveryController {
             @RequestParam(required = false) String status) {
         LambdaQueryWrapper<SalesDelivery> qw = new LambdaQueryWrapper<>();
         if (deliveryNo != null && !deliveryNo.isBlank()) qw.like(SalesDelivery::getDeliveryNo, deliveryNo);
-        if (customerId != null) qw.eq(SalesDelivery::getOrderId, customerId);
+        if (customerId != null) {
+            // 按客户ID查询：先查该客户的所有订单ID，再按订单ID过滤发货单
+            List<SalesOrder> customerOrders = orderMapper.selectList(
+                    new LambdaQueryWrapper<SalesOrder>().eq(SalesOrder::getCustomerId, customerId)
+            );
+            List<Long> orderIds = customerOrders.stream().map(SalesOrder::getId).toList();
+            if (orderIds.isEmpty()) {
+                return ApiResponse.ok(new PageResult<>(0L, param.getPage(), param.getSize(), List.of()));
+            }
+            qw.in(SalesDelivery::getOrderId, orderIds);
+        }
         if (status != null && !status.isBlank()) qw.eq(SalesDelivery::getStatus, status);
         qw.orderByDesc(SalesDelivery::getCreateTime);
         Page<SalesDelivery> page = deliveryMapper.selectPage(
