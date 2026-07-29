@@ -36,4 +36,7 @@ public class ProdOrder extends BaseEntity {
 
     @com.baomidou.mybatisplus.annotation.TableField(exist = false)
     private String materialName;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String salesOrderNo;
 }

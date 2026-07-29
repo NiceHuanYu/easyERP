@@ -32,7 +32,7 @@ public class MaterialController extends BaseBizController<Material, MaterialMapp
                                                    @RequestParam(required = false) Integer status,
                                                    @RequestParam(required = false) String keyword) {
         LambdaQueryWrapper<Material> w = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(code)) w.eq(Material::getCode, code);
+        if (StringUtils.hasText(code)) w.like(Material::getCode, code);
         if (StringUtils.hasText(name)) w.like(Material::getName, name);
         if (category != null) w.eq(Material::getCategory, category);
         if (status != null) w.eq(Material::getStatus, status);

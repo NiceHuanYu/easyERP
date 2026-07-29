@@ -32,7 +32,7 @@ public class EmployeeController extends BaseBizController<Employee, EmployeeMapp
                                                    @RequestParam(required = false) Integer status,
                                                    @RequestParam(required = false) String keyword) {
         LambdaQueryWrapper<Employee> w = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(code)) w.eq(Employee::getCode, code);
+        if (StringUtils.hasText(code)) w.like(Employee::getCode, code);
         if (StringUtils.hasText(name)) w.like(Employee::getName, name);
         if (StringUtils.hasText(dept)) w.eq(Employee::getDept, dept);
         if (status != null) w.eq(Employee::getStatus, status);

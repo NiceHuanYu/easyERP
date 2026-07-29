@@ -16,6 +16,8 @@ import top.huanyu666.backend.modules.finance.service.FinReceivableService;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.sales.entity.*;
 import top.huanyu666.backend.modules.sales.mapper.*;
+import top.huanyu666.backend.modules.base.entity.Customer;
+import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,21 +42,34 @@ public class SalesDeliveryController {
     private final SalesOrderItemMapper orderItemMapper;
     private final InvStockService invStockService;
     private final FinReceivableService finReceivableService;
+    private final CustomerMapper customerMapper;
 
     /**
      * 分页列表
      */
     @SaCheckPermission("delivery:order:view")
     @GetMapping
-    public ApiResponse<PageResult<SalesDelivery>> list(PageParam param) {
+    public ApiResponse<PageResult<SalesDelivery>> list(PageParam param,
+            @RequestParam(required = false) String deliveryNo,
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) String status) {
+        LambdaQueryWrapper<SalesDelivery> qw = new LambdaQueryWrapper<>();
+        if (deliveryNo != null && !deliveryNo.isBlank()) qw.like(SalesDelivery::getDeliveryNo, deliveryNo);
+        if (customerId != null) qw.eq(SalesDelivery::getOrderId, customerId);
+        if (status != null && !status.isBlank()) qw.eq(SalesDelivery::getStatus, status);
+        qw.orderByDesc(SalesDelivery::getCreateTime);
         Page<SalesDelivery> page = deliveryMapper.selectPage(
-                new Page<>(param.getPage(), param.getSize()),
-                new LambdaQueryWrapper<SalesDelivery>().orderByDesc(SalesDelivery::getCreateTime)
-        );
+                new Page<>(param.getPage(), param.getSize()), qw);
         for (SalesDelivery d : page.getRecords()) {
             if (d.getOrderId() != null) {
                 SalesOrder order = orderMapper.selectById(d.getOrderId());
-                d.setOrderNo(order != null ? order.getOrderNo() : "");
+                if (order != null) {
+                    d.setOrderNo(order.getOrderNo());
+                    if (order.getCustomerId() != null) {
+                        Customer c = customerMapper.selectById(order.getCustomerId());
+                        d.setCustomerName(c != null ? c.getName() : "");
+                    }
+                }
             }
         }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));

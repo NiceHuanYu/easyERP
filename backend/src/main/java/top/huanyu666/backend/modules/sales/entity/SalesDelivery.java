@@ -48,4 +48,7 @@ public class SalesDelivery extends BaseEntity {
     /** 关联查询字段（非表字段，列表展示用） */
     @com.baomidou.mybatisplus.annotation.TableField(exist = false)
     private String orderNo;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String customerName;
 }

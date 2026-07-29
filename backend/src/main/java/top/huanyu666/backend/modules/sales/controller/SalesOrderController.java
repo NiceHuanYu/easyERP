@@ -20,6 +20,8 @@ import top.huanyu666.backend.modules.sales.mapper.SalesDeliveryMapper;
 import top.huanyu666.backend.modules.sales.mapper.SalesOrderItemMapper;
 import top.huanyu666.backend.modules.sales.mapper.SalesOrderMapper;
 import top.huanyu666.backend.modules.sales.service.SalesOrderService;
+import top.huanyu666.backend.modules.base.entity.Customer;
+import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
 
 import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 import top.huanyu666.backend.modules.sales.dto.DeliverableItem;
@@ -42,6 +44,7 @@ public class SalesOrderController {
     private final SalesDeliveryItemMapper deliveryItemMapper;
     private final SalesOrderService orderService;
     private final MaterialMapper materialMapper;
+    private final CustomerMapper customerMapper;
 
     /**
      * 分页列表
@@ -57,6 +60,12 @@ public class SalesOrderController {
         qw.orderByDesc(SalesOrder::getCreateTime);
         Page<SalesOrder> page = orderMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        page.getRecords().forEach(o -> {
+            if (o.getCustomerId() != null) {
+                Customer c = customerMapper.selectById(o.getCustomerId());
+                o.setCustomerName(c != null ? c.getName() : "");
+            }
+        });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 

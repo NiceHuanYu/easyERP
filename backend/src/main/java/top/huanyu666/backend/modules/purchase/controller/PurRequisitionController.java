@@ -39,8 +39,10 @@ public class PurRequisitionController {
     @SaCheckPermission("purchase:order:view")
     @GetMapping
     public ApiResponse<PageResult<PurRequisition>> list(PageParam param,
+                                                         @RequestParam(required = false) String reqNo,
                                                          @RequestParam(required = false) String status) {
         LambdaQueryWrapper<PurRequisition> qw = new LambdaQueryWrapper<>();
+        if (reqNo != null && !reqNo.isBlank()) qw.like(PurRequisition::getRequisitionNo, reqNo);
         if (status != null && !status.isBlank()) {
             qw.eq(PurRequisition::getStatus, status);
         }

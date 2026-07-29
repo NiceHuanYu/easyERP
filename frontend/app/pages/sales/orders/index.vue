@@ -98,11 +98,7 @@
       >
         <el-table-column type="selection" width="50" align="center" />
         <el-table-column prop="orderNo" label="订单编号" width="160" />
-        <el-table-column label="客户" width="160">
-          <template #default="{ row }">
-            {{ getCustomerName(row.customerId) }}
-          </template>
-        </el-table-column>
+        <el-table-column prop="customerName" label="客户" width="160" />
         <el-table-column prop="orderDate" label="订单日期" width="120" />
         <el-table-column prop="deliveryDate" label="交货日期" width="120" />
         <el-table-column prop="totalAmount" label="金额总计" width="140" align="right">

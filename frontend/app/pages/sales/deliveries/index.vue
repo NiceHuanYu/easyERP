@@ -83,11 +83,7 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column label="客户" width="180">
-          <template #default="{ row }">
-            {{ getCustomerName(row.customerId) }}
-          </template>
-        </el-table-column>
+        <el-table-column prop="customerName" label="客户" width="180" />
         <el-table-column prop="deliveryDate" label="发货日期" width="120" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">

@@ -40,8 +40,12 @@ public class FinPaymentController {
 
     @SaCheckPermission("finance:order:view")
     @GetMapping
-    public ApiResponse<PageResult<FinPayment>> list(PageParam param) {
+    public ApiResponse<PageResult<FinPayment>> list(PageParam param,
+            @RequestParam(required = false) String paymentNo,
+            @RequestParam(required = false) String type) {
         LambdaQueryWrapper<FinPayment> qw = new LambdaQueryWrapper<>();
+        if (paymentNo != null && !paymentNo.isBlank()) qw.like(FinPayment::getPaymentNo, paymentNo);
+        if (type != null && !type.isBlank()) qw.eq(FinPayment::getType, type);
         qw.orderByDesc(FinPayment::getCreateTime);
         Page<FinPayment> page = paymentMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);

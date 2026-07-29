@@ -21,6 +21,7 @@ import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 import top.huanyu666.backend.modules.production.service.ProdOrderService;
+import top.huanyu666.backend.modules.sales.mapper.SalesOrderMapper;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,15 +41,18 @@ public class ProdOrderController {
     private final BomHeaderMapper bomHeaderMapper;
     private final BomDetailMapper bomDetailMapper;
     private final MaterialMapper materialMapper;
+    private final SalesOrderMapper salesOrderMapper;
 
     // ==================== 基础 CRUD ====================
 
     @SaCheckPermission("production:order:view")
     @GetMapping
     public ApiResponse<PageResult<ProdOrder>> list(PageParam param,
+                                                   @RequestParam(required = false) String orderNo,
                                                    @RequestParam(required = false) Long materialId,
                                                    @RequestParam(required = false) String status) {
         LambdaQueryWrapper<ProdOrder> qw = new LambdaQueryWrapper<>();
+        if (orderNo != null && !orderNo.isBlank()) qw.like(ProdOrder::getOrderNo, orderNo);
         if (materialId != null) {
             qw.eq(ProdOrder::getMaterialId, materialId);
         }
@@ -62,6 +66,10 @@ public class ProdOrderController {
             if (o.getMaterialId() != null) {
                 Material m = materialMapper.selectById(o.getMaterialId());
                 o.setMaterialName(m != null ? m.getName() : "");
+            }
+            if (o.getSalesOrderId() != null) {
+                top.huanyu666.backend.modules.sales.entity.SalesOrder so = salesOrderMapper.selectById(o.getSalesOrderId());
+                o.setSalesOrderNo(so != null ? so.getOrderNo() : "");
             }
         });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));

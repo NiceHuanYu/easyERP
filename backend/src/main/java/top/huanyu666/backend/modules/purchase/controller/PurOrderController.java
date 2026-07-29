@@ -38,9 +38,11 @@ public class PurOrderController {
     @SaCheckPermission("purchase:order:view")
     @GetMapping
     public ApiResponse<PageResult<PurOrder>> list(PageParam param,
+                                                   @RequestParam(required = false) String orderNo,
                                                    @RequestParam(required = false) Long supplierId,
                                                    @RequestParam(required = false) String status) {
         LambdaQueryWrapper<PurOrder> qw = new LambdaQueryWrapper<>();
+        if (orderNo != null && !orderNo.isBlank()) qw.like(PurOrder::getOrderNo, orderNo);
         if (supplierId != null) {
             qw.eq(PurOrder::getSupplierId, supplierId);
         }

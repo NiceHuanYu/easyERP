@@ -74,9 +74,9 @@
             </el-descriptions-item>
             <el-descriptions-item label="物料">{{ order.materialName }}</el-descriptions-item>
             <el-descriptions-item label="计划数量">{{ order.planQuantity }}</el-descriptions-item>
-            <el-descriptions-item label="已完工数量">{{ order.finishedQuantity }}</el-descriptions-item>
-            <el-descriptions-item label="计划开始日期">{{ order.planStartDate }}</el-descriptions-item>
-            <el-descriptions-item label="计划结束日期">{{ order.planEndDate }}</el-descriptions-item>
+            <el-descriptions-item label="已完工数量">{{ order.finishQuantity }}</el-descriptions-item>
+            <el-descriptions-item label="计划开始日期">{{ order.startDate }}</el-descriptions-item>
+            <el-descriptions-item label="计划结束日期">{{ order.endDate }}</el-descriptions-item>
             <el-descriptions-item label="生产车间">{{ order.workshopName }}</el-descriptions-item>
             <el-descriptions-item label="备注" :span="3">{{ order.remark || '-' }}</el-descriptions-item>
             <el-descriptions-item label="制单人">{{ order.createdBy }}</el-descriptions-item>
@@ -231,9 +231,9 @@ interface Order {
   materialId: number
   materialName: string
   planQuantity: number
-  finishedQuantity: number
-  planStartDate: string
-  planEndDate: string
+  finishQuantity: number
+  startDate: string
+  endDate: string
   workshopName: string
   status: string
   remark: string
@@ -297,7 +297,6 @@ async function loadOrder(id: string) {
     materialRequirements.value = materials
     pickings.value = pickingPage.list
     finishings.value = finishingPage.list
-    histories.value = historyList
   } catch {
     ElMessage.error('加载工单详情失败')
   }

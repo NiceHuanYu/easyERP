@@ -67,9 +67,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="计划开始日期" prop="planStartDate">
+            <el-form-item label="计划开始日期" prop="startDate">
               <el-date-picker
-                v-model="form.planStartDate"
+                v-model="form.startDate"
                 type="date"
                 placeholder="选择日期"
                 value-format="YYYY-MM-DD"
@@ -78,9 +78,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="计划结束日期" prop="planEndDate">
+            <el-form-item label="计划结束日期" prop="endDate">
               <el-date-picker
-                v-model="form.planEndDate"
+                v-model="form.endDate"
                 type="date"
                 placeholder="选择日期"
                 value-format="YYYY-MM-DD"
@@ -226,8 +226,8 @@ interface OrderForm {
   salesOrderId: number | null
   materialId: number | null
   planQuantity: number
-  planStartDate: string
-  planEndDate: string
+  startDate: string
+  endDate: string
   remark: string
 }
 
@@ -236,8 +236,8 @@ const form = reactive<OrderForm>({
   salesOrderId: null,
   materialId: null,
   planQuantity: 100,
-  planStartDate: formatDate(new Date(), 'YYYY-MM-DD'),
-  planEndDate: '',
+  startDate: formatDate(new Date(), 'YYYY-MM-DD'),
+  endDate: '',
   remark: '',
 })
 
@@ -245,8 +245,8 @@ const formRef = ref()
 const rules = {
   materialId: [{ required: true, message: '请选择物料', trigger: 'change' }],
   planQuantity: [{ required: true, message: '请输入计划数量', trigger: 'blur' }],
-  planStartDate: [{ required: true, message: '请选择计划开始日期', trigger: 'change' }],
-  planEndDate: [{ required: true, message: '请选择计划结束日期', trigger: 'change' }],
+  startDate: [{ required: true, message: '请选择计划开始日期', trigger: 'change' }],
+  endDate: [{ required: true, message: '请选择计划结束日期', trigger: 'change' }],
 }
 
 // ==================== 事件处理 ====================

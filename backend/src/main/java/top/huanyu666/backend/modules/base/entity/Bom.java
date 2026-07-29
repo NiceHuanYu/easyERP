@@ -1,1 +1,0 @@
-/** Deprecated: BOM 已重构为 BomHeader + BomDetail，请删除此文件。 */

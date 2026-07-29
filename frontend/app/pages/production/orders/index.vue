@@ -104,9 +104,9 @@
         </el-table-column>
         <el-table-column prop="materialName" label="物料名称" min-width="180" />
         <el-table-column prop="planQuantity" label="计划数量" width="110" align="right" />
-        <el-table-column prop="finishedQuantity" label="已完工数量" width="120" align="right" />
-        <el-table-column prop="planStartDate" label="计划开始" width="120" />
-        <el-table-column prop="planEndDate" label="计划结束" width="120" />
+        <el-table-column prop="finishQuantity" label="已完工数量" width="120" align="right" />
+        <el-table-column prop="startDate" label="计划开始" width="120" />
+        <el-table-column prop="endDate" label="计划结束" width="120" />
         <el-table-column prop="status" label="状态" width="110" align="center">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">
@@ -238,9 +238,9 @@ interface ProductionOrder {
   materialId: number
   materialName: string
   planQuantity: number
-  finishedQuantity: number
-  planStartDate: string
-  planEndDate: string
+  finishQuantity: number
+  startDate: string
+  endDate: string
   status: string
 }
 

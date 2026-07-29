@@ -50,4 +50,7 @@ public class SalesOrder extends BaseEntity {
      * 备注
      */
     private String remark;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String customerName;
 }
