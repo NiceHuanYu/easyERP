@@ -202,6 +202,7 @@ async function fetchWarehouseOptions() {
 
 // ==================== 类型定义 ====================
 interface ReceivingLine {
+  orderItemId: number
   materialId: number
   materialName: string
   orderQuantity: number
@@ -245,8 +246,10 @@ async function onOrderChange(val: number | null) {
   }
   try {
     const data = await api.get<any>(`/purchase/orders/${val}`)
-    if (data.lines && data.lines.length > 0) {
-      form.lines = data.lines.map((l: any) => ({
+    const lines = data.lines || (data.order && data.order.lines) || []
+    if (lines.length > 0) {
+      form.lines = lines.map((l: any) => ({
+        orderItemId: l.id ?? 0,
         materialId: l.materialId ?? 0,
         materialName: l.materialName ?? '',
         orderQuantity: l.quantity ?? 0,
@@ -348,13 +351,14 @@ async function loadReceiving(id: string) {
     form.remark = data.remark ?? ''
     if (data.lines && data.lines.length > 0) {
       form.lines = data.lines.map((l: any) => ({
+        orderItemId: l.orderItemId ?? 0,
         materialId: l.materialId ?? 0,
         materialName: l.materialName ?? '',
-        orderQuantity: l.orderQuantity ?? 0,
-        receivedQuantity: l.receivedQuantity ?? 0,
-        receivingQuantity: l.receivingQuantity ?? 0,
-        price: l.price ?? 0,
-        subtotal: l.subtotal ?? 0,
+        orderQuantity: l.quantity ?? 0,
+        receivedQuantity: 0,
+        receivingQuantity: l.quantity ?? 0,
+        price: 0,
+        subtotal: 0,
       }))
     }
   } catch {

@@ -15,7 +15,9 @@ import top.huanyu666.backend.modules.purchase.entity.*;
 import top.huanyu666.backend.modules.purchase.mapper.*;
 import top.huanyu666.backend.modules.purchase.service.PurOrderService;
 import top.huanyu666.backend.modules.base.entity.Supplier;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
+import top.huanyu666.backend.modules.base.entity.Material;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,6 +37,7 @@ public class PurOrderController {
     private final PurOrderItemMapper orderItemMapper;
     private final PurOrderService orderService;
     private final SupplierMapper supplierMapper;
+    private final MaterialMapper materialMapper;
 
     // ==================== 基础 CRUD ====================
 
@@ -74,7 +77,18 @@ public class PurOrderController {
                 new LambdaQueryWrapper<PurOrderItem>().eq(PurOrderItem::getOrderId, id));
         java.util.Map<String, Object> result = new java.util.HashMap<>();
         result.put("order", order);
-        result.put("lines", items);
+        result.put("lines", items.stream().map(i -> {
+            java.util.Map<String, Object> line = new java.util.HashMap<>();
+            line.put("id", i.getId());
+            line.put("materialId", i.getMaterialId());
+            line.put("quantity", i.getQuantity());
+            line.put("price", i.getPrice());
+            line.put("amount", i.getAmount());
+            line.put("receivedQty", i.getReceivedQty());
+            Material m = materialMapper.selectById(i.getMaterialId());
+            line.put("materialName", m != null ? m.getName() : "");
+            return line;
+        }).toList());
         return ApiResponse.ok(result);
     }
 

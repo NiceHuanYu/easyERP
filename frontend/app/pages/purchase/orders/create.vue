@@ -382,6 +382,7 @@ async function loadOrder(id: string) {
     form.orderDate = order.orderDate ?? formatDate(new Date(), 'YYYY-MM-DD')
     form.deliveryDate = order.deliveryDate ?? ''
     form.remark = order.remark ?? ''
+    form.requisitionId = order.requisitionId ?? null
     const lines = data.lines || order.lines
     form.lines = (lines && lines.length > 0)
       ? lines.map((l: any) => ({

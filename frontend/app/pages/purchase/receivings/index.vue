@@ -124,7 +124,7 @@
                     type="success"
                     size="small"
                     link
-                    v-permission="'purchase:receiving:confirm'"
+                    v-permission="'purchase:order:approve'"
                   >确认收货</el-button>
                 </template>
               </el-popconfirm>
