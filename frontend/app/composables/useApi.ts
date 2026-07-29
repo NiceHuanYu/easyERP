@@ -1,13 +1,8 @@
 import { useAuthStore } from '../../stores/auth'
-import { toPageParam, fromPageResult, ApiError, type PageData } from '../../shared/types/api'
+import { toPageParam, fromPageResult, ApiError, type PageData } from '#shared/types/api'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
 
-/**
- * Simple API wrapper. Auto-attaches Authorization, unwraps { code, data }.
- * Usage: await api.get('/system/users', { page: 1, size: 10 })
- *         await api.post('/system/users', { username: 'test', ... })
- */
 async function request<T>(
   method: HttpMethod,
   path: string,
@@ -18,7 +13,6 @@ async function request<T>(
   const headers: Record<string, string> = {}
   if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
 
-  // Build query string
   const qs = query
     ? '?' +
       Object.entries(query)
@@ -51,7 +45,6 @@ export const api = {
     return request<T>('DELETE', path)
   },
 
-  /** GET with pagination → returns { list, total } */
   async page<T>(
     path: string,
     page: number,
