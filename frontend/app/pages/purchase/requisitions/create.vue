@@ -120,24 +120,6 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="建议供应商" width="200">
-            <template #default="{ row }">
-              <el-select
-                v-model="row.suggestedSupplierId"
-                placeholder="请选择"
-                clearable
-                filterable
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="s in supplierOptions"
-                  :key="s.value"
-                  :label="s.label"
-                  :value="s.value"
-                />
-              </el-select>
-            </template>
-          </el-table-column>
           <el-table-column label="操作" width="80" align="center">
             <template #default="{ $index }">
               <el-button
@@ -225,17 +207,6 @@ async function fetchMaterialOptions() {
   } catch { /* ignore */ }
 }
 
-const supplierOptions = ref<{ label: string; value: number }[]>([])
-
-async function fetchSupplierOptions() {
-  try {
-    const result = await api.page<{ id: number; name: string }>(
-      '/base/suppliers', 1, 1000,
-    )
-    supplierOptions.value = result.list.map((s) => ({ label: s.name, value: s.id }))
-  } catch { /* ignore */ }
-}
-
 // ==================== 表单数据 ====================
 interface RequisitionLine {
   materialId: number | null
@@ -243,7 +214,6 @@ interface RequisitionLine {
   spec: string
   unit: string
   quantity: number
-  suggestedSupplierId: number | null
 }
 
 interface RequisitionForm {
@@ -394,7 +364,6 @@ async function handleSubmit() {
 onMounted(() => {
   fetchEmployeeOptions()
   fetchMaterialOptions()
-  fetchSupplierOptions()
   if (route.query.id) {
     loadRequisition(route.query.id as string)
   }

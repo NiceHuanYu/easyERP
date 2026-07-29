@@ -77,10 +77,8 @@
             <el-descriptions-item label="已完工数量">{{ order.finishQuantity }}</el-descriptions-item>
             <el-descriptions-item label="计划开始日期">{{ order.startDate }}</el-descriptions-item>
             <el-descriptions-item label="计划结束日期">{{ order.endDate }}</el-descriptions-item>
-            <el-descriptions-item label="生产车间">{{ order.workshopName }}</el-descriptions-item>
             <el-descriptions-item label="备注" :span="3">{{ order.remark || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="制单人">{{ order.createdBy }}</el-descriptions-item>
-            <el-descriptions-item label="制单时间">{{ order.createdAt }}</el-descriptions-item>
+            <el-descriptions-item label="创建时间">{{ order.createTime }}</el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>
 
@@ -234,11 +232,9 @@ interface Order {
   finishQuantity: number
   startDate: string
   endDate: string
-  workshopName: string
   status: string
   remark: string
-  createdBy: string
-  createdAt: string
+  createTime: string
 }
 
 interface MaterialRequirement {

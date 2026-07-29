@@ -52,9 +52,35 @@ public class PurRequisitionController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    /** 详情（含明细） */
+    @SaCheckPermission("purchase:order:view")
+    @GetMapping("/{id}")
+    public ApiResponse<java.util.Map<String, Object>> detail(@PathVariable Long id) {
+        PurRequisition req = requisitionMapper.selectById(id);
+        if (req == null) throw new BusinessException("采购申请不存在");
+        List<PurRequisitionItem> items = requisitionItemMapper.selectList(
+                new LambdaQueryWrapper<PurRequisitionItem>().eq(PurRequisitionItem::getRequisitionId, id));
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("id", req.getId());
+        result.put("reqNo", req.getRequisitionNo());
+        result.put("status", req.getStatus());
+        result.put("remark", req.getRemark());
+        result.put("applicantId", req.getApplicantId());
+        result.put("reqDate", req.getReqDate() != null ? req.getReqDate().toString() : "");
+        result.put("lines", items.stream().map(i -> {
+            java.util.Map<String, Object> line = new java.util.HashMap<>();
+            line.put("materialId", i.getMaterialId());
+            line.put("quantity", i.getQuantity());
+            line.put("orderedQty", i.getOrderedQty());
+            return line;
+        }).toList());
+        return ApiResponse.ok(result);
+    }
+
     @SaCheckPermission("purchase:order:create")
     @PostMapping
-    public ApiResponse<PurRequisition> create(@RequestBody PurRequisition requisition) {
+    public ApiResponse<PurRequisition> create(@RequestBody java.util.Map<String, Object> body) {
+        PurRequisition requisition = mapToRequisition(body);
         requisition.setStatus("DRAFT");
         if (requisition.getRequisitionNo() == null || requisition.getRequisitionNo().isBlank()) {
             requisition.setRequisitionNo(CodeGenerator.generate("PR", () -> {
@@ -67,21 +93,27 @@ public class PurRequisitionController {
             }));
         }
         requisitionMapper.insert(requisition);
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> lines = (java.util.List<java.util.Map<String, Object>>) body.get("lines");
+        if (lines != null) saveRequisitionItems(requisition.getId(), lines);
         return ApiResponse.ok(requisition);
     }
 
     @SaCheckPermission("purchase:order:create")
     @PutMapping("/{id}")
-    public ApiResponse<PurRequisition> update(@PathVariable Long id, @RequestBody PurRequisition requisition) {
+    public ApiResponse<PurRequisition> update(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
         PurRequisition exist = requisitionMapper.selectById(id);
-        if (exist == null) {
-            throw new BusinessException("采购申请不存在");
-        }
-        if (!"DRAFT".equals(exist.getStatus())) {
-            throw new BusinessException("仅草稿状态可修改");
-        }
+        if (exist == null) throw new BusinessException("采购申请不存在");
+        if (!"DRAFT".equals(exist.getStatus())) throw new BusinessException("仅草稿状态可修改");
+        PurRequisition requisition = mapToRequisition(body);
         requisition.setId(id);
         requisitionMapper.updateById(requisition);
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> lines = (java.util.List<java.util.Map<String, Object>>) body.get("lines");
+        if (lines != null) {
+            requisitionItemMapper.delete(new LambdaQueryWrapper<PurRequisitionItem>().eq(PurRequisitionItem::getRequisitionId, id));
+            saveRequisitionItems(id, lines);
+        }
         return ApiResponse.ok(requisitionMapper.selectById(id));
     }
 
@@ -145,6 +177,36 @@ public class PurRequisitionController {
         return ApiResponse.ok(order);
     }
 
+    // ==================== 状态流转 ====================
+
+    /** 提交：DRAFT → SUBMITTED */
+    @SaCheckPermission("purchase:order:create")
+    @PostMapping("/{id}/submit")
+    @Transactional
+    public ApiResponse<Void> submit(@PathVariable Long id) {
+        PurRequisition r = requisitionMapper.selectById(id);
+        if (r == null) throw new BusinessException("采购申请不存在");
+        if (!"DRAFT".equals(r.getStatus())) throw new BusinessException("仅草稿状态可提交");
+        r.setStatus("SUBMITTED");
+        requisitionMapper.updateById(r);
+        log.info("采购申请 {} 已提交", r.getRequisitionNo());
+        return ApiResponse.ok();
+    }
+
+    /** 审核通过：SUBMITTED → APPROVED */
+    @SaCheckPermission("purchase:order:create")
+    @PostMapping("/{id}/approve")
+    @Transactional
+    public ApiResponse<Void> approve(@PathVariable Long id) {
+        PurRequisition r = requisitionMapper.selectById(id);
+        if (r == null) throw new BusinessException("采购申请不存在");
+        if (!"SUBMITTED".equals(r.getStatus())) throw new BusinessException("仅已提交状态可审核");
+        r.setStatus("APPROVED");
+        requisitionMapper.updateById(r);
+        log.info("采购申请 {} 已审核通过", r.getRequisitionNo());
+        return ApiResponse.ok();
+    }
+
     // ==================== 删除 ====================
 
     @SaCheckPermission("purchase:order:create")
@@ -157,5 +219,29 @@ public class PurRequisitionController {
         requisitionItemMapper.delete(new LambdaQueryWrapper<PurRequisitionItem>().eq(PurRequisitionItem::getRequisitionId, id));
         requisitionMapper.deleteById(id);
         return ApiResponse.ok();
+    }
+
+    private PurRequisition mapToRequisition(java.util.Map<String, Object> body) {
+        PurRequisition r = new PurRequisition();
+        if (body.containsKey("id")) r.setId(Long.valueOf(body.get("id").toString()));
+        if (body.containsKey("reqNo")) r.setRequisitionNo((String) body.get("reqNo"));
+        if (body.containsKey("status")) r.setStatus((String) body.get("status"));
+        if (body.containsKey("remark")) r.setRemark((String) body.get("remark"));
+        if (body.containsKey("applicantId")) r.setApplicantId(Long.valueOf(body.get("applicantId").toString()));
+        if (body.containsKey("reqDate")) r.setReqDate(LocalDate.parse(body.get("reqDate").toString()));
+        return r;
+    }
+
+    private void saveRequisitionItems(Long reqId, java.util.List<java.util.Map<String, Object>> lines) {
+        for (java.util.Map<String, Object> line : lines) {
+            PurRequisitionItem item = new PurRequisitionItem();
+            item.setRequisitionId(reqId);
+            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            item.setQuantity(new BigDecimal(line.get("quantity").toString()));
+            item.setOrderedQty(BigDecimal.ZERO);
+            item.setCreateTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            requisitionItemMapper.insert(item);
+        }
     }
 }

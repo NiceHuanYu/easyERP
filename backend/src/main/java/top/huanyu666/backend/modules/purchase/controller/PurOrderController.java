@@ -17,6 +17,8 @@ import top.huanyu666.backend.modules.purchase.service.PurOrderService;
 import top.huanyu666.backend.modules.base.entity.Supplier;
 import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 
@@ -30,6 +32,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 public class PurOrderController {
 
     private final PurOrderMapper orderMapper;
+    private final PurOrderItemMapper orderItemMapper;
     private final PurOrderService orderService;
     private final SupplierMapper supplierMapper;
 
@@ -61,19 +64,24 @@ public class PurOrderController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
+    /** 详情（含明细） */
     @SaCheckPermission("purchase:order:view")
     @GetMapping("/{id}")
-    public ApiResponse<PurOrder> detail(@PathVariable Long id) {
+    public ApiResponse<java.util.Map<String, Object>> detail(@PathVariable Long id) {
         PurOrder order = orderMapper.selectById(id);
-        if (order == null) {
-            throw new BusinessException("采购订单不存在");
-        }
-        return ApiResponse.ok(order);
+        if (order == null) throw new BusinessException("采购订单不存在");
+        List<PurOrderItem> items = orderItemMapper.selectList(
+                new LambdaQueryWrapper<PurOrderItem>().eq(PurOrderItem::getOrderId, id));
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("order", order);
+        result.put("lines", items);
+        return ApiResponse.ok(result);
     }
 
     @SaCheckPermission("purchase:order:create")
     @PostMapping
-    public ApiResponse<PurOrder> create(@RequestBody PurOrder order) {
+    public ApiResponse<PurOrder> create(@RequestBody java.util.Map<String, Object> body) {
+        PurOrder order = mapToOrder(body);
         order.setStatus("DRAFT");
         if (order.getOrderNo() == null || order.getOrderNo().isBlank()) {
             order.setOrderNo(CodeGenerator.generate("PO", () -> {
@@ -86,6 +94,9 @@ public class PurOrderController {
             }));
         }
         orderMapper.insert(order);
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> lines = (java.util.List<java.util.Map<String, Object>>) body.get("lines");
+        if (lines != null) saveOrderItems(order.getId(), lines);
         return ApiResponse.ok(order);
     }
 
@@ -104,12 +115,19 @@ public class PurOrderController {
     @SaCheckPermission("purchase:order:create")
     @PutMapping("/{id}")
     @Transactional
-    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody PurOrder order) {
+    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
         PurOrder exist = orderMapper.selectById(id);
         if (exist == null) throw new BusinessException("采购订单不存在");
         if (!"DRAFT".equals(exist.getStatus())) throw new BusinessException("只有草稿状态可编辑");
+        PurOrder order = mapToOrder(body);
         order.setId(id);
         orderMapper.updateById(order);
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> lines = (java.util.List<java.util.Map<String, Object>>) body.get("lines");
+        if (lines != null) {
+            orderItemMapper.delete(new LambdaQueryWrapper<PurOrderItem>().eq(PurOrderItem::getOrderId, id));
+            saveOrderItems(id, lines);
+        }
         return ApiResponse.ok();
     }
 
@@ -127,5 +145,32 @@ public class PurOrderController {
     public ApiResponse<Void> issue(@PathVariable Long id) {
         orderService.issue(id);
         return ApiResponse.ok();
+    }
+
+    private PurOrder mapToOrder(java.util.Map<String, Object> body) {
+        PurOrder o = new PurOrder();
+        if (body.containsKey("supplierId")) o.setSupplierId(Long.valueOf(body.get("supplierId").toString()));
+        if (body.containsKey("orderDate")) o.setOrderDate(LocalDate.parse(body.get("orderDate").toString()));
+        if (body.containsKey("remark")) o.setRemark((String) body.get("remark"));
+        if (body.containsKey("totalAmount")) o.setTotalAmount(new BigDecimal(body.get("totalAmount").toString()));
+        if (body.containsKey("requisitionId")) o.setRequisitionId(Long.valueOf(body.get("requisitionId").toString()));
+        if (body.containsKey("deliveryDate") && body.get("deliveryDate") != null && !body.get("deliveryDate").toString().isBlank())
+            o.setDeliveryDate(LocalDate.parse(body.get("deliveryDate").toString()));
+        return o;
+    }
+
+    private void saveOrderItems(Long orderId, java.util.List<java.util.Map<String, Object>> lines) {
+        int lineNo = 1;
+        for (java.util.Map<String, Object> line : lines) {
+            PurOrderItem item = new PurOrderItem();
+            item.setOrderId(orderId);
+            item.setLineNo(lineNo++);
+            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            item.setQuantity(new BigDecimal(line.get("quantity").toString()));
+            item.setPrice(new BigDecimal(line.get("price") != null ? line.get("price").toString() : "0"));
+            item.setAmount(new BigDecimal(line.get("amount") != null ? line.get("amount").toString() : "0"));
+            item.setUnit("");
+            orderItemMapper.insert(item);
+        }
     }
 }

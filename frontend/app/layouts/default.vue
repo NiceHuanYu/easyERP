@@ -48,7 +48,7 @@
             <el-icon><DataAnalysis /></el-icon>
             <span>生产管理</span>
           </template>
-          <el-menu-item index="/production/orders">生产订单</el-menu-item>
+          <el-menu-item index="/production/orders">生产工单</el-menu-item>
           <el-menu-item index="/production/pickings">生产领料</el-menu-item>
           <el-menu-item index="/production/finishings">生产完工</el-menu-item>
         </el-sub-menu>
@@ -179,7 +179,7 @@ const menuTitleMap: Record<string, string> = {
   '/base-data/employees': '员工管理',
   '/sales/orders': '销售订单',
   '/sales/deliveries': '销售发货',
-  '/production/orders': '生产订单',
+  '/production/orders': '生产工单',
   '/production/pickings': '生产领料',
   '/production/finishings': '生产完工',
   '/purchase/requisitions': '采购申请',

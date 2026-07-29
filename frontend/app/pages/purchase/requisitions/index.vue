@@ -64,7 +64,7 @@
         <el-button
           type="primary"
           :icon="Plus"
-          v-permission="'purchase:requisition:create'"
+          v-permission="'purchase:order:create'"
           @click="navigateTo('/purchase/requisitions/create')"
         >
           新增申请
@@ -78,15 +78,7 @@
         stripe
         style="width: 100%; margin-top: 12px"
       >
-        <el-table-column prop="reqNo" label="申请单号" width="160" />
-        <el-table-column prop="applicantName" label="申请人" width="120" />
-        <el-table-column prop="reqDate" label="申请日期" width="120" />
-        <el-table-column label="物料" min-width="200">
-          <template #default="{ row }">
-            {{ row.materialSummary }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="totalQuantity" label="数量" width="100" align="right" />
+        <el-table-column prop="requisitionNo" label="申请单号" width="160" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">
@@ -101,7 +93,7 @@
                 type="primary"
                 size="small"
                 link
-                v-permission="'purchase:requisition:create'"
+                v-permission="'purchase:order:create'"
                 @click="handleEdit(row)"
               >
                 编辑
@@ -117,7 +109,7 @@
                     type="danger"
                     size="small"
                     link
-                    v-permission="'purchase:requisition:create'"
+                    v-permission="'purchase:order:create'"
                   >删除</el-button>
                 </template>
               </el-popconfirm>
@@ -132,7 +124,7 @@
                     type="warning"
                     size="small"
                     link
-                    v-permission="'purchase:requisition:create'"
+                    v-permission="'purchase:order:create'"
                   >提交</el-button>
                 </template>
               </el-popconfirm>
@@ -153,7 +145,7 @@
                     type="success"
                     size="small"
                     link
-                    v-permission="'purchase:requisition:create'"
+                    v-permission="'purchase:order:create'"
                   >审核</el-button>
                 </template>
               </el-popconfirm>
@@ -167,7 +159,7 @@
                 type="success"
                 size="small"
                 link
-                v-permission="'purchase:requisition:create'"
+                v-permission="'purchase:order:create'"
                 @click="handleCreateOrder(row)"
               >
                 生成采购订单
@@ -333,7 +325,7 @@ async function handleDelete(row: Requisition) {
 
 async function handleSubmit(row: Requisition) {
   try {
-    await api.put(`/purchase/requisitions/${row.id}`, { status: 'SUBMITTED' })
+    await api.post(`/purchase/requisitions/${row.id}/submit`)
     ElMessage.success('提交成功')
     fetchData()
   } catch {
@@ -343,7 +335,7 @@ async function handleSubmit(row: Requisition) {
 
 async function handleApprove(row: Requisition) {
   try {
-    await api.put(`/purchase/requisitions/${row.id}`, { status: 'APPROVED' })
+    await api.post(`/purchase/requisitions/${row.id}/approve`)
     ElMessage.success('审核通过')
     fetchData()
   } catch {

@@ -77,17 +77,17 @@ public class ProdOrderController {
 
     @SaCheckPermission("production:order:view")
     @GetMapping("/{id}")
-    public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
+    public ApiResponse<ProdOrder> detail(@PathVariable Long id) {
         ProdOrder order = orderService.getById(id);
-
-        List<ProdPicking> pickings = orderService.getPickingsByOrderId(id);
-        List<ProdFinish> finishings = orderService.getFinishingsByOrderId(id);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("order", order);
-        result.put("pickings", pickings);
-        result.put("finishings", finishings);
-        return ApiResponse.ok(result);
+        if (order.getMaterialId() != null) {
+            Material m = materialMapper.selectById(order.getMaterialId());
+            order.setMaterialName(m != null ? m.getName() : "");
+        }
+        if (order.getSalesOrderId() != null) {
+            top.huanyu666.backend.modules.sales.entity.SalesOrder so = salesOrderMapper.selectById(order.getSalesOrderId());
+            order.setSalesOrderNo(so != null ? so.getOrderNo() : "");
+        }
+        return ApiResponse.ok(order);
     }
 
     @SaCheckPermission("production:order:view")

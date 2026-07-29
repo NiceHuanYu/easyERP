@@ -17,6 +17,8 @@ import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 
 import java.math.BigDecimal;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -54,7 +56,7 @@ public class ProdFinishController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
-    /** 详情（含明细） */
+    /** 详情（含明细），字段对齐前端表单 */
     @SaCheckPermission("production:order:view")
     @GetMapping("/{id}")
     public ApiResponse<java.util.Map<String, Object>> detail(@PathVariable Long id) {
@@ -62,12 +64,27 @@ public class ProdFinishController {
         if (finish == null) throw new BusinessException("完工入库单不存在");
         List<ProdFinishItem> items = finishItemMapper.selectList(
                 new LambdaQueryWrapper<ProdFinishItem>().eq(ProdFinishItem::getFinishId, id));
-        return ApiResponse.ok(java.util.Map.of("finishing", finish, "items", items));
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("id", finish.getId());
+        result.put("finishNo", finish.getFinishNo());
+        result.put("orderId", finish.getOrderId());
+        result.put("warehouseId", finish.getWarehouseId());
+        result.put("finishDate", finish.getFinishDate() != null ? finish.getFinishDate().toString() : "");
+        result.put("status", finish.getStatus());
+        result.put("lines", items.stream().map(i -> {
+            java.util.Map<String, Object> line = new java.util.HashMap<>();
+            line.put("materialId", i.getMaterialId());
+            line.put("quantity", i.getQuantity());
+            line.put("finishQuantity", i.getQuantity());
+            return line;
+        }).toList());
+        return ApiResponse.ok(result);
     }
 
     @SaCheckPermission("production:order:create")
     @PostMapping
-    public ApiResponse<ProdFinish> create(@RequestBody ProdFinish finish) {
+    public ApiResponse<ProdFinish> create(@RequestBody java.util.Map<String, Object> body) {
+        ProdFinish finish = mapToFinish(body);
         finish.setStatus("DRAFT");
         if (finish.getFinishNo() == null || finish.getFinishNo().isBlank()) {
             finish.setFinishNo(CodeGenerator.generate("FI", () -> {
@@ -80,21 +97,27 @@ public class ProdFinishController {
             }));
         }
         finishMapper.insert(finish);
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> lines = (java.util.List<java.util.Map<String, Object>>) body.get("lines");
+        if (lines != null) saveFinishItems(finish.getId(), lines);
         return ApiResponse.ok(finish);
     }
 
     @SaCheckPermission("production:order:create")
     @PutMapping("/{id}")
-    public ApiResponse<ProdFinish> update(@PathVariable Long id, @RequestBody ProdFinish finish) {
+    public ApiResponse<ProdFinish> update(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
         ProdFinish exist = finishMapper.selectById(id);
-        if (exist == null) {
-            throw new BusinessException("完工入库单不存在");
-        }
-        if (!"DRAFT".equals(exist.getStatus())) {
-            throw new BusinessException("仅草稿状态可修改");
-        }
+        if (exist == null) throw new BusinessException("完工入库单不存在");
+        if (!"DRAFT".equals(exist.getStatus())) throw new BusinessException("仅草稿状态可修改");
+        ProdFinish finish = mapToFinish(body);
         finish.setId(id);
         finishMapper.updateById(finish);
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> lines = (java.util.List<java.util.Map<String, Object>>) body.get("lines");
+        if (lines != null) {
+            finishItemMapper.delete(new LambdaQueryWrapper<ProdFinishItem>().eq(ProdFinishItem::getFinishId, id));
+            saveFinishItems(id, lines);
+        }
         return ApiResponse.ok(finishMapper.selectById(id));
     }
 
@@ -165,5 +188,28 @@ public class ProdFinishController {
         finishItemMapper.delete(new LambdaQueryWrapper<ProdFinishItem>().eq(ProdFinishItem::getFinishId, id));
         finishMapper.deleteById(id);
         return ApiResponse.ok();
+    }
+
+    private ProdFinish mapToFinish(java.util.Map<String, Object> body) {
+        ProdFinish f = new ProdFinish();
+        if (body.containsKey("id")) f.setId(Long.valueOf(body.get("id").toString()));
+        if (body.containsKey("orderId")) f.setOrderId(Long.valueOf(body.get("orderId").toString()));
+        if (body.containsKey("warehouseId")) f.setWarehouseId(Long.valueOf(body.get("warehouseId").toString()));
+        if (body.containsKey("finishDate")) f.setFinishDate(LocalDate.parse(body.get("finishDate").toString()));
+        if (body.containsKey("status")) f.setStatus((String) body.get("status"));
+        return f;
+    }
+
+    private void saveFinishItems(Long finishId, java.util.List<java.util.Map<String, Object>> lines) {
+        for (java.util.Map<String, Object> line : lines) {
+            ProdFinishItem item = new ProdFinishItem();
+            item.setFinishId(finishId);
+            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            item.setQuantity(new BigDecimal(line.get("finishQuantity") != null
+                    ? line.get("finishQuantity").toString() : "0"));
+            item.setCreateTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            finishItemMapper.insert(item);
+        }
     }
 }

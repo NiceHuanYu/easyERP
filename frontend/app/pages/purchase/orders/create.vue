@@ -229,11 +229,16 @@ async function fetchSupplierOptions() {
   } catch { /* ignore */ }
 }
 
-const requisitionOptions = ref([
-  { label: 'PR-00001 / 张三 / PCB主板等2项', value: 1 },
-  { label: 'PR-00003 / 李四 / CPU处理器等3项', value: 3 },
-  { label: 'PR-00005 / 王五 / 锂电池组等1项', value: 5 },
-])
+const requisitionOptions = ref<{ label: string; value: number }[]>([])
+
+async function fetchRequisitionOptions() {
+  try {
+    const result = await api.page<{ id: number; requisitionNo: string }>(
+      '/purchase/requisitions', 1, 200, { status: 'APPROVED' },
+    )
+    requisitionOptions.value = result.list.map((r) => ({ label: r.requisitionNo, value: r.id }))
+  } catch { /* ignore */ }
+}
 
 const materialOptions = ref<{ label: string; value: number }[]>([])
 
@@ -371,14 +376,15 @@ async function onRequisitionChange(val: number | null) {
 async function loadOrder(id: string) {
   try {
     const data = await api.get<any>(`/purchase/orders/${id}`)
-    form.orderNo = data.orderNo ?? ''
-    form.supplierId = data.supplierId ?? null
-    form.requisitionId = data.requisitionId ?? null
-    form.orderDate = data.orderDate ?? formatDate(new Date(), 'YYYY-MM-DD')
-    form.deliveryDate = data.deliveryDate ?? ''
-    form.remark = data.remark ?? ''
-    form.lines = (data.lines && data.lines.length > 0)
-      ? data.lines.map((l: any) => ({
+    const order = data.order || data
+    form.orderNo = order.orderNo ?? ''
+    form.supplierId = order.supplierId ?? null
+    form.orderDate = order.orderDate ?? formatDate(new Date(), 'YYYY-MM-DD')
+    form.deliveryDate = order.deliveryDate ?? ''
+    form.remark = order.remark ?? ''
+    const lines = data.lines || order.lines
+    form.lines = (lines && lines.length > 0)
+      ? lines.map((l: any) => ({
           materialId: l.materialId ?? null,
           materialName: l.materialName ?? '',
           quantity: l.quantity ?? 0,
@@ -440,6 +446,7 @@ function prefillFromRequisition(reqId: string) {
 onMounted(() => {
   fetchSupplierOptions()
   fetchMaterialOptions()
+  fetchRequisitionOptions()
   if (route.query.fromRequisition) {
     prefillFromRequisition(route.query.fromRequisition as string)
   }

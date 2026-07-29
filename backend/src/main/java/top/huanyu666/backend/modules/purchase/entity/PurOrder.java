@@ -28,6 +28,9 @@ public class PurOrder extends BaseEntity {
 
     private String remark;
 
+    private Long requisitionId;
+    private LocalDate deliveryDate;
+
     @com.baomidou.mybatisplus.annotation.TableField(exist = false)
     private String supplierName;
 }

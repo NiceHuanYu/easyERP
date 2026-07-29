@@ -17,6 +17,7 @@ import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -54,7 +55,7 @@ public class ProdPickingController {
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
-    /** 详情（含明细） */
+    /** 详情（含明细），字段对齐前端表单 */
     @SaCheckPermission("production:order:view")
     @GetMapping("/{id}")
     public ApiResponse<java.util.Map<String, Object>> detail(@PathVariable Long id) {
@@ -62,12 +63,28 @@ public class ProdPickingController {
         if (picking == null) throw new BusinessException("领料单不存在");
         List<ProdPickingItem> items = pickingItemMapper.selectList(
                 new LambdaQueryWrapper<ProdPickingItem>().eq(ProdPickingItem::getPickingId, id));
-        return ApiResponse.ok(java.util.Map.of("picking", picking, "items", items));
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("id", picking.getId());
+        result.put("pickingNo", picking.getPickingNo());
+        result.put("orderId", picking.getOrderId());
+        result.put("warehouseId", picking.getWarehouseId());
+        result.put("pickingDate", picking.getPickingDate() != null ? picking.getPickingDate().toString() : "");
+        result.put("status", picking.getStatus());
+        result.put("lines", items.stream().map(i -> {
+            java.util.Map<String, Object> line = new java.util.HashMap<>();
+            line.put("materialId", i.getMaterialId());
+            line.put("requestQty", i.getRequestQty());
+            line.put("actualQty", i.getActualQty());
+            line.put("pickingQuantity", i.getActualQty());
+            return line;
+        }).toList());
+        return ApiResponse.ok(result);
     }
 
     @SaCheckPermission("production:order:create")
     @PostMapping
-    public ApiResponse<ProdPicking> create(@RequestBody ProdPicking picking) {
+    public ApiResponse<ProdPicking> create(@RequestBody java.util.Map<String, Object> body) {
+        ProdPicking picking = mapToPicking(body);
         picking.setStatus("DRAFT");
         if (picking.getPickingNo() == null || picking.getPickingNo().isBlank()) {
             picking.setPickingNo(CodeGenerator.generate("PK", () -> {
@@ -80,21 +97,27 @@ public class ProdPickingController {
             }));
         }
         pickingMapper.insert(picking);
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> lines = (java.util.List<java.util.Map<String, Object>>) body.get("lines");
+        if (lines != null) savePickingItems(picking.getId(), lines);
         return ApiResponse.ok(picking);
     }
 
     @SaCheckPermission("production:order:create")
     @PutMapping("/{id}")
-    public ApiResponse<ProdPicking> update(@PathVariable Long id, @RequestBody ProdPicking picking) {
+    public ApiResponse<ProdPicking> update(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
         ProdPicking exist = pickingMapper.selectById(id);
-        if (exist == null) {
-            throw new BusinessException("领料单不存在");
-        }
-        if (!"DRAFT".equals(exist.getStatus())) {
-            throw new BusinessException("仅草稿状态可修改");
-        }
+        if (exist == null) throw new BusinessException("领料单不存在");
+        if (!"DRAFT".equals(exist.getStatus())) throw new BusinessException("仅草稿状态可修改");
+        ProdPicking picking = mapToPicking(body);
         picking.setId(id);
         pickingMapper.updateById(picking);
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> lines = (java.util.List<java.util.Map<String, Object>>) body.get("lines");
+        if (lines != null) {
+            pickingItemMapper.delete(new LambdaQueryWrapper<ProdPickingItem>().eq(ProdPickingItem::getPickingId, id));
+            savePickingItems(id, lines);
+        }
         return ApiResponse.ok(pickingMapper.selectById(id));
     }
 
@@ -164,5 +187,30 @@ public class ProdPickingController {
         pickingItemMapper.delete(new LambdaQueryWrapper<ProdPickingItem>().eq(ProdPickingItem::getPickingId, id));
         pickingMapper.deleteById(id);
         return ApiResponse.ok();
+    }
+
+    private ProdPicking mapToPicking(java.util.Map<String, Object> body) {
+        ProdPicking p = new ProdPicking();
+        if (body.containsKey("id")) p.setId(Long.valueOf(body.get("id").toString()));
+        if (body.containsKey("orderId")) p.setOrderId(Long.valueOf(body.get("orderId").toString()));
+        if (body.containsKey("warehouseId")) p.setWarehouseId(Long.valueOf(body.get("warehouseId").toString()));
+        if (body.containsKey("pickingDate")) p.setPickingDate(LocalDate.parse(body.get("pickingDate").toString()));
+        if (body.containsKey("status")) p.setStatus((String) body.get("status"));
+        return p;
+    }
+
+    private void savePickingItems(Long pickingId, java.util.List<java.util.Map<String, Object>> lines) {
+        for (java.util.Map<String, Object> line : lines) {
+            ProdPickingItem item = new ProdPickingItem();
+            item.setPickingId(pickingId);
+            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            BigDecimal qty = new BigDecimal(line.get("pickingQuantity") != null
+                    ? line.get("pickingQuantity").toString() : "0");
+            item.setRequestQty(qty);
+            item.setActualQty(qty);
+            item.setCreateTime(LocalDateTime.now());
+            item.setUpdateTime(LocalDateTime.now());
+            pickingItemMapper.insert(item);
+        }
     }
 }
