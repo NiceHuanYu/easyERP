@@ -125,7 +125,7 @@ public class PurReceivingController {
         return ApiResponse.ok(receiving);
     }
 
-    @SaCheckPermission("purchase:order:create")
+    @SaCheckPermission("purchase:order:edit")
     @PutMapping("/{id}")
     public ApiResponse<PurReceiving> update(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
         PurReceiving exist = receivingMapper.selectById(id);
@@ -170,6 +170,12 @@ public class PurReceivingController {
         }
 
         PurOrder order = orderMapper.selectById(receiving.getOrderId());
+        if (order == null) {
+            throw new BusinessException("关联的采购订单不存在");
+        }
+        if (!"APPROVED".equals(order.getStatus())) {
+            throw new BusinessException("采购订单未审核，无法确认收货");
+        }
         BigDecimal totalPayable = BigDecimal.ZERO;
 
         for (PurReceivingItem item : items) {
@@ -217,7 +223,7 @@ public class PurReceivingController {
         if (body.containsKey("id")) r.setId(Long.valueOf(body.get("id").toString()));
         if (body.containsKey("orderId")) r.setOrderId(Long.valueOf(body.get("orderId").toString()));
         if (body.containsKey("warehouseId")) r.setWarehouseId(Long.valueOf(body.get("warehouseId").toString()));
-        if (body.containsKey("receivingDate")) r.setReceivingDate(java.time.LocalDate.parse(body.get("receivingDate").toString()));
+        if (body.containsKey("receivingDate") && body.get("receivingDate") != null && !body.get("receivingDate").toString().isBlank()) r.setReceivingDate(java.time.LocalDate.parse(body.get("receivingDate").toString()));
         if (body.containsKey("status")) r.setStatus((String) body.get("status"));
         if (body.containsKey("remark")) r.setRemark((String) body.get("remark"));
         return r;
@@ -228,7 +234,8 @@ public class PurReceivingController {
             PurReceivingItem item = new PurReceivingItem();
             item.setReceivingId(receivingId);
             if (line.containsKey("orderItemId")) item.setOrderItemId(Long.valueOf(line.get("orderItemId").toString()));
-            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            if (line.containsKey("materialId") && line.get("materialId") != null)
+                item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
             item.setQuantity(new BigDecimal(line.get("receivingQuantity") != null
                     ? line.get("receivingQuantity").toString() : "0"));
             item.setCreateTime(LocalDateTime.now());

@@ -12,6 +12,7 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import top.huanyu666.backend.modules.finance.entity.FinReceivable;
 import top.huanyu666.backend.modules.finance.service.FinReceivableService;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.sales.entity.*;
@@ -175,6 +176,9 @@ public class SalesDeliveryController {
             throw new BusinessException("销售订单未审核，无法发货: " + order.getOrderNo());
         }
 
+        // 计算本次发货金额并扣减库存
+        BigDecimal deliveryAmount = BigDecimal.ZERO;
+
         for (SalesDeliveryItem deliveryItem : deliveryItems) {
             // 2. 更新订单明细的 shippedQty
             SalesOrderItem orderItem = orderItemMapper.selectById(deliveryItem.getOrderItemId());
@@ -193,6 +197,12 @@ public class SalesDeliveryController {
             orderItem.setShippedQty(newShippedQty);
             orderItem.setUpdateTime(LocalDateTime.now());
             orderItemMapper.updateById(orderItem);
+
+            // 累计本次发货金额
+            if (orderItem.getPrice() != null) {
+                deliveryAmount = deliveryAmount.add(
+                        orderItem.getPrice().multiply(deliveryItem.getQuantity()));
+            }
 
             // 3. 扣减库存（统一由 InvStockService 处理）
             invStockService.deduct(deliveryItem.getMaterialId(), delivery.getWarehouseId(),
@@ -218,8 +228,12 @@ public class SalesDeliveryController {
         delivery.setStatus("CONFIRMED");
         deliveryMapper.updateById(delivery);
 
-        // 7. 创建应收台账
-        finReceivableService.createFromDelivery(delivery.getId(), order.getCustomerId(), order.getTotalAmount());
+        // 7. 创建应收台账（防重复）
+        FinReceivable existReceivable = finReceivableService.findByDeliveryId(delivery.getId());
+        if (existReceivable != null) {
+            throw new BusinessException("该发货单已创建应收台账，请勿重复确认");
+        }
+        finReceivableService.createFromDelivery(delivery.getId(), order.getCustomerId(), deliveryAmount);
 
         log.info("确认发货成功: deliveryId={}, orderId={}", id, order.getId());
         return ApiResponse.ok();
@@ -249,7 +263,7 @@ public class SalesDeliveryController {
         if (body.containsKey("deliveryNo")) d.setDeliveryNo((String) body.get("deliveryNo"));
         if (body.containsKey("orderId")) d.setOrderId(Long.valueOf(body.get("orderId").toString()));
         if (body.containsKey("warehouseId")) d.setWarehouseId(Long.valueOf(body.get("warehouseId").toString()));
-        if (body.containsKey("deliveryDate")) d.setDeliveryDate(LocalDate.parse(body.get("deliveryDate").toString()));
+        if (body.containsKey("deliveryDate") && body.get("deliveryDate") != null && !body.get("deliveryDate").toString().isBlank()) d.setDeliveryDate(LocalDate.parse(body.get("deliveryDate").toString()));
         if (body.containsKey("status")) d.setStatus((String) body.get("status"));
         if (body.containsKey("remark")) d.setRemark((String) body.get("remark"));
         return d;
@@ -260,9 +274,12 @@ public class SalesDeliveryController {
             SalesDeliveryItem item = new SalesDeliveryItem();
             item.setDeliveryId(deliveryId);
             if (line.containsKey("id")) item.setId(Long.valueOf(line.get("id").toString()));
-            item.setOrderItemId(Long.valueOf(line.get("orderItemId").toString()));
-            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
-            item.setQuantity(new BigDecimal(line.get("deliveryQuantity").toString()));
+            if (line.containsKey("orderItemId") && line.get("orderItemId") != null)
+                item.setOrderItemId(Long.valueOf(line.get("orderItemId").toString()));
+            if (line.containsKey("materialId") && line.get("materialId") != null)
+                item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            if (line.containsKey("deliveryQuantity") && line.get("deliveryQuantity") != null)
+                item.setQuantity(new BigDecimal(line.get("deliveryQuantity").toString()));
             item.setCreateTime(LocalDateTime.now());
             item.setUpdateTime(LocalDateTime.now());
             deliveryItemMapper.insert(item);

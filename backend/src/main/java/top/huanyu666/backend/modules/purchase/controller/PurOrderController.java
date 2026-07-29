@@ -164,10 +164,10 @@ public class PurOrderController {
     private PurOrder mapToOrder(java.util.Map<String, Object> body) {
         PurOrder o = new PurOrder();
         if (body.containsKey("supplierId")) o.setSupplierId(Long.valueOf(body.get("supplierId").toString()));
-        if (body.containsKey("orderDate")) o.setOrderDate(LocalDate.parse(body.get("orderDate").toString()));
+        if (body.containsKey("orderDate") && body.get("orderDate") != null && !body.get("orderDate").toString().isBlank()) o.setOrderDate(LocalDate.parse(body.get("orderDate").toString()));
         if (body.containsKey("remark")) o.setRemark((String) body.get("remark"));
-        if (body.containsKey("totalAmount")) o.setTotalAmount(new BigDecimal(body.get("totalAmount").toString()));
-        if (body.containsKey("requisitionId")) o.setRequisitionId(Long.valueOf(body.get("requisitionId").toString()));
+        if (body.containsKey("totalAmount") && body.get("totalAmount") != null) o.setTotalAmount(new BigDecimal(body.get("totalAmount").toString()));
+        if (body.containsKey("requisitionId") && body.get("requisitionId") != null) o.setRequisitionId(Long.valueOf(body.get("requisitionId").toString()));
         if (body.containsKey("deliveryDate") && body.get("deliveryDate") != null && !body.get("deliveryDate").toString().isBlank())
             o.setDeliveryDate(LocalDate.parse(body.get("deliveryDate").toString()));
         return o;
@@ -179,8 +179,11 @@ public class PurOrderController {
             PurOrderItem item = new PurOrderItem();
             item.setOrderId(orderId);
             item.setLineNo(lineNo++);
-            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
-            item.setQuantity(new BigDecimal(line.get("quantity").toString()));
+            if (line.containsKey("materialId") && line.get("materialId") != null)
+                item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            if (line.containsKey("quantity") && line.get("quantity") != null)
+                item.setQuantity(new BigDecimal(line.get("quantity").toString()));
+            item.setReceivedQty(BigDecimal.ZERO);
             item.setPrice(new BigDecimal(line.get("price") != null ? line.get("price").toString() : "0"));
             item.setAmount(new BigDecimal(line.get("amount") != null ? line.get("amount").toString() : "0"));
             item.setUnit("");

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import cn.hutool.crypto.digest.BCrypt;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
@@ -47,6 +48,7 @@ public class UserController {
     @PostMapping
     @SaCheckPermission("system:user:create")
     public ApiResponse<Void> create(@RequestBody SysUser user) {
+        user.setPassword(BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
         userMapper.insert(user);
         return ApiResponse.ok();
     }
@@ -54,6 +56,16 @@ public class UserController {
     @PutMapping("/{id}")
     @SaCheckPermission("system:user:edit")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SysUser user) {
+        // 如果传入了密码则加密，否则保持原密码不变
+        if (user.getPassword() != null && !user.getPassword().isBlank()) {
+            user.setPassword(BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
+        } else {
+            // 不传密码时，保留数据库中的原密码
+            SysUser exist = userMapper.selectById(id);
+            if (exist != null) {
+                user.setPassword(exist.getPassword());
+            }
+        }
         user.setId(id);
         userMapper.updateById(user);
         return ApiResponse.ok();

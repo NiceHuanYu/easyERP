@@ -96,6 +96,9 @@ public class ProdOrderService {
     @Transactional
     public ProdPicking createPicking(Long orderId, ProdPicking picking) {
         ProdOrder order = getOrder(orderId);
+        if (!DocumentStatus.RELEASED.eq(order.getStatus())) {
+            throw new BusinessException("仅已下达的工单可创建领料单");
+        }
 
         LambdaQueryWrapper<ProdOrderBom> bomQw = new LambdaQueryWrapper<>();
         bomQw.eq(ProdOrderBom::getOrderId, orderId);
@@ -133,6 +136,9 @@ public class ProdOrderService {
     @Transactional
     public ProdFinish createFinish(Long orderId, ProdFinish finish) {
         ProdOrder order = getOrder(orderId);
+        if (!DocumentStatus.RELEASED.eq(order.getStatus())) {
+            throw new BusinessException("仅已下达的工单可创建完工入库单");
+        }
 
         finish.setOrderId(orderId);
         finish.setStatus(DocumentStatus.DRAFT.getCode());
@@ -157,6 +163,9 @@ public class ProdOrderService {
     @Transactional
     public void finish(Long id) {
         ProdOrder order = getOrder(id);
+        if (!DocumentStatus.RELEASED.eq(order.getStatus())) {
+            throw new BusinessException("仅已下达的工单可完工");
+        }
         order.setStatus(DocumentStatus.COMPLETED.getCode());
         orderMapper.updateById(order);
         log.info("工单 {} 已完工", order.getOrderNo());

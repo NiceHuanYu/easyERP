@@ -28,6 +28,11 @@ public class FinPayableService {
      * 收货确认时创建应付台账。
      */
     public FinPayable createFromReceiving(Long receivingId, Long supplierId, BigDecimal amount) {
+        // 防重复创建
+        FinPayable exist = findByReceivingId(receivingId);
+        if (exist != null) {
+            throw new BusinessException("该收货单已创建应付台账");
+        }
         FinPayable payable = new FinPayable();
         payable.setReceivingId(receivingId);
         payable.setSupplierId(supplierId);
@@ -43,11 +48,18 @@ public class FinPayableService {
      * 付款核销 —— 增加已付金额，自动更新状态。
      */
     public FinPayable applyPayment(Long payableId, BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("核销金额必须大于0");
+        }
         FinPayable p = payableMapper.selectById(payableId);
         if (p == null) {
             throw new BusinessException("应付台账不存在: " + payableId);
         }
-        BigDecimal newPaid = nvl(p.getPaidAmount()).add(amount);
+        BigDecimal currentPaid = nvl(p.getPaidAmount());
+        if (currentPaid.add(amount).compareTo(p.getPayableAmount()) > 0) {
+            throw new BusinessException("核销金额超过应付金额");
+        }
+        BigDecimal newPaid = currentPaid.add(amount);
         p.setPaidAmount(newPaid);
         p.setStatus(deriveStatus(newPaid, p.getPayableAmount()));
         payableMapper.updateById(p);

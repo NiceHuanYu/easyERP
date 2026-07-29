@@ -12,6 +12,7 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.finance.entity.FinPayable;
 import top.huanyu666.backend.modules.finance.mapper.FinPayableMapper;
+import top.huanyu666.backend.modules.finance.service.FinPayableService;
 import top.huanyu666.backend.modules.base.entity.Supplier;
 import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
 
@@ -29,6 +30,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 public class FinPayableController {
 
     private final FinPayableMapper payableMapper;
+    private final FinPayableService payableService;
     private final SupplierMapper supplierMapper;
 
     @SaCheckPermission("finance:order:view")
@@ -57,20 +59,12 @@ public class FinPayableController {
 
     // ==================== 核销 ====================
 
-    @SaCheckPermission("finance:order:view")
-    @PostMapping("/{no}/reconcile")
+    @SaCheckPermission("finance:order:approve")
+    @PostMapping("/{id}/reconcile")
     @Transactional
-    public ApiResponse<Void> reconcile(@PathVariable String no, @RequestBody Map<String, Object> body) {
+    public ApiResponse<Void> reconcile(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         BigDecimal amount = new BigDecimal(body.get("amount").toString());
-        FinPayable payable = payableMapper.selectById(java.lang.Long.parseLong(no));
-        if (payable == null) throw new BusinessException("应付记录不存在");
-        payable.setPaidAmount(payable.getPaidAmount().add(amount));
-        if (payable.getPaidAmount().compareTo(payable.getPayableAmount()) >= 0) {
-            payable.setStatus("PAID");
-        } else {
-            payable.setStatus("PARTIAL_PAID");
-        }
-        payableMapper.updateById(payable);
+        payableService.applyPayment(id, amount);
         return ApiResponse.ok();
     }
 }

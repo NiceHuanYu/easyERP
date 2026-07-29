@@ -149,6 +149,7 @@ public class ProdOrderController {
     /**
      * 修改（仅草稿）
      */
+    @SaCheckPermission("production:order:edit")
     @PutMapping("/{id}")
     @Transactional
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody ProdOrder order) {
@@ -160,6 +161,7 @@ public class ProdOrderController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("production:order:delete")
     @DeleteMapping("/{id}")
     @Transactional
     public ApiResponse<Void> delete(@PathVariable Long id) {
@@ -167,6 +169,7 @@ public class ProdOrderController {
         return ApiResponse.ok();
     }
 
+    @SaCheckPermission("production:order:finish")
     @PostMapping("/{id}/finish")
     @Transactional
     public ApiResponse<Void> finish(@PathVariable Long id) {

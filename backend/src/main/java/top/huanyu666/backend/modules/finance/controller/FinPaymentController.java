@@ -65,6 +65,9 @@ public class FinPaymentController {
                 return last != null ? last.getPaymentNo() : null;
             }));
         }
+        if (payment.getStatus() == null || payment.getStatus().isBlank()) {
+            payment.setStatus("DRAFT");
+        }
         paymentMapper.insert(payment);
         return ApiResponse.ok();
     }
@@ -98,6 +101,10 @@ public class FinPaymentController {
 
         List<FinPaymentItem> items = paymentItemMapper.selectList(
                 new LambdaQueryWrapper<FinPaymentItem>().eq(FinPaymentItem::getPaymentId, id));
+
+        if (items.isEmpty()) {
+            return ApiResponse.error("收付款单无核销明细");
+        }
 
         for (FinPaymentItem item : items) {
             if (item.getReceivableId() != null) {

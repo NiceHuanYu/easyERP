@@ -28,6 +28,11 @@ public class FinReceivableService {
      * 发货确认时创建应收台账。
      */
     public FinReceivable createFromDelivery(Long deliveryId, Long customerId, BigDecimal amount) {
+        // 防重复创建
+        FinReceivable exist = findByDeliveryId(deliveryId);
+        if (exist != null) {
+            throw new BusinessException("该发货单已创建应收台账");
+        }
         FinReceivable receivable = new FinReceivable();
         receivable.setDeliveryId(deliveryId);
         receivable.setCustomerId(customerId);
@@ -43,11 +48,18 @@ public class FinReceivableService {
      * 收款核销 —— 增加已收金额，自动更新状态。
      */
     public FinReceivable applyPayment(Long receivableId, BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("核销金额必须大于0");
+        }
         FinReceivable r = receivableMapper.selectById(receivableId);
         if (r == null) {
             throw new BusinessException("应收台账不存在: " + receivableId);
         }
-        BigDecimal newReceived = nvl(r.getReceivedAmount()).add(amount);
+        BigDecimal currentReceived = nvl(r.getReceivedAmount());
+        if (currentReceived.add(amount).compareTo(r.getReceivableAmount()) > 0) {
+            throw new BusinessException("核销金额超过应收金额");
+        }
+        BigDecimal newReceived = currentReceived.add(amount);
         r.setReceivedAmount(newReceived);
         r.setStatus(deriveStatus(newReceived, r.getReceivableAmount()));
         receivableMapper.updateById(r);

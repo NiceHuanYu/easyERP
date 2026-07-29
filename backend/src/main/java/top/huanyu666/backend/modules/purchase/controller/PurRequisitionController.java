@@ -131,6 +131,9 @@ public class PurRequisitionController {
         if (requisition == null) {
             throw new BusinessException("采购申请不存在");
         }
+        if (!"APPROVED".equals(requisition.getStatus())) {
+            throw new BusinessException("仅已审核的申请可生成订单");
+        }
 
         // 查申请明细
         LambdaQueryWrapper<PurRequisitionItem> itemQw = new LambdaQueryWrapper<>();
@@ -161,16 +164,19 @@ public class PurRequisitionController {
             orderItemMapper.insert(orderItem);
 
             // 更新申请明细已下单数量
-            reqItem.setOrderedQty(
-                    reqItem.getOrderedQty() != null
-                            ? reqItem.getOrderedQty().add(reqItem.getQuantity())
-                            : reqItem.getQuantity());
+            BigDecimal currentOrdered = reqItem.getOrderedQty() != null
+                    ? reqItem.getOrderedQty() : BigDecimal.ZERO;
+            reqItem.setOrderedQty(currentOrdered.add(reqItem.getQuantity()));
             reqItem.setUpdateTime(LocalDateTime.now());
             requisitionItemMapper.updateById(reqItem);
         }
 
-        // 更新申请状态
-        requisition.setStatus("ORDERED");
+        // 更新申请状态：全部明细都已下单才设为 ORDERED
+        List<PurRequisitionItem> allItems = requisitionItemMapper.selectList(
+                new LambdaQueryWrapper<PurRequisitionItem>().eq(PurRequisitionItem::getRequisitionId, id));
+        boolean allOrdered = allItems.stream().allMatch(item ->
+                item.getOrderedQty() != null && item.getOrderedQty().compareTo(item.getQuantity()) >= 0);
+        requisition.setStatus(allOrdered ? "ORDERED" : "APPROVED");
         requisitionMapper.updateById(requisition);
 
         log.info("采购申请 {} 生成采购订单 {}", requisition.getRequisitionNo(), order.getOrderNo());
@@ -228,7 +234,7 @@ public class PurRequisitionController {
         if (body.containsKey("status")) r.setStatus((String) body.get("status"));
         if (body.containsKey("remark")) r.setRemark((String) body.get("remark"));
         if (body.containsKey("applicantId")) r.setApplicantId(Long.valueOf(body.get("applicantId").toString()));
-        if (body.containsKey("reqDate")) r.setReqDate(LocalDate.parse(body.get("reqDate").toString()));
+        if (body.containsKey("reqDate") && body.get("reqDate") != null && !body.get("reqDate").toString().isBlank()) r.setReqDate(LocalDate.parse(body.get("reqDate").toString()));
         return r;
     }
 
@@ -236,8 +242,10 @@ public class PurRequisitionController {
         for (java.util.Map<String, Object> line : lines) {
             PurRequisitionItem item = new PurRequisitionItem();
             item.setRequisitionId(reqId);
-            item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
-            item.setQuantity(new BigDecimal(line.get("quantity").toString()));
+            if (line.containsKey("materialId") && line.get("materialId") != null)
+                item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
+            if (line.containsKey("quantity") && line.get("quantity") != null)
+                item.setQuantity(new BigDecimal(line.get("quantity").toString()));
             item.setOrderedQty(BigDecimal.ZERO);
             item.setCreateTime(LocalDateTime.now());
             item.setUpdateTime(LocalDateTime.now());

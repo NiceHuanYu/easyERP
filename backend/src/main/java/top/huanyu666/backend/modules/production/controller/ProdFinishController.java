@@ -103,7 +103,7 @@ public class ProdFinishController {
         return ApiResponse.ok(finish);
     }
 
-    @SaCheckPermission("production:order:create")
+    @SaCheckPermission("production:order:edit")
     @PutMapping("/{id}")
     public ApiResponse<ProdFinish> update(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
         ProdFinish exist = finishMapper.selectById(id);
@@ -179,6 +179,7 @@ public class ProdFinishController {
     /**
      * 删除（仅草稿）
      */
+    @SaCheckPermission("production:order:delete")
     @DeleteMapping("/{id}")
     @Transactional
     public ApiResponse<Void> delete(@PathVariable Long id) {
@@ -195,7 +196,7 @@ public class ProdFinishController {
         if (body.containsKey("id")) f.setId(Long.valueOf(body.get("id").toString()));
         if (body.containsKey("orderId")) f.setOrderId(Long.valueOf(body.get("orderId").toString()));
         if (body.containsKey("warehouseId")) f.setWarehouseId(Long.valueOf(body.get("warehouseId").toString()));
-        if (body.containsKey("finishDate")) f.setFinishDate(LocalDate.parse(body.get("finishDate").toString()));
+        if (body.containsKey("finishDate") && body.get("finishDate") != null && !body.get("finishDate").toString().isBlank()) f.setFinishDate(LocalDate.parse(body.get("finishDate").toString()));
         if (body.containsKey("status")) f.setStatus((String) body.get("status"));
         return f;
     }

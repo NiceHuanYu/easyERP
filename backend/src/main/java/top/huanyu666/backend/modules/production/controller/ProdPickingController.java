@@ -103,7 +103,7 @@ public class ProdPickingController {
         return ApiResponse.ok(picking);
     }
 
-    @SaCheckPermission("production:order:create")
+    @SaCheckPermission("production:order:edit")
     @PutMapping("/{id}")
     public ApiResponse<ProdPicking> update(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
         ProdPicking exist = pickingMapper.selectById(id);
@@ -162,7 +162,9 @@ public class ProdPickingController {
             bomQw.eq(ProdOrderBom::getMaterialId, item.getMaterialId());
             ProdOrderBom orderBom = orderBomMapper.selectOne(bomQw);
             if (orderBom != null) {
-                orderBom.setPickedQty(orderBom.getPickedQty().add(item.getActualQty()));
+                BigDecimal currentPicked = orderBom.getPickedQty() != null
+                        ? orderBom.getPickedQty() : BigDecimal.ZERO;
+                orderBom.setPickedQty(currentPicked.add(item.getActualQty()));
                 orderBom.setUpdateTime(LocalDateTime.now());
                 orderBomMapper.updateById(orderBom);
             }
@@ -178,6 +180,7 @@ public class ProdPickingController {
     /**
      * 删除（仅草稿）
      */
+    @SaCheckPermission("production:order:delete")
     @DeleteMapping("/{id}")
     @Transactional
     public ApiResponse<Void> delete(@PathVariable Long id) {
@@ -194,7 +197,7 @@ public class ProdPickingController {
         if (body.containsKey("id")) p.setId(Long.valueOf(body.get("id").toString()));
         if (body.containsKey("orderId")) p.setOrderId(Long.valueOf(body.get("orderId").toString()));
         if (body.containsKey("warehouseId")) p.setWarehouseId(Long.valueOf(body.get("warehouseId").toString()));
-        if (body.containsKey("pickingDate")) p.setPickingDate(LocalDate.parse(body.get("pickingDate").toString()));
+        if (body.containsKey("pickingDate") && body.get("pickingDate") != null && !body.get("pickingDate").toString().isBlank()) p.setPickingDate(LocalDate.parse(body.get("pickingDate").toString()));
         if (body.containsKey("status")) p.setStatus((String) body.get("status"));
         return p;
     }

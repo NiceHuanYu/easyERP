@@ -12,6 +12,7 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.finance.entity.FinReceivable;
 import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
+import top.huanyu666.backend.modules.finance.service.FinReceivableService;
 import top.huanyu666.backend.modules.base.entity.Customer;
 import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
 
@@ -29,6 +30,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 public class FinReceivableController {
 
     private final FinReceivableMapper receivableMapper;
+    private final FinReceivableService receivableService;
     private final CustomerMapper customerMapper;
 
     @SaCheckPermission("finance:order:view")
@@ -57,26 +59,12 @@ public class FinReceivableController {
 
     // ==================== 核销 ====================
 
-    @SaCheckPermission("finance:order:view")
-    @PostMapping("/{no}/reconcile")
+    @SaCheckPermission("finance:order:approve")
+    @PostMapping("/{id}/reconcile")
     @Transactional
-    public ApiResponse<Void> reconcile(@PathVariable String no, @RequestBody Map<String, Object> body) {
+    public ApiResponse<Void> reconcile(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         BigDecimal amount = new BigDecimal(body.get("amount").toString());
-        FinReceivable receivable = receivableMapper.selectOne(
-            new LambdaQueryWrapper<FinReceivable>().eq(FinReceivable::getDeliveryId,
-                java.lang.Long.parseLong(no))
-        );
-        if (receivable == null) {
-            receivable = receivableMapper.selectById(java.lang.Long.parseLong(no));
-        }
-        if (receivable == null) throw new BusinessException("应收记录不存在");
-        receivable.setReceivedAmount(receivable.getReceivedAmount().add(amount));
-        if (receivable.getReceivedAmount().compareTo(receivable.getReceivableAmount()) >= 0) {
-            receivable.setStatus("PAID");
-        } else {
-            receivable.setStatus("PARTIAL_PAID");
-        }
-        receivableMapper.updateById(receivable);
+        receivableService.applyPayment(id, amount);
         return ApiResponse.ok();
     }
 }
