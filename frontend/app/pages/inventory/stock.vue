@@ -44,11 +44,8 @@
         @row-click="handleRowClick"
         style="cursor: pointer"
       >
-        <el-table-column prop="materialCode" label="物料编码" width="140" />
         <el-table-column prop="materialName" label="物料名称" min-width="150" />
-        <el-table-column prop="spec" label="规格" width="120" />
-        <el-table-column prop="unit" label="单位" width="80" />
-        <el-table-column prop="warehouse" label="仓库" width="120" />
+        <el-table-column prop="warehouseId" label="仓库ID" width="100" />
         <el-table-column prop="quantity" label="库存数量" width="100" sortable />
         <el-table-column prop="availableQty" label="可用数量" width="100" sortable />
         <el-table-column prop="lockedQty" label="锁定数量" width="100" sortable />

@@ -52,32 +52,17 @@
         stripe
         border
       >
-        <el-table-column prop="transNo" label="流水号" width="160" />
-        <el-table-column prop="date" label="日期" width="110" sortable />
-        <el-table-column prop="materialCode" label="物料编码" width="130" />
+        <el-table-column prop="id" label="ID" width="160" />
+        <el-table-column prop="createTime" label="日期" width="170" sortable />
         <el-table-column prop="materialName" label="物料名称" min-width="150" />
-        <el-table-column prop="warehouse" label="仓库" width="110" />
-        <el-table-column prop="type" label="类型" width="90">
+        <el-table-column prop="type" label="类型" width="120">
           <template #default="{ row }">
-            <el-tag
-              :type="typeTagMap[row.type]"
-              size="small"
-              effect="plain"
-            >
-              {{ row.type }}
-            </el-tag>
+            <el-tag size="small">{{ row.type }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="90" />
-        <el-table-column prop="direction" label="方向" width="70">
-          <template #default="{ row }">
-            <span :class="row.direction === '+' ? 'direction-in' : 'direction-out'">
-              {{ row.direction }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="refNo" label="关联单号" width="150" />
-        <el-table-column prop="operator" label="操作人" width="100" />
+        <el-table-column prop="currentStock" label="结存" width="90" />
+        <el-table-column prop="sourceNo" label="关联单号" width="150" />
       </el-table>
 
       <el-pagination
