@@ -42,17 +42,31 @@ public class InvStockService {
                         .eq(InvStock::getWarehouseId, warehouseId));
 
         if (stock == null) {
-            throw new BusinessException("库存记录不存在: materialId=" + materialId
-                    + ", warehouseId=" + warehouseId);
+            // 库存记录不存在时自动创建，初始量为 0
+            stock = new InvStock();
+            stock.setMaterialId(materialId);
+            stock.setWarehouseId(warehouseId);
+            stock.setQuantity(BigDecimal.ZERO);
+            stock.setAvailableQty(BigDecimal.ZERO);
+            stock.setLockedQty(BigDecimal.ZERO);
+            stock.setCreateTime(LocalDateTime.now());
+            stock.setUpdateTime(LocalDateTime.now());
+            stockMapper.insert(stock);
         }
-        if (stock.getAvailableQty() == null
-                || stock.getAvailableQty().compareTo(qty) < 0) {
+        // 防御：若 availableQty 为 null 或与 quantity 不一致，以 quantity 为准
+        BigDecimal qtyOnHand = nvl(stock.getQuantity());
+        BigDecimal available = nvl(stock.getAvailableQty());
+        if (available.compareTo(qtyOnHand) > 0) {
+            available = qtyOnHand;
+            stock.setAvailableQty(available);
+        }
+        if (available.compareTo(qty) < 0) {
             throw new BusinessException("库存不足: materialId=" + materialId
-                    + ", 可用=" + stock.getAvailableQty() + ", 需要=" + qty);
+                    + ", 可用=" + available + ", 需要=" + qty);
         }
 
-        stock.setAvailableQty(stock.getAvailableQty().subtract(qty));
-        stock.setQuantity(nvl(stock.getQuantity()).subtract(qty));
+        stock.setAvailableQty(available.subtract(qty));
+        stock.setQuantity(qtyOnHand.subtract(qty));
         stock.setUpdateTime(LocalDateTime.now());
         stockMapper.updateById(stock);
 

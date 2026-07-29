@@ -56,6 +56,27 @@ public class ProdPickingController {
         qw.orderByDesc(ProdPicking::getCreateTime);
         Page<ProdPicking> page = pickingMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        // 填充工单号和物料汇总
+        for (ProdPicking p : page.getRecords()) {
+            // 工单号
+            if (p.getOrderId() != null) {
+                ProdOrder order = orderMapper.selectById(p.getOrderId());
+                p.setOrderNo(order != null ? order.getOrderNo() : "");
+            }
+            // 物料汇总：查明细 → 批量查物料名 → 拼接
+            List<ProdPickingItem> items = pickingItemMapper.selectList(
+                    new LambdaQueryWrapper<ProdPickingItem>().eq(ProdPickingItem::getPickingId, p.getId()));
+            if (!items.isEmpty()) {
+                List<Long> mIds = items.stream().map(ProdPickingItem::getMaterialId).distinct().toList();
+                java.util.Map<Long, String> nameMap = materialMapper.selectBatchIds(mIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(Material::getId, Material::getName, (a, b) -> a));
+                String summary = items.stream()
+                        .map(i -> nameMap.getOrDefault(i.getMaterialId(), "") + "×" + i.getActualQty())
+                        .reduce((a, b) -> a + "、 " + b)
+                        .orElse("");
+                p.setMaterialSummary(summary);
+            }
+        }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
@@ -67,19 +88,43 @@ public class ProdPickingController {
         if (picking == null) throw new BusinessException("领料单不存在");
         List<ProdPickingItem> items = pickingItemMapper.selectList(
                 new LambdaQueryWrapper<ProdPickingItem>().eq(ProdPickingItem::getPickingId, id));
+
+        // 批量查物料名
+        final java.util.Map<Long, Material> matMap;
+        if (!items.isEmpty()) {
+            List<Long> mIds = items.stream().map(ProdPickingItem::getMaterialId).distinct().toList();
+            matMap = materialMapper.selectBatchIds(mIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Material::getId, m -> m, (a, b) -> a));
+        } else {
+            matMap = java.util.Collections.emptyMap();
+        }
+
         java.util.Map<String, Object> result = new java.util.HashMap<>();
         result.put("id", picking.getId());
         result.put("pickingNo", picking.getPickingNo());
         result.put("orderId", picking.getOrderId());
+        // 工单号
+        if (picking.getOrderId() != null) {
+            ProdOrder order = orderMapper.selectById(picking.getOrderId());
+            result.put("orderNo", order != null ? order.getOrderNo() : "");
+        }
         result.put("warehouseId", picking.getWarehouseId());
         result.put("pickingDate", picking.getPickingDate() != null ? picking.getPickingDate().toString() : "");
         result.put("status", picking.getStatus());
         result.put("lines", items.stream().map(i -> {
+            Material m = matMap.get(i.getMaterialId());
             java.util.Map<String, Object> line = new java.util.HashMap<>();
+            line.put("id", i.getId());
             line.put("materialId", i.getMaterialId());
+            line.put("materialName", m != null ? m.getName() : "");
+            line.put("materialCode", m != null ? m.getCode() : "");
+            line.put("unit", m != null ? m.getUnit() : "");
             line.put("requestQty", i.getRequestQty());
             line.put("actualQty", i.getActualQty());
             line.put("pickingQuantity", i.getActualQty());
+            // 前端期望的字段名
+            line.put("requiredQuantity", i.getRequestQty());
+            line.put("pickedQuantity", i.getActualQty());
             return line;
         }).toList());
         return ApiResponse.ok(result);
@@ -211,8 +256,12 @@ public class ProdPickingController {
             ProdPickingItem item = new ProdPickingItem();
             item.setPickingId(pickingId);
             item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
-            BigDecimal qty = new BigDecimal(line.get("pickingQuantity") != null
-                    ? line.get("pickingQuantity").toString() : "0");
+            // 兼容 quantity 和 pickingQuantity 两种字段名
+            BigDecimal qty = new BigDecimal(
+                    line.get("quantity") != null
+                            ? line.get("quantity").toString()
+                            : (line.get("pickingQuantity") != null
+                                    ? line.get("pickingQuantity").toString() : "0"));
             item.setRequestQty(qty);
             item.setActualQty(qty);
             item.setCreateTime(LocalDateTime.now());

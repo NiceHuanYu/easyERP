@@ -39,4 +39,7 @@ public class ProdOrder extends BaseEntity {
 
     @com.baomidou.mybatisplus.annotation.TableField(exist = false)
     private String salesOrderNo;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String unit;
 }

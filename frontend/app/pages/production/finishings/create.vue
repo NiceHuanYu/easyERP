@@ -91,7 +91,7 @@
               <el-input-number
                 v-model="row.finishingQuantity"
                 :min="0"
-                :max="row.orderQuantity - row.finishedQuantity"
+                :max="Math.max(0, row.orderQuantity - row.finishedQuantity)"
                 :precision="0"
                 style="width: 140px"
                 :disabled="isEdit"
@@ -121,8 +121,7 @@
 
 <script setup lang="ts">
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { formatDate, generateCode } from '~/utils'
-import { useAuthStore } from '../../../stores/auth'
+import { formatDate } from '~/utils'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
 
@@ -130,7 +129,6 @@ definePageMeta({ middleware: 'auth' })
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
@@ -196,14 +194,14 @@ async function onOrderChange(val: number | null) {
     return
   }
   try {
-    const orderData = await api.get<{ materialId: number; materialName: string; planQuantity: number; finishedQuantity: number; unit: string }>(`/production/orders/${val}`)
+    const orderData = await api.get<{ materialId: number; materialName: string; planQuantity: number; finishQuantity: number; unit: string }>(`/production/orders/${val}`)
     form.lines = [{
       materialId: orderData.materialId,
       materialName: orderData.materialName,
       orderQuantity: orderData.planQuantity,
-      finishedQuantity: orderData.finishedQuantity,
-      finishingQuantity: Math.max(0, orderData.planQuantity - orderData.finishedQuantity),
-      unit: orderData.unit || '个',
+      finishedQuantity: orderData.finishQuantity ?? 0,
+      finishingQuantity: Math.max(0, (orderData.planQuantity ?? 0) - (orderData.finishQuantity ?? 0)),
+      unit: orderData.unit || '',
     }]
   } catch {
     form.lines = []
@@ -292,11 +290,15 @@ onMounted(() => {
 
 async function loadFinishing(id: string) {
   try {
-    const data = await api.get<{ orderId: number; warehouseId: number; finishingDate: string; lines: FinishingLine[] }>(`/production/finishings/${id}`)
+    const data = await api.get<{ orderId: number; warehouseId: number; finishingDate: string; planQuantity: number; finishedQuantity: number; lines: FinishingLine[] }>(`/production/finishings/${id}`)
     form.orderId = data.orderId
     form.warehouseId = data.warehouseId
     form.finishingDate = data.finishingDate
-    form.lines = data.lines.map((l) => ({ ...l }))
+    form.lines = data.lines.map((l) => ({
+      ...l,
+      orderQuantity: (data as any).planQuantity ?? 0,
+      finishedQuantity: (data as any).finishedQuantity ?? 0,
+    }))
   } catch {
     ElMessage.error('加载入库单数据失败')
   }

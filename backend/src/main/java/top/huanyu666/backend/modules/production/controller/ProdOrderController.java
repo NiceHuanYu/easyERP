@@ -82,6 +82,7 @@ public class ProdOrderController {
         if (order.getMaterialId() != null) {
             Material m = materialMapper.selectById(order.getMaterialId());
             order.setMaterialName(m != null ? m.getName() : "");
+            order.setUnit(m != null ? m.getUnit() : "");
         }
         if (order.getSalesOrderId() != null) {
             top.huanyu666.backend.modules.sales.entity.SalesOrder so = salesOrderMapper.selectById(order.getSalesOrderId());

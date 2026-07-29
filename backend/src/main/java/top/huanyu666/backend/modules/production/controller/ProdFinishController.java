@@ -13,11 +13,12 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
 
-import java.math.BigDecimal;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,6 +36,7 @@ public class ProdFinishController {
     private final ProdFinishMapper finishMapper;
     private final ProdFinishItemMapper finishItemMapper;
     private final ProdOrderMapper orderMapper;
+    private final MaterialMapper materialMapper;
     private final InvStockService stockService;
 
     // ==================== 基础 CRUD ====================
@@ -54,6 +56,26 @@ public class ProdFinishController {
         qw.orderByDesc(ProdFinish::getCreateTime);
         Page<ProdFinish> page = finishMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        // 填充工单号 + 前端字段名映射 + 物料/数量
+        for (ProdFinish f : page.getRecords()) {
+            // 前端字段名映射（前端用 finishingNo/finishingDate，表字段是 finishNo/finishDate）
+            f.setFinishingNo(f.getFinishNo());
+            f.setFinishingDate(f.getFinishDate() != null ? f.getFinishDate().toString() : "");
+            // 工单号
+            if (f.getOrderId() != null) {
+                ProdOrder order = orderMapper.selectById(f.getOrderId());
+                f.setOrderNo(order != null ? order.getOrderNo() : "");
+            }
+            // 物料名称和数量（取第一条明细）
+            List<ProdFinishItem> items = finishItemMapper.selectList(
+                    new LambdaQueryWrapper<ProdFinishItem>().eq(ProdFinishItem::getFinishId, f.getId()));
+            if (!items.isEmpty()) {
+                ProdFinishItem first = items.get(0);
+                Material m = materialMapper.selectById(first.getMaterialId());
+                f.setMaterialName(m != null ? m.getName() : "");
+                f.setQuantity(first.getQuantity());
+            }
+        }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
@@ -65,18 +87,44 @@ public class ProdFinishController {
         if (finish == null) throw new BusinessException("完工入库单不存在");
         List<ProdFinishItem> items = finishItemMapper.selectList(
                 new LambdaQueryWrapper<ProdFinishItem>().eq(ProdFinishItem::getFinishId, id));
+
+        // 批量查物料
+        final java.util.Map<Long, Material> matMap;
+        if (!items.isEmpty()) {
+            List<Long> mIds = items.stream().map(ProdFinishItem::getMaterialId).distinct().toList();
+            matMap = materialMapper.selectBatchIds(mIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Material::getId, m -> m, (a, b) -> a));
+        } else {
+            matMap = java.util.Collections.emptyMap();
+        }
+
         java.util.Map<String, Object> result = new java.util.HashMap<>();
         result.put("id", finish.getId());
-        result.put("finishNo", finish.getFinishNo());
+        result.put("finishingNo", finish.getFinishNo());   // 前端字段名（含 ing）
         result.put("orderId", finish.getOrderId());
+        if (finish.getOrderId() != null) {
+            ProdOrder order = orderMapper.selectById(finish.getOrderId());
+            result.put("orderNo", order != null ? order.getOrderNo() : "");
+            result.put("planQuantity", order != null ? order.getPlanQuantity() : BigDecimal.ZERO);
+            result.put("finishedQuantity", order != null ? order.getFinishQuantity() : BigDecimal.ZERO);
+        } else {
+            result.put("planQuantity", BigDecimal.ZERO);
+            result.put("finishedQuantity", BigDecimal.ZERO);
+        }
         result.put("warehouseId", finish.getWarehouseId());
-        result.put("finishDate", finish.getFinishDate() != null ? finish.getFinishDate().toString() : "");
+        result.put("finishingDate", finish.getFinishDate() != null ? finish.getFinishDate().toString() : "");
         result.put("status", finish.getStatus());
         result.put("lines", items.stream().map(i -> {
+            Material m = matMap.get(i.getMaterialId());
             java.util.Map<String, Object> line = new java.util.HashMap<>();
+            line.put("id", i.getId());
             line.put("materialId", i.getMaterialId());
+            line.put("materialName", m != null ? m.getName() : "");
+            line.put("materialCode", m != null ? m.getCode() : "");
+            line.put("unit", m != null ? m.getUnit() : "");
             line.put("quantity", i.getQuantity());
             line.put("finishQuantity", i.getQuantity());
+            line.put("finishingQuantity", i.getQuantity());
             return line;
         }).toList());
         return ApiResponse.ok(result);
@@ -194,7 +242,11 @@ public class ProdFinishController {
         if (body.containsKey("id")) f.setId(Long.valueOf(body.get("id").toString()));
         if (body.containsKey("orderId")) f.setOrderId(Long.valueOf(body.get("orderId").toString()));
         if (body.containsKey("warehouseId")) f.setWarehouseId(Long.valueOf(body.get("warehouseId").toString()));
-        if (body.containsKey("finishDate") && body.get("finishDate") != null && !body.get("finishDate").toString().isBlank()) f.setFinishDate(LocalDate.parse(body.get("finishDate").toString()));
+        // 兼容 finishDate（DB字段名）和 finishingDate（前端字段名）
+        if (body.containsKey("finishDate") && body.get("finishDate") != null && !body.get("finishDate").toString().isBlank())
+            f.setFinishDate(LocalDate.parse(body.get("finishDate").toString()));
+        else if (body.containsKey("finishingDate") && body.get("finishingDate") != null && !body.get("finishingDate").toString().isBlank())
+            f.setFinishDate(LocalDate.parse(body.get("finishingDate").toString()));
         if (body.containsKey("status")) f.setStatus((String) body.get("status"));
         return f;
     }
@@ -204,8 +256,11 @@ public class ProdFinishController {
             ProdFinishItem item = new ProdFinishItem();
             item.setFinishId(finishId);
             item.setMaterialId(Long.valueOf(line.get("materialId").toString()));
-            item.setQuantity(new BigDecimal(line.get("finishQuantity") != null
-                    ? line.get("finishQuantity").toString() : "0"));
+            item.setQuantity(new BigDecimal(
+                    line.get("quantity") != null
+                            ? line.get("quantity").toString()
+                            : (line.get("finishQuantity") != null
+                                    ? line.get("finishQuantity").toString() : "0")));
             item.setCreateTime(LocalDateTime.now());
             item.setUpdateTime(LocalDateTime.now());
             finishItemMapper.insert(item);
