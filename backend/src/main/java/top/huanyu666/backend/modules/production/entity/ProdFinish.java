@@ -45,4 +45,7 @@ public class ProdFinish extends BaseEntity {
 
     @TableField(exist = false)
     private java.math.BigDecimal quantity;
+
+    @TableField(exist = false)
+    private String warehouseName;
 }

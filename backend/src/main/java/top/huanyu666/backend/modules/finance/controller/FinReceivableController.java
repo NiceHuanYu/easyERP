@@ -67,6 +67,17 @@ public class FinReceivableController {
 
     // ==================== 核销 ====================
 
+    /** 更新应收日期 */
+    @SaCheckPermission("finance:order:edit")
+    @PutMapping("/{id}/due-date")
+    public ApiResponse<Void> updateDueDate(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        FinReceivable r = receivableMapper.selectById(id);
+        if (r == null) throw new BusinessException("应收记录不存在");
+        r.setDueDate(java.time.LocalDate.parse(body.get("dueDate")));
+        receivableMapper.updateById(r);
+        return ApiResponse.ok();
+    }
+
     @SaCheckPermission("finance:order:approve")
     @PostMapping("/{id}/reconcile")
     @Transactional

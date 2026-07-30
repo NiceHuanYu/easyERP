@@ -72,7 +72,7 @@
                 {{ statusLabel(order.status) }}
               </el-tag>
             </el-descriptions-item>
-            <el-descriptions-item label="物料">{{ order.materialName }}</el-descriptions-item>
+            <el-descriptions-item label="产品">{{ order.materialName }}</el-descriptions-item>
             <el-descriptions-item label="计划数量">{{ order.planQuantity }}</el-descriptions-item>
             <el-descriptions-item label="已完工数量">{{ order.finishQuantity }}</el-descriptions-item>
             <el-descriptions-item label="计划开始日期">{{ order.startDate }}</el-descriptions-item>

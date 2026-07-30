@@ -14,7 +14,9 @@ import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.entity.Warehouse;
 import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
+import top.huanyu666.backend.modules.base.mapper.WarehouseMapper;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
@@ -37,6 +39,7 @@ public class ProdFinishController {
     private final ProdFinishItemMapper finishItemMapper;
     private final ProdOrderMapper orderMapper;
     private final MaterialMapper materialMapper;
+    private final WarehouseMapper warehouseMapper;
     private final InvStockService stockService;
 
     // ==================== 基础 CRUD ====================
@@ -65,6 +68,11 @@ public class ProdFinishController {
             if (f.getOrderId() != null) {
                 ProdOrder order = orderMapper.selectById(f.getOrderId());
                 f.setOrderNo(order != null ? order.getOrderNo() : "");
+            }
+            // 仓库名
+            if (f.getWarehouseId() != null) {
+                Warehouse wh = warehouseMapper.selectById(f.getWarehouseId());
+                f.setWarehouseName(wh != null ? wh.getName() : "");
             }
             // 物料名称和数量（取第一条明细）
             List<ProdFinishItem> items = finishItemMapper.selectList(

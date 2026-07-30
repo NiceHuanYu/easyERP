@@ -13,7 +13,9 @@ import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.entity.Warehouse;
 import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
+import top.huanyu666.backend.modules.base.mapper.WarehouseMapper;
 import top.huanyu666.backend.modules.inventory.service.InvStockService;
 import top.huanyu666.backend.modules.production.entity.*;
 import top.huanyu666.backend.modules.production.mapper.*;
@@ -37,6 +39,7 @@ public class ProdPickingController {
     private final ProdOrderBomMapper orderBomMapper;
     private final ProdOrderMapper orderMapper;
     private final MaterialMapper materialMapper;
+    private final WarehouseMapper warehouseMapper;
     private final InvStockService stockService;
 
     // ==================== 基础 CRUD ====================
@@ -62,6 +65,11 @@ public class ProdPickingController {
             if (p.getOrderId() != null) {
                 ProdOrder order = orderMapper.selectById(p.getOrderId());
                 p.setOrderNo(order != null ? order.getOrderNo() : "");
+            }
+            // 仓库名
+            if (p.getWarehouseId() != null) {
+                Warehouse wh = warehouseMapper.selectById(p.getWarehouseId());
+                p.setWarehouseName(wh != null ? wh.getName() : "");
             }
             // 物料汇总：查明细 → 批量查物料名 → 拼接
             List<ProdPickingItem> items = pickingItemMapper.selectList(

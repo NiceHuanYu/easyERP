@@ -4,7 +4,7 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="客户">
-          <el-select v-model="searchForm.customer" placeholder="请选择客户" clearable filterable>
+          <el-select v-model="searchForm.customerId" placeholder="请选择客户" clearable filterable>
             <el-option
               v-for="c in customerOptions"
               :key="c.value"
@@ -15,9 +15,9 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="未核销" value="未核销" />
-            <el-option label="部分核销" value="部分核销" />
-            <el-option label="已核销" value="已核销" />
+            <el-option label="未核销" value="PENDING" />
+            <el-option label="部分核销" value="PARTIALLY_PAID" />
+            <el-option label="已核销" value="FULLY_PAID" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期">
@@ -58,11 +58,23 @@
             <span class="unreceived">¥{{ ((row.receivableAmount ?? 0) - (row.receivedAmount ?? 0)).toLocaleString() }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="dueDate" label="应收日期" width="110" sortable />
+        <el-table-column label="应收日期" width="140" sortable>
+          <template #default="{ row }">
+            <el-date-picker
+              v-model="row.dueDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="选择日期"
+              size="small"
+              style="width:130px"
+              @change="(val: string) => handleDueDateChange(row, val)"
+            />
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTagMap[row.status]" size="small" effect="plain">
-              {{ row.status }}
+              {{ statusLabelMap[row.status] || row.status }}
             </el-tag>
           </template>
         </el-table-column>
@@ -73,7 +85,7 @@
               type="warning"
               link
               size="small"
-              :disabled="row.status === '已核销'"
+              :disabled="row.status === 'FULLY_PAID' || row.status === 'PAID'"
               @click.stop="handleReconcile(row)"
             >
               核销
@@ -101,13 +113,13 @@
           <el-descriptions-item label="客户">{{ viewRow.customerName }}</el-descriptions-item>
           <el-descriptions-item label="发货单号">{{ viewRow.deliveryNo }}</el-descriptions-item>
           <el-descriptions-item label="应收日期">{{ viewRow.dueDate }}</el-descriptions-item>
-          <el-descriptions-item label="应收金额">¥{{ viewRow.amount.toLocaleString() }}</el-descriptions-item>
-          <el-descriptions-item label="已收金额">¥{{ viewRow.receivedAmount.toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="应收金额">¥{{ (viewRow.receivableAmount ?? 0).toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="已收金额">¥{{ (viewRow.receivedAmount ?? 0).toLocaleString() }}</el-descriptions-item>
           <el-descriptions-item label="未收金额">
-            <span class="unreceived">¥{{ viewRow.unreceivedAmount.toLocaleString() }}</span>
+            <span class="unreceived">¥{{ ((viewRow.receivableAmount ?? 0) - (viewRow.receivedAmount ?? 0)).toLocaleString() }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="statusTagMap[viewRow.status]" size="small">{{ viewRow.status }}</el-tag>
+            <el-tag :type="statusTagMap[viewRow.status]" size="small">{{ statusLabelMap[viewRow.status] || viewRow.status }}</el-tag>
           </el-descriptions-item>
         </el-descriptions>
       </template>
@@ -119,9 +131,9 @@
         <el-descriptions :column="2" border class="reconcile-desc">
           <el-descriptions-item label="应收单号">{{ reconcileRow.receivableNo }}</el-descriptions-item>
           <el-descriptions-item label="客户">{{ reconcileRow.customerName }}</el-descriptions-item>
-          <el-descriptions-item label="应收金额">¥{{ reconcileRow.amount.toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="应收金额">¥{{ (reconcileRow.receivableAmount ?? 0).toLocaleString() }}</el-descriptions-item>
           <el-descriptions-item label="未收金额">
-            <span class="unreceived">¥{{ reconcileRow.unreceivedAmount.toLocaleString() }}</span>
+            <span class="unreceived">¥{{ ((reconcileRow.receivableAmount ?? 0) - (reconcileRow.receivedAmount ?? 0)).toLocaleString() }}</span>
           </el-descriptions-item>
         </el-descriptions>
 
@@ -159,7 +171,7 @@
           <span>本次核销合计：</span>
           <strong class="unreceived">¥{{ totalReconcileAmount.toLocaleString() }}</strong>
           <span class="reconcile-max">
-            （可核销上限：¥{{ reconcileRow.unreceivedAmount.toLocaleString() }}）
+            （可核销上限：¥{{ ((reconcileRow.receivableAmount ?? 0) - (reconcileRow.receivedAmount ?? 0)).toLocaleString() }}）
           </span>
         </div>
       </template>
@@ -168,7 +180,7 @@
         <el-button @click="reconcileDialogVisible = false">取消</el-button>
         <el-button
           type="primary"
-          :disabled="totalReconcileAmount <= 0 || totalReconcileAmount > reconcileRow!.unreceivedAmount"
+          :disabled="totalReconcileAmount <= 0 || totalReconcileAmount > ((reconcileRow.receivableAmount ?? 0) - (reconcileRow.receivedAmount ?? 0))"
           @click="confirmReconcile"
         >
           确认核销
@@ -187,14 +199,14 @@ definePageMeta({ middleware: 'auth' })
 
 // ── Types ──────────────────────────────────────────
 interface Receivable {
+  id: number
   receivableNo: string
   customerName: string
   deliveryNo: string
-  amount: number
+  receivableAmount: number
   receivedAmount: number
-  unreceivedAmount: number
   dueDate: string
-  status: '未核销' | '部分核销' | '已核销'
+  status: string
 }
 
 interface Payment {
@@ -205,26 +217,36 @@ interface Payment {
 
 // ── Search Form ────────────────────────────────────
 const searchForm = reactive({
-  customer: '',
+  customerId: '' as any,
   status: '' as string,
   dateRange: null as [string, string] | null,
 })
 
-const customerOptions = ref<{ label: string; value: string }[]>([])
+const customerOptions = ref<{ label: string; value: number }[]>([])
 
 async function fetchCustomerOptions() {
   try {
     const result = await api.page<{ id: number; name: string }>('/base/customers', 1, 1000)
-    customerOptions.value = result.list.map((item) => ({ label: item.name, value: item.name }))
+    customerOptions.value = result.list.map((item) => ({ label: item.name, value: item.id }))
   } catch {
     // options load silently; the dropdown just stays empty
   }
 }
 
+const statusLabelMap: Record<string, string> = {
+  'PENDING': '未核销',
+  'PARTIALLY_PAID': '部分核销',
+  'FULLY_PAID': '已核销',
+  'UNPAID': '未核销',
+  'PAID': '已核销',
+}
+
 const statusTagMap: Record<string, 'warning' | 'success' | 'info'> = {
-  '未核销': 'warning',
-  '部分核销': 'warning' as const,
-  '已核销': 'success',
+  'PENDING': 'warning',
+  'UNPAID': 'warning',
+  'PARTIALLY_PAID': 'warning' as const,
+  'FULLY_PAID': 'success',
+  'PAID': 'success',
 }
 
 // ── Data ───────────────────────────────────────────
@@ -240,13 +262,13 @@ async function fetchData() {
   loading.value = true
   try {
     const extraQuery: Record<string, string | number | undefined> = {}
-    if (searchForm.customer) extraQuery.customer = searchForm.customer
+    if (searchForm.customerId) extraQuery.customerId = searchForm.customerId
     if (searchForm.status) extraQuery.status = searchForm.status
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
       extraQuery.startDate = searchForm.dateRange[0]
       extraQuery.endDate = searchForm.dateRange[1]
     }
-    const result = await api.page<Receivable>(
+    const result = await api.page<any>(
       '/finance/receivables',
       pagination.page,
       pagination.pageSize,
@@ -267,6 +289,16 @@ const paginatedData = computed(() => allData.value)
 const viewDialogVisible = ref(false)
 const viewRow = ref<Receivable | null>(null)
 
+async function handleDueDateChange(row: Receivable, val: string) {
+  if (!val) return
+  try {
+    await api.put(`/finance/receivables/${row.id}/due-date`, { dueDate: val })
+    ElMessage.success('应收日期已更新')
+  } catch {
+    ElMessage.error('更新失败')
+  }
+}
+
 function handleView(row: Receivable) {
   viewRow.value = row
   viewDialogVisible.value = true
@@ -279,13 +311,13 @@ const availablePayments = ref<Payment[]>([])
 const reconcileAmounts = reactive<Record<string, number>>({})
 const selectedPayments = ref<Payment[]>([])
 
-async function fetchAvailablePayments(customerName: string) {
+async function fetchAvailablePayments(_customerName: string) {
   try {
-    const result = await api.page<any>('/finance/payments', 1, 200, { type: '收款', counterparty: customerName })
+    const result = await api.page<any>('/finance/payments', 1, 200, { type: 'RECEIVE' })
     availablePayments.value = result.list.map((p: any) => ({
       paymentNo: p.paymentNo,
       amount: p.amount,
-      availableAmount: (p.amount ?? 0) - (p.reconciledAmount ?? 0),
+      availableAmount: p.amount ?? 0,
     }))
   } catch {
     // Fallback: empty list
@@ -334,13 +366,14 @@ async function confirmReconcile() {
   if (!reconcileRow.value) return
 
   const total = totalReconcileAmount.value
-  if (total <= 0 || total > reconcileRow.value.unreceivedAmount) {
+  const unpaidAmount = (reconcileRow.value.receivableAmount ?? 0) - (reconcileRow.value.receivedAmount ?? 0)
+  if (total <= 0 || total > unpaidAmount) {
     ElMessage.warning('核销金额无效')
     return
   }
 
   try {
-    await api.post(`/finance/receivables/${reconcileRow.value.receivableNo}/reconcile`, {
+    await api.post(`/finance/receivables/${reconcileRow.value.id}/reconcile`, {
       reconcileAmount: total,
       payments: Object.entries(reconcileAmounts)
         .filter(([, amount]) => amount > 0)
@@ -362,7 +395,7 @@ function handleSearch() {
 }
 
 function handleReset() {
-  searchForm.customer = ''
+  searchForm.customerId = ''
   searchForm.status = ''
   searchForm.dateRange = null
   pagination.page = 1

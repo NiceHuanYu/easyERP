@@ -35,4 +35,8 @@ public class ProdPicking extends BaseEntity {
     /** 领料物料汇总（列表展示用，非 DB 字段） */
     @TableField(exist = false)
     private String materialSummary;
+
+    /** 仓库名（列表展示用，非 DB 字段） */
+    @TableField(exist = false)
+    private String warehouseName;
 }

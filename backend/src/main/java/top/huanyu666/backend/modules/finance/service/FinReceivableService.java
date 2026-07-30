@@ -8,8 +8,6 @@ import top.huanyu666.backend.common.enums.DocumentStatus;
 import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.modules.finance.entity.FinReceivable;
 import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
-import top.huanyu666.backend.modules.sales.entity.SalesDelivery;
-import top.huanyu666.backend.modules.sales.mapper.SalesDeliveryMapper;
 
 import java.math.BigDecimal;
 
@@ -25,7 +23,6 @@ import java.math.BigDecimal;
 public class FinReceivableService {
 
     private final FinReceivableMapper receivableMapper;
-    private final SalesDeliveryMapper deliveryMapper;
 
     /**
      * 发货确认时创建应收台账。
@@ -41,9 +38,6 @@ public class FinReceivableService {
         receivable.setCustomerId(customerId);
         receivable.setReceivableAmount(amount);
         receivable.setReceivedAmount(BigDecimal.ZERO);
-        // 应收日期 = 发货单的发货日期
-        SalesDelivery delivery = deliveryMapper.selectById(deliveryId);
-        receivable.setDueDate(delivery != null ? delivery.getDeliveryDate() : null);
         receivable.setStatus(DocumentStatus.PENDING.getCode());
         receivableMapper.insert(receivable);
         log.info("创建应收台账: deliveryId={}, customerId={}, amount={}", deliveryId, customerId, amount);

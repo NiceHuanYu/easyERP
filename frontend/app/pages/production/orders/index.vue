@@ -19,10 +19,10 @@
             style="width: 180px"
           />
         </el-form-item>
-        <el-form-item label="物料">
+        <el-form-item label="产品">
           <el-select
             v-model="searchForm.materialId"
-            placeholder="请选择物料"
+            placeholder="请选择产品"
             clearable
             filterable
             style="width: 200px"
@@ -102,7 +102,7 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="materialName" label="物料名称" min-width="180" />
+        <el-table-column prop="materialName" label="产品名称" min-width="180" />
         <el-table-column prop="planQuantity" label="计划数量" width="110" align="right" />
         <el-table-column prop="finishQuantity" label="已完工数量" width="120" align="right" />
         <el-table-column prop="startDate" label="计划开始" width="120" />
@@ -271,7 +271,7 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | '' {
   return map[s] ?? ''
 }
 
-// ==================== 物料选项 ====================
+// ==================== 产品选项 ====================
 const materialOptions = ref<{ label: string; value: number }[]>([])
 
 async function loadMaterialOptions() {

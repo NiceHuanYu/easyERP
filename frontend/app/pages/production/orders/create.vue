@@ -39,10 +39,10 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="物料" prop="materialId">
+            <el-form-item label="产品" prop="materialId">
               <el-select
                 v-model="form.materialId"
-                placeholder="请选择物料"
+                placeholder="请选择产品"
                 filterable
                 style="width: 100%"
                 @change="onMaterialChange"
@@ -243,7 +243,7 @@ const form = reactive<OrderForm>({
 
 const formRef = ref()
 const rules = {
-  materialId: [{ required: true, message: '请选择物料', trigger: 'change' }],
+  materialId: [{ required: true, message: '请选择产品', trigger: 'change' }],
   planQuantity: [{ required: true, message: '请输入计划数量', trigger: 'blur' }],
   startDate: [{ required: true, message: '请选择计划开始日期', trigger: 'change' }],
   endDate: [{ required: true, message: '请选择计划结束日期', trigger: 'change' }],

@@ -4,7 +4,7 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="供应商">
-          <el-select v-model="searchForm.supplier" placeholder="请选择供应商" clearable filterable>
+          <el-select v-model="searchForm.supplierId" placeholder="请选择供应商" clearable filterable>
             <el-option
               v-for="s in supplierOptions"
               :key="s.value"
@@ -15,9 +15,9 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="未核销" value="未核销" />
-            <el-option label="部分核销" value="部分核销" />
-            <el-option label="已核销" value="已核销" />
+            <el-option label="未核销" value="UNPAID" />
+            <el-option label="部分核销" value="PARTIALLY_PAID" />
+            <el-option label="已核销" value="FULLY_PAID" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期">
@@ -74,7 +74,7 @@
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTagMap[row.status]" size="small" effect="plain">
-              {{ row.status }}
+              {{ statusLabelMap[row.status] || row.status }}
             </el-tag>
           </template>
         </el-table-column>
@@ -85,7 +85,7 @@
               type="warning"
               link
               size="small"
-              :disabled="row.status === '已核销'"
+              :disabled="row.status === 'FULLY_PAID' || row.status === 'PAID'"
               @click.stop="handleReconcile(row)"
             >
               核销
@@ -113,13 +113,13 @@
           <el-descriptions-item label="供应商">{{ viewRow.supplierName }}</el-descriptions-item>
           <el-descriptions-item label="收货单号">{{ viewRow.receivingNo }}</el-descriptions-item>
           <el-descriptions-item label="应付日期">{{ viewRow.dueDate }}</el-descriptions-item>
-          <el-descriptions-item label="应付金额">¥{{ viewRow.amount.toLocaleString() }}</el-descriptions-item>
-          <el-descriptions-item label="已付金额">¥{{ viewRow.paidAmount.toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="应付金额">¥{{ (viewRow.payableAmount ?? 0).toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="已付金额">¥{{ (viewRow.paidAmount ?? 0).toLocaleString() }}</el-descriptions-item>
           <el-descriptions-item label="未付金额">
-            <span class="unpaid">¥{{ viewRow.unpaidAmount.toLocaleString() }}</span>
+            <span class="unpaid">¥{{ ((viewRow.payableAmount ?? 0) - (viewRow.paidAmount ?? 0)).toLocaleString() }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="statusTagMap[viewRow.status]" size="small">{{ viewRow.status }}</el-tag>
+            <el-tag :type="statusTagMap[viewRow.status]" size="small">{{ statusLabelMap[viewRow.status] || viewRow.status }}</el-tag>
           </el-descriptions-item>
         </el-descriptions>
       </template>
@@ -131,9 +131,9 @@
         <el-descriptions :column="2" border class="reconcile-desc">
           <el-descriptions-item label="应付单号">{{ reconcileRow.payableNo }}</el-descriptions-item>
           <el-descriptions-item label="供应商">{{ reconcileRow.supplierName }}</el-descriptions-item>
-          <el-descriptions-item label="应付金额">¥{{ reconcileRow.amount.toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="应付金额">¥{{ (reconcileRow.payableAmount ?? 0).toLocaleString() }}</el-descriptions-item>
           <el-descriptions-item label="未付金额">
-            <span class="unpaid">¥{{ reconcileRow.unpaidAmount.toLocaleString() }}</span>
+            <span class="unpaid">¥{{ ((reconcileRow.payableAmount ?? 0) - (reconcileRow.paidAmount ?? 0)).toLocaleString() }}</span>
           </el-descriptions-item>
         </el-descriptions>
 
@@ -171,7 +171,7 @@
           <span>本次核销合计：</span>
           <strong class="unpaid">¥{{ totalReconcileAmount.toLocaleString() }}</strong>
           <span class="reconcile-max">
-            （可核销上限：¥{{ reconcileRow.unpaidAmount.toLocaleString() }}）
+            （可核销上限：¥{{ ((reconcileRow.payableAmount ?? 0) - (reconcileRow.paidAmount ?? 0)).toLocaleString() }}）
           </span>
         </div>
       </template>
@@ -199,14 +199,14 @@ definePageMeta({ middleware: 'auth' })
 
 // ── Types ──────────────────────────────────────────
 interface Payable {
+  id: number
   payableNo: string
   supplierName: string
   receivingNo: string
-  amount: number
+  payableAmount: number
   paidAmount: number
-  unpaidAmount: number
   dueDate: string
-  status: '未核销' | '部分核销' | '已核销'
+  status: string
 }
 
 interface PaymentRecord {
@@ -217,26 +217,34 @@ interface PaymentRecord {
 
 // ── Search Form ────────────────────────────────────
 const searchForm = reactive({
-  supplier: '',
+  supplierId: '' as any,
   status: '' as string,
   dateRange: null as [string, string] | null,
 })
 
-const supplierOptions = ref<{ label: string; value: string }[]>([])
+const supplierOptions = ref<{ label: string; value: number }[]>([])
 
 async function fetchSupplierOptions() {
   try {
     const result = await api.page<{ id: number; name: string }>('/base/suppliers', 1, 1000)
-    supplierOptions.value = result.list.map((item) => ({ label: item.name, value: item.name }))
+    supplierOptions.value = result.list.map((item) => ({ label: item.name, value: item.id }))
   } catch {
     // options load silently; the dropdown just stays empty
   }
 }
 
+const statusLabelMap: Record<string, string> = {
+  'UNPAID': '未核销',
+  'PARTIALLY_PAID': '部分核销',
+  'FULLY_PAID': '已核销',
+  'PENDING': '未核销',
+  'PAID': '已核销',
+}
+
 const statusTagMap: Record<string, 'warning' | 'success' | 'info'> = {
-  '未核销': 'warning',
-  '部分核销': 'warning' as const,
-  '已核销': 'success',
+  'UNPAID': 'warning',
+  'PARTIALLY_PAID': 'warning' as const,
+  'FULLY_PAID': 'success',
 }
 
 // ── Data ───────────────────────────────────────────
@@ -252,13 +260,13 @@ async function fetchData() {
   loading.value = true
   try {
     const extraQuery: Record<string, string | number | undefined> = {}
-    if (searchForm.supplier) extraQuery.supplier = searchForm.supplier
+    if (searchForm.supplierId) extraQuery.supplierId = searchForm.supplierId
     if (searchForm.status) extraQuery.status = searchForm.status
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
       extraQuery.startDate = searchForm.dateRange[0]
       extraQuery.endDate = searchForm.dateRange[1]
     }
-    const result = await api.page<Payable>(
+    const result = await api.page<any>(
       '/finance/payables',
       pagination.page,
       pagination.pageSize,
@@ -301,13 +309,13 @@ const availablePayments = ref<PaymentRecord[]>([])
 const reconcileAmounts = reactive<Record<string, number>>({})
 const selectedPayments = ref<PaymentRecord[]>([])
 
-async function fetchAvailablePayments(supplierName: string) {
+async function fetchAvailablePayments(_supplierName: string) {
   try {
-    const result = await api.page<any>('/finance/payments', 1, 200, { type: '付款', counterparty: supplierName })
+    const result = await api.page<any>('/finance/payments', 1, 200, { type: 'PAY' })
     availablePayments.value = result.list.map((p: any) => ({
       paymentNo: p.paymentNo,
       amount: p.amount,
-      availableAmount: (p.amount ?? 0) - (p.reconciledAmount ?? 0),
+      availableAmount: p.amount ?? 0,
     }))
   } catch {
     availablePayments.value = []
@@ -353,13 +361,14 @@ async function confirmReconcile() {
   if (!reconcileRow.value) return
 
   const total = totalReconcileAmount.value
-  if (total <= 0 || total > reconcileRow.value.unpaidAmount) {
+  const unpaidAmount = (reconcileRow.value.payableAmount ?? 0) - (reconcileRow.value.paidAmount ?? 0)
+  if (total <= 0 || total > unpaidAmount) {
     ElMessage.warning('核销金额无效')
     return
   }
 
   try {
-    await api.post(`/finance/payables/${reconcileRow.value.payableNo}/reconcile`, {
+    await api.post(`/finance/payables/${reconcileRow.value.id}/reconcile`, {
       reconcileAmount: total,
       payments: Object.entries(reconcileAmounts)
         .filter(([, amount]) => amount > 0)
@@ -381,7 +390,7 @@ function handleSearch() {
 }
 
 function handleReset() {
-  searchForm.supplier = ''
+  searchForm.supplierId = ''
   searchForm.status = ''
   searchForm.dateRange = null
   pagination.page = 1
