@@ -138,31 +138,20 @@
         </el-descriptions>
 
         <el-divider content-position="left">可用的收款记录</el-divider>
-
-        <el-table
-          :data="availablePayments"
-          stripe
-          border
-          @selection-change="handlePaymentSelection"
-        >
+        <el-table :data="availablePayments" stripe border @selection-change="handlePaymentSelection">
           <el-table-column type="selection" width="50" />
           <el-table-column prop="paymentNo" label="收款单号" width="150" />
           <el-table-column prop="amount" label="收款金额" width="120">
             <template #default="{ row }">¥{{ row.amount.toLocaleString() }}</template>
           </el-table-column>
-          <el-table-column prop="availableAmount" label="可核销金额" width="120">
-            <template #default="{ row }">¥{{ row.availableAmount.toLocaleString() }}</template>
+          <el-table-column label="可核销金额" width="120">
+            <template #default="{ row }">¥{{ ((row.amount ?? 0) - (row.reconciledAmount ?? 0)).toLocaleString() }}</template>
           </el-table-column>
           <el-table-column label="本次核销金额" min-width="160">
             <template #default="{ row: payment }">
-              <el-input-number
-                v-model="reconcileAmounts[payment.paymentNo]"
-                :min="0"
-                :max="payment.availableAmount"
-                :precision="2"
-                controls-position="right"
-                size="small"
-              />
+              <el-input-number v-model="reconcileAmounts[payment.paymentNo]" :min="0"
+                :max="Math.max(0, (payment.amount ?? 0) - (payment.reconciledAmount ?? 0))"
+                :precision="2" controls-position="right" size="small" />
             </template>
           </el-table-column>
         </el-table>
@@ -180,7 +169,6 @@
         <el-button @click="reconcileDialogVisible = false">取消</el-button>
         <el-button
           type="primary"
-          :disabled="totalReconcileAmount <= 0 || totalReconcileAmount > ((reconcileRow.receivableAmount ?? 0) - (reconcileRow.receivedAmount ?? 0))"
           @click="confirmReconcile"
         >
           确认核销
@@ -212,7 +200,7 @@ interface Receivable {
 interface Payment {
   paymentNo: string
   amount: number
-  availableAmount: number
+  reconciledAmount: number
 }
 
 // ── Search Form ────────────────────────────────────
@@ -313,42 +301,31 @@ const selectedPayments = ref<Payment[]>([])
 
 async function fetchAvailablePayments(_customerName: string) {
   try {
-    const result = await api.page<any>('/finance/payments', 1, 200, { type: 'RECEIVE' })
-    availablePayments.value = result.list.map((p: any) => ({
-      paymentNo: p.paymentNo,
-      amount: p.amount,
-      availableAmount: p.amount ?? 0,
+    const result = await api.page<any>('/finance/payments', 1, 200, { type: 'RECEIVE', status: 'CONFIRMED' })
+    availablePayments.value = result.list
+      .filter((p: any) => (p.amount ?? 0) > (p.reconciledAmount ?? 0))
+      .map((p: any) => ({
+      paymentNo: p.paymentNo || '',
+      amount: p.amount ?? 0,
+      reconciledAmount: p.reconciledAmount ?? 0,
     }))
-  } catch {
-    // Fallback: empty list
-    availablePayments.value = []
-  }
+  } catch { availablePayments.value = [] }
 }
 
 const totalReconcileAmount = computed(() =>
-  Object.values(reconcileAmounts).reduce((sum, val) => sum + (val || 0), 0),
+  selectedPayments.value.reduce((sum, p) => sum + (reconcileAmounts[p.paymentNo] || 0), 0),
 )
 
 function handleReconcile(row: Receivable) {
   reconcileRow.value = row
+  for (const key of Object.keys(reconcileAmounts)) delete reconcileAmounts[key]
   fetchAvailablePayments(row.customerName)
-
-  // Reset amounts
-  for (const key of Object.keys(reconcileAmounts)) {
-    delete reconcileAmounts[key]
-  }
-
   reconcileDialogVisible.value = true
 }
 
-// Watch availablePayments to init amounts once loaded
 watch(availablePayments, (payments) => {
-  for (const key of Object.keys(reconcileAmounts)) {
-    delete reconcileAmounts[key]
-  }
-  payments.forEach((p) => {
-    reconcileAmounts[p.paymentNo] = 0
-  })
+  for (const key of Object.keys(reconcileAmounts)) delete reconcileAmounts[key]
+  payments.forEach(p => { reconcileAmounts[p.paymentNo] = 0 })
 })
 
 function handlePaymentSelection(selection: Payment[]) {
@@ -356,32 +333,36 @@ function handlePaymentSelection(selection: Payment[]) {
 }
 
 function resetReconcileForm() {
-  for (const key of Object.keys(reconcileAmounts)) {
-    delete reconcileAmounts[key]
-  }
+  for (const key of Object.keys(reconcileAmounts)) delete reconcileAmounts[key]
   selectedPayments.value = []
 }
 
 async function confirmReconcile() {
   if (!reconcileRow.value) return
-
   const total = totalReconcileAmount.value
   const unpaidAmount = (reconcileRow.value.receivableAmount ?? 0) - (reconcileRow.value.receivedAmount ?? 0)
   if (total <= 0 || total > unpaidAmount) {
     ElMessage.warning('核销金额无效')
     return
   }
-
+  for (const p of selectedPayments.value) {
+    const amt = reconcileAmounts[p.paymentNo] || 0
+    const available = (p.amount ?? 0) - (p.reconciledAmount ?? 0)
+    if (amt > available) {
+      ElMessage.warning(`收款单 ${p.paymentNo} 核销金额超出可核销金额`)
+      return
+    }
+  }
   try {
     await api.post(`/finance/receivables/${reconcileRow.value.id}/reconcile`, {
-      reconcileAmount: total,
-      payments: Object.entries(reconcileAmounts)
-        .filter(([, amount]) => amount > 0)
-        .map(([paymentNo, amount]) => ({ paymentNo, amount })),
+      amount: total,
+      payments: selectedPayments.value.map(p => ({
+        paymentNo: p.paymentNo,
+        amount: reconcileAmounts[p.paymentNo] || 0,
+      })),
     })
-    ElMessage.success(`核销成功，本次核销 ¥${total.toLocaleString()}`)
+    ElMessage.success('核销成功')
     reconcileDialogVisible.value = false
-    resetReconcileForm()
     fetchData()
   } catch {
     ElMessage.error('核销失败')

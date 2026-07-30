@@ -19,8 +19,8 @@
           <el-col :span="8">
             <el-form-item label="类型" prop="type">
               <el-radio-group v-model="form.type" @change="handleTypeChange">
-                <el-radio value="收款">收款</el-radio>
-                <el-radio value="付款">付款</el-radio>
+                <el-radio value="RECEIVE">收款</el-radio>
+                <el-radio value="PAY">付款</el-radio>
               </el-radio-group>
             </el-form-item>
           </el-col>
@@ -28,7 +28,7 @@
             <el-form-item label="往来单位" prop="counterparty">
               <el-select
                 v-model="form.counterparty"
-                :placeholder="form.type === '收款' ? '请选择客户' : '请选择供应商'"
+                :placeholder="form.type === 'RECEIVE' ? '请选择客户' : '请选择供应商'"
                 clearable
                 filterable
                 style="width: 100%"
@@ -101,25 +101,17 @@
       </template>
 
       <el-empty v-if="!form.counterparty" description="请先选择往来单位" />
+      <el-empty v-else-if="openItems.length === 0" description="该往来单位没有待核销项目" />
 
-      <template v-else>
-        <el-alert
-          v-if="openItems.length === 0"
-          title="该往来单位没有待核销项目"
-          type="success"
-          :closable="false"
-          show-icon
-        />
-
-        <el-table v-else :data="openItems" stripe border>
+      <el-table v-else :data="openItems" stripe border>
           <el-table-column
-            :prop="form.type === '收款' ? 'receivableNo' : 'payableNo'"
-            :label="form.type === '收款' ? '应收单号' : '应付单号'"
+            :prop="form.type === 'RECEIVE' ? 'receivableNo' : 'payableNo'"
+            :label="form.type === 'RECEIVE' ? '应收单号' : '应付单号'"
             width="150"
           />
           <el-table-column
-            :prop="form.type === '收款' ? 'deliveryNo' : 'receivingNo'"
-            :label="form.type === '收款' ? '发货单号' : '收货单号'"
+            :prop="form.type === 'RECEIVE' ? 'deliveryNo' : 'receivingNo'"
+            :label="form.type === 'RECEIVE' ? '发货单号' : '收货单号'"
             width="140"
           />
           <el-table-column prop="totalAmount" label="金额" width="130">
@@ -145,7 +137,6 @@
             </template>
           </el-table-column>
         </el-table>
-      </template>
     </el-card>
 
     <!-- Actions -->
@@ -175,12 +166,12 @@
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../composables/useApi'
-import { generateCode } from '~/utils'
 
 definePageMeta({ middleware: 'auth' })
 
 // ── Types ──────────────────────────────────────────
 interface OpenItem {
+  id: number
   receivableNo?: string
   payableNo?: string
   deliveryNo?: string
@@ -194,8 +185,8 @@ interface OpenItem {
 const formRef = ref<FormInstance>()
 const form = reactive({
   paymentNo: '',
-  type: '收款' as '收款' | '付款',
-  counterparty: '',
+  type: 'RECEIVE' as 'RECEIVE' | 'PAY',
+  counterparty: null as string | null,
   amount: 0,
   date: new Date().toISOString().slice(0, 10),
   bankAccount: '',
@@ -219,26 +210,33 @@ const supplierOptions = ref<{ label: string; value: string }[]>([])
 
 async function fetchCustomerOptions() {
   try {
-    const result = await api.page<{ id: number; name: string }>('/base/customers', 1, 1000)
-    customerOptions.value = result.list.map((item) => ({ label: item.name, value: item.name }))
+    const result = await api.page<any>('/base/customers', 1, 1000)
+    customerOptions.value = result.list
+      .filter((item: any) => item.id != null)
+      .map((item: any) => ({ label: item.name, value: item.id }))
   } catch {
-    // options load silently; the dropdown just stays empty
+    // ignore
   }
+  if (form.type === 'RECEIVE') loadCounterpartyOptions()
 }
 
 async function fetchSupplierOptions() {
   try {
-    const result = await api.page<{ id: number; name: string }>('/base/suppliers', 1, 1000)
-    supplierOptions.value = result.list.map((item) => ({ label: item.name, value: item.name }))
+    const result = await api.page<any>('/base/suppliers', 1, 1000)
+    supplierOptions.value = result.list
+      .filter((item: any) => item.id != null)
+      .map((item: any) => ({ label: item.name, value: item.id }))
   } catch {
-    // options load silently; the dropdown just stays empty
+    // ignore
   }
+  if (form.type === 'PAY') loadCounterpartyOptions()
 }
 
-const counterpartyOptions = computed(() =>
-  form.type === '收款' ? customerOptions : supplierOptions,
-)
+const counterpartyOptions = ref<{ label: string; value: string }[]>([])
 
+function loadCounterpartyOptions() {
+  counterpartyOptions.value = form.type === 'RECEIVE' ? customerOptions.value : supplierOptions.value
+}
 // ── Open Items ─────────────────────────────────────
 const openItems = ref<OpenItem[]>([])
 const writeOffAmounts = ref<number[]>([])
@@ -249,28 +247,30 @@ const totalWriteOffAmount = computed(() =>
 
 async function fetchOpenItems(counterparty: string) {
   try {
-    if (form.type === '收款') {
+    if (form.type === 'RECEIVE') {
       const result = await api.page<any>('/finance/receivables', 1, 200, {
-        customer: counterparty,
-        status: '未核销',
+        customerId: counterparty,
+        status: 'PENDING',
       })
       openItems.value = result.list.map((r: any) => ({
+        id: r.id,
         receivableNo: r.receivableNo,
         deliveryNo: r.deliveryNo,
-        totalAmount: r.amount,
-        openAmount: r.unreceivedAmount,
+        totalAmount: r.receivableAmount ?? 0,
+        openAmount: (r.receivableAmount ?? 0) - (r.receivedAmount ?? 0),
         dueDate: r.dueDate,
       }))
     } else {
       const result = await api.page<any>('/finance/payables', 1, 200, {
-        supplier: counterparty,
-        status: '未核销',
+        supplierId: counterparty,
+        status: 'UNPAID',
       })
       openItems.value = result.list.map((r: any) => ({
+        id: r.id,
         payableNo: r.payableNo,
         receivingNo: r.receivingNo,
-        totalAmount: r.amount,
-        openAmount: r.unpaidAmount,
+        totalAmount: r.payableAmount ?? 0,
+        openAmount: (r.payableAmount ?? 0) - (r.paidAmount ?? 0),
         dueDate: r.dueDate,
       }))
     }
@@ -281,9 +281,10 @@ async function fetchOpenItems(counterparty: string) {
 
 // ── Event Handlers ─────────────────────────────────
 function handleTypeChange() {
-  form.counterparty = ''
+  form.counterparty = null
   openItems.value = []
   writeOffAmounts.value = []
+  loadCounterpartyOptions()
 }
 
 function handleCounterpartyChange() {
@@ -329,18 +330,17 @@ async function doSubmit(status: '草稿' | '已确认') {
 
   try {
     const payload = {
-      ...form,
-      status,
-      writeOffs: openItems.value
-        .map((item, i) => ({
-          itemNo: form.type === '收款' ? item.receivableNo : item.payableNo,
-          amount: writeOffAmounts.value[i] || 0,
-        }))
-        .filter((w) => w.amount > 0),
+      type: form.type,
+      counterpartyId: form.counterparty,
+      amount: form.amount,
+      paymentDate: form.date,
+      bankAccount: form.bankAccount,
+      remark: form.remark,
+      status: status === '已确认' ? 'CONFIRMED' : 'DRAFT',
     }
     const result = await api.post<any>('/finance/payments', payload)
-    if (status === '已确认' && result.paymentNo) {
-      await api.post(`/finance/payments/${result.paymentNo}/confirm`)
+    if (status === '已确认' && result.id) {
+      await api.post(`/finance/payments/confirm/${result.id}`)
     }
     ElMessage.success(status === '已确认' ? '保存并确认成功' : '保存成功')
     router.push('/finance/payments')

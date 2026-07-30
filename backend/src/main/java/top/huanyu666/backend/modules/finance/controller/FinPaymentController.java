@@ -11,6 +11,10 @@ import top.huanyu666.backend.common.exception.BusinessException;
 import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
+import top.huanyu666.backend.modules.base.entity.Customer;
+import top.huanyu666.backend.modules.base.entity.Supplier;
+import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
+import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
 import top.huanyu666.backend.modules.finance.entity.FinPayment;
 import top.huanyu666.backend.modules.finance.entity.FinPaymentItem;
 import top.huanyu666.backend.modules.finance.mapper.FinPaymentItemMapper;
@@ -37,24 +41,48 @@ public class FinPaymentController {
     private final FinPaymentItemMapper paymentItemMapper;
     private final FinReceivableService receivableService;
     private final FinPayableService payableService;
+    private final CustomerMapper customerMapper;
+    private final SupplierMapper supplierMapper;
 
     @SaCheckPermission("finance:order:view")
     @GetMapping
     public ApiResponse<PageResult<FinPayment>> list(PageParam param,
             @RequestParam(required = false) String paymentNo,
-            @RequestParam(required = false) String type) {
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status) {
         LambdaQueryWrapper<FinPayment> qw = new LambdaQueryWrapper<>();
         if (paymentNo != null && !paymentNo.isBlank()) qw.like(FinPayment::getPaymentNo, paymentNo);
         if (type != null && !type.isBlank()) qw.eq(FinPayment::getType, type);
+        if (status != null && !status.isBlank()) qw.eq(FinPayment::getStatus, status);
         qw.orderByDesc(FinPayment::getCreateTime);
         Page<FinPayment> page = paymentMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        // 填充往来单位名称
+        // 批量查客户和供应商（不依赖 type 字段，双向尝试）
+        java.util.Set<Long> allIds = new java.util.HashSet<>();
+        for (FinPayment p : page.getRecords()) {
+            if (p.getCounterpartyId() != null) allIds.add(p.getCounterpartyId());
+        }
+        List<Long> idList = new java.util.ArrayList<>(allIds);
+        java.util.Map<Long, String> customerMap = idList.isEmpty() ? java.util.Collections.emptyMap()
+                : customerMapper.selectBatchIds(idList).stream()
+                        .collect(java.util.stream.Collectors.toMap(Customer::getId, Customer::getName, (a, b) -> a));
+        java.util.Map<Long, String> supplierMap = idList.isEmpty() ? java.util.Collections.emptyMap()
+                : supplierMapper.selectBatchIds(idList).stream()
+                        .collect(java.util.stream.Collectors.toMap(Supplier::getId, Supplier::getName, (a, b) -> a));
+        for (FinPayment p : page.getRecords()) {
+            if (p.getCounterpartyId() != null) {
+                String name = customerMap.get(p.getCounterpartyId());
+                if (name == null) name = supplierMap.get(p.getCounterpartyId());
+                p.setCounterpartyName(name != null ? name : "");
+            }
+        }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
     @SaCheckPermission("finance:order:view")
     @PostMapping
-    public ApiResponse<Void> create(@RequestBody FinPayment payment) {
+    public ApiResponse<FinPayment> create(@RequestBody FinPayment payment) {
         if (payment.getPaymentNo() == null || payment.getPaymentNo().isBlank()) {
             payment.setPaymentNo(CodeGenerator.generate("PAY", () -> {
                 FinPayment last = paymentMapper.selectOne(
@@ -69,7 +97,7 @@ public class FinPaymentController {
             payment.setStatus("DRAFT");
         }
         paymentMapper.insert(payment);
-        return ApiResponse.ok();
+        return ApiResponse.ok(payment);
     }
 
     @SaCheckPermission("finance:order:view")
@@ -78,6 +106,16 @@ public class FinPaymentController {
         FinPayment payment = paymentMapper.selectById(id);
         if (payment == null) {
             return ApiResponse.error("收付款单不存在");
+        }
+        // 填充往来单位名称
+        if (payment.getCounterpartyId() != null) {
+            if ("RECEIVE".equals(payment.getType())) {
+                Customer c = customerMapper.selectById(payment.getCounterpartyId());
+                payment.setCounterpartyName(c != null ? c.getName() : "");
+            } else {
+                Supplier s = supplierMapper.selectById(payment.getCounterpartyId());
+                payment.setCounterpartyName(s != null ? s.getName() : "");
+            }
         }
         List<FinPaymentItem> items = paymentItemMapper.selectList(
                 new LambdaQueryWrapper<FinPaymentItem>().eq(FinPaymentItem::getPaymentId, id));
@@ -99,13 +137,9 @@ public class FinPaymentController {
             return ApiResponse.error("仅草稿状态可确认");
         }
 
+        // 执行核销（若有核销明细）
         List<FinPaymentItem> items = paymentItemMapper.selectList(
                 new LambdaQueryWrapper<FinPaymentItem>().eq(FinPaymentItem::getPaymentId, id));
-
-        if (items.isEmpty()) {
-            return ApiResponse.error("收付款单无核销明细");
-        }
-
         for (FinPaymentItem item : items) {
             if (item.getReceivableId() != null) {
                 receivableService.applyPayment(item.getReceivableId(), item.getAmount());

@@ -31,4 +31,9 @@ public class FinPayment extends BaseEntity {
     private String status;
 
     private String remark;
+
+    private java.math.BigDecimal reconciledAmount;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String counterpartyName;
 }

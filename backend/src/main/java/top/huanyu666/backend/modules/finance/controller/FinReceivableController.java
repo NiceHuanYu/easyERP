@@ -11,7 +11,9 @@ import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.finance.entity.FinReceivable;
+import top.huanyu666.backend.modules.finance.entity.FinPayment;
 import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
+import top.huanyu666.backend.modules.finance.mapper.FinPaymentMapper;
 import top.huanyu666.backend.modules.finance.service.FinReceivableService;
 import top.huanyu666.backend.modules.base.entity.Customer;
 import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
@@ -33,6 +35,7 @@ public class FinReceivableController {
 
     private final FinReceivableMapper receivableMapper;
     private final FinReceivableService receivableService;
+    private final FinPaymentMapper paymentMapper;
     private final CustomerMapper customerMapper;
     private final SalesDeliveryMapper deliveryMapper;
 
@@ -84,6 +87,26 @@ public class FinReceivableController {
     public ApiResponse<Void> reconcile(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         BigDecimal amount = new BigDecimal(body.get("amount").toString());
         receivableService.applyPayment(id, amount);
+
+        // 更新关联的收付款单已核销金额
+        @SuppressWarnings("unchecked")
+        java.util.List<java.util.Map<String, Object>> payments =
+                (java.util.List<java.util.Map<String, Object>>) body.get("payments");
+        if (payments != null) {
+            for (java.util.Map<String, Object> p : payments) {
+                String paymentNo = (String) p.get("paymentNo");
+                BigDecimal payAmount = new BigDecimal(p.get("amount").toString());
+                FinPayment payment = paymentMapper.selectOne(
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<FinPayment>()
+                                .eq(FinPayment::getPaymentNo, paymentNo));
+                if (payment != null) {
+                    BigDecimal current = payment.getReconciledAmount() != null
+                            ? payment.getReconciledAmount() : java.math.BigDecimal.ZERO;
+                    payment.setReconciledAmount(current.add(payAmount));
+                    paymentMapper.updateById(payment);
+                }
+            }
+        }
         return ApiResponse.ok();
     }
 }
