@@ -14,8 +14,12 @@ import top.huanyu666.backend.modules.system.entity.SysUser;
 import top.huanyu666.backend.modules.system.entity.SysUserRole;
 import top.huanyu666.backend.modules.system.mapper.SysUserMapper;
 import top.huanyu666.backend.modules.system.mapper.SysUserRoleMapper;
+import top.huanyu666.backend.modules.base.entity.Employee;
+import top.huanyu666.backend.modules.base.mapper.EmployeeMapper;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 用户管理
@@ -27,6 +31,7 @@ public class UserController {
 
     private final SysUserMapper userMapper;
     private final SysUserRoleMapper userRoleMapper;
+    private final EmployeeMapper employeeMapper;
 
     @GetMapping
     @SaCheckPermission("system:user:view")
@@ -39,6 +44,13 @@ public class UserController {
         qw.orderByDesc(SysUser::getCreateTime);
         Page<SysUser> page = userMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
+        // 填充员工名称
+        for (SysUser u : page.getRecords()) {
+            if (u.getEmployeeId() != null) {
+                Employee e = employeeMapper.selectById(u.getEmployeeId());
+                u.setEmployeeName(e != null ? e.getName() : "");
+            }
+        }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
@@ -50,10 +62,10 @@ public class UserController {
 
     @PostMapping
     @SaCheckPermission("system:user:create")
-    public ApiResponse<Void> create(@RequestBody SysUser user) {
+    public ApiResponse<SysUser> create(@RequestBody SysUser user) {
         user.setPassword(BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
         userMapper.insert(user);
-        return ApiResponse.ok();
+        return ApiResponse.ok(user);
     }
 
     @PutMapping("/{id}")
@@ -89,6 +101,29 @@ public class UserController {
         if (user == null) throw new BusinessException("用户不存在");
         user.setStatus(body.get("status"));
         userMapper.updateById(user);
+        return ApiResponse.ok();
+    }
+
+    /** 获取用户角色ID列表 */
+    @GetMapping("/{id}/roles")
+    @SaCheckPermission("system:user:view")
+    public ApiResponse<List<Long>> getUserRoles(@PathVariable Long id) {
+        List<SysUserRole> list = userRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
+        return ApiResponse.ok(list.stream().map(SysUserRole::getRoleId).collect(Collectors.toList()));
+    }
+
+    /** 设置用户角色 */
+    @PutMapping("/{id}/roles")
+    @SaCheckPermission("system:user:edit")
+    public ApiResponse<Void> setUserRoles(@PathVariable Long id, @RequestBody List<Long> roleIds) {
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
+        for (Long roleId : roleIds) {
+            SysUserRole ur = new SysUserRole();
+            ur.setUserId(id);
+            ur.setRoleId(roleId);
+            userRoleMapper.insert(ur);
+        }
         return ApiResponse.ok();
     }
 }

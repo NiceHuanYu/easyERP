@@ -18,4 +18,7 @@ public class SysUser extends BaseEntity {
     private String nickname;
     private Long employeeId;
     private Integer status;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String employeeName;
 }
