@@ -47,18 +47,30 @@
         <el-table-column prop="payableNo" label="应付单号" width="150" />
         <el-table-column prop="supplierName" label="供应商" min-width="160" />
         <el-table-column prop="receivingNo" label="收货单号" width="140" />
-        <el-table-column prop="amount" label="应付金额" width="120">
-          <template #default="{ row }">¥{{ row.amount.toLocaleString() }}</template>
+        <el-table-column prop="payableAmount" label="应付金额" width="120">
+          <template #default="{ row }">¥{{ (row.payableAmount ?? 0).toLocaleString() }}</template>
         </el-table-column>
         <el-table-column prop="paidAmount" label="已付金额" width="120">
-          <template #default="{ row }">¥{{ row.paidAmount.toLocaleString() }}</template>
+          <template #default="{ row }">¥{{ (row.paidAmount ?? 0).toLocaleString() }}</template>
         </el-table-column>
-        <el-table-column prop="unpaidAmount" label="未付金额" width="120">
+        <el-table-column label="未付金额" width="120">
           <template #default="{ row }">
-            <span class="unpaid">¥{{ row.unpaidAmount.toLocaleString() }}</span>
+            <span class="unpaid">¥{{ ((row.payableAmount ?? 0) - (row.paidAmount ?? 0)).toLocaleString() }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="dueDate" label="应付日期" width="110" sortable />
+        <el-table-column label="应付日期" width="140" sortable>
+          <template #default="{ row }">
+            <el-date-picker
+              v-model="row.dueDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="选择日期"
+              size="small"
+              style="width:130px"
+              @change="(val: string) => handleDueDateChange(row, val)"
+            />
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTagMap[row.status]" size="small" effect="plain">
@@ -266,6 +278,16 @@ const paginatedData = computed(() => allData.value)
 // ── View Dialog ────────────────────────────────────
 const viewDialogVisible = ref(false)
 const viewRow = ref<Payable | null>(null)
+
+async function handleDueDateChange(row: Payable, val: string) {
+  if (!val) return
+  try {
+    await api.put(`/finance/payables/${row.id}/due-date`, { dueDate: val })
+    ElMessage.success('应付日期已更新')
+  } catch {
+    ElMessage.error('更新失败')
+  }
+}
 
 function handleView(row: Payable) {
   viewRow.value = row

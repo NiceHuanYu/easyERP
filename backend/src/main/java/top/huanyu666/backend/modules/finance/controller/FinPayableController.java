@@ -15,6 +15,8 @@ import top.huanyu666.backend.modules.finance.mapper.FinPayableMapper;
 import top.huanyu666.backend.modules.finance.service.FinPayableService;
 import top.huanyu666.backend.modules.base.entity.Supplier;
 import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
+import top.huanyu666.backend.modules.purchase.entity.PurReceiving;
+import top.huanyu666.backend.modules.purchase.mapper.PurReceivingMapper;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -32,6 +34,7 @@ public class FinPayableController {
     private final FinPayableMapper payableMapper;
     private final FinPayableService payableService;
     private final SupplierMapper supplierMapper;
+    private final PurReceivingMapper receivingMapper;
 
     @SaCheckPermission("finance:order:view")
     @GetMapping
@@ -49,15 +52,33 @@ public class FinPayableController {
         Page<FinPayable> page = payableMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
         page.getRecords().forEach(p -> {
+            // 供应商名
             if (p.getSupplierId() != null) {
                 Supplier s = supplierMapper.selectById(p.getSupplierId());
                 p.setSupplierName(s != null ? s.getName() : "");
             }
+            // 收货单号 + 应付单号
+            if (p.getReceivingId() != null) {
+                PurReceiving r = receivingMapper.selectById(p.getReceivingId());
+                p.setReceivingNo(r != null ? r.getReceivingNo() : "");
+            }
+            p.setPayableNo("AP-" + p.getId());
         });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
 
     // ==================== 核销 ====================
+
+    /** 更新应付日期 */
+    @SaCheckPermission("finance:order:edit")
+    @PutMapping("/{id}/due-date")
+    public ApiResponse<Void> updateDueDate(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        FinPayable p = payableMapper.selectById(id);
+        if (p == null) throw new BusinessException("应付记录不存在");
+        p.setDueDate(java.time.LocalDate.parse(body.get("dueDate")));
+        payableMapper.updateById(p);
+        return ApiResponse.ok();
+    }
 
     @SaCheckPermission("finance:order:approve")
     @PostMapping("/{id}/reconcile")

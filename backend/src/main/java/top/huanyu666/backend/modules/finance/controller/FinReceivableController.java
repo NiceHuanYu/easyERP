@@ -15,6 +15,8 @@ import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
 import top.huanyu666.backend.modules.finance.service.FinReceivableService;
 import top.huanyu666.backend.modules.base.entity.Customer;
 import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
+import top.huanyu666.backend.modules.sales.entity.SalesDelivery;
+import top.huanyu666.backend.modules.sales.mapper.SalesDeliveryMapper;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -32,6 +34,7 @@ public class FinReceivableController {
     private final FinReceivableMapper receivableMapper;
     private final FinReceivableService receivableService;
     private final CustomerMapper customerMapper;
+    private final SalesDeliveryMapper deliveryMapper;
 
     @SaCheckPermission("finance:order:view")
     @GetMapping
@@ -53,6 +56,11 @@ public class FinReceivableController {
                 Customer c = customerMapper.selectById(r.getCustomerId());
                 r.setCustomerName(c != null ? c.getName() : "");
             }
+            if (r.getDeliveryId() != null) {
+                SalesDelivery d = deliveryMapper.selectById(r.getDeliveryId());
+                r.setDeliveryNo(d != null ? d.getDeliveryNo() : "");
+            }
+            r.setReceivableNo("AR-" + r.getId());
         });
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }

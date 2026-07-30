@@ -47,15 +47,15 @@
         <el-table-column prop="receivableNo" label="应收单号" width="150" />
         <el-table-column prop="customerName" label="客户" min-width="160" />
         <el-table-column prop="deliveryNo" label="发货单号" width="140" />
-        <el-table-column prop="amount" label="应收金额" width="120">
-          <template #default="{ row }">¥{{ row.amount.toLocaleString() }}</template>
+        <el-table-column prop="receivableAmount" label="应收金额" width="120">
+          <template #default="{ row }">¥{{ (row.receivableAmount ?? 0).toLocaleString() }}</template>
         </el-table-column>
         <el-table-column prop="receivedAmount" label="已收金额" width="120">
-          <template #default="{ row }">¥{{ row.receivedAmount.toLocaleString() }}</template>
+          <template #default="{ row }">¥{{ (row.receivedAmount ?? 0).toLocaleString() }}</template>
         </el-table-column>
-        <el-table-column prop="unreceivedAmount" label="未收金额" width="120">
+        <el-table-column label="未收金额" width="120">
           <template #default="{ row }">
-            <span class="unreceived">¥{{ row.unreceivedAmount.toLocaleString() }}</span>
+            <span class="unreceived">¥{{ ((row.receivableAmount ?? 0) - (row.receivedAmount ?? 0)).toLocaleString() }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="dueDate" label="应收日期" width="110" sortable />

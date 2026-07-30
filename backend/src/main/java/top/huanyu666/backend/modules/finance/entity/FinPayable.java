@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 import top.huanyu666.backend.common.model.BaseEntity;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * 应付台账
@@ -25,6 +26,14 @@ public class FinPayable extends BaseEntity {
 
     private String status;
 
+    private LocalDate dueDate;
+
     @com.baomidou.mybatisplus.annotation.TableField(exist = false)
     private String supplierName;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String receivingNo;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String payableNo;
 }
