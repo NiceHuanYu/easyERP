@@ -35,4 +35,7 @@ public class InvStock implements Serializable {
 
     @com.baomidou.mybatisplus.annotation.TableField(exist = false)
     private String materialName;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String warehouseName;
 }

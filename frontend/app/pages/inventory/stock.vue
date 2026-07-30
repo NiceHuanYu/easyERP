@@ -45,7 +45,7 @@
         style="cursor: pointer"
       >
         <el-table-column prop="materialName" label="物料名称" min-width="150" />
-        <el-table-column prop="warehouseId" label="仓库ID" width="100" />
+        <el-table-column prop="warehouseName" label="仓库" width="120" />
         <el-table-column prop="quantity" label="库存数量" width="100" sortable />
         <el-table-column prop="availableQty" label="可用数量" width="100" sortable />
         <el-table-column prop="lockedQty" label="锁定数量" width="100" sortable />

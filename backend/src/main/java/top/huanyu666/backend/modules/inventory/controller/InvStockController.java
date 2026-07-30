@@ -10,7 +10,9 @@ import top.huanyu666.backend.common.model.ApiResponse;
 import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.entity.Warehouse;
 import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
+import top.huanyu666.backend.modules.base.mapper.WarehouseMapper;
 import top.huanyu666.backend.modules.inventory.entity.InvStock;
 import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
 
@@ -29,6 +31,7 @@ public class InvStockController {
 
     private final InvStockMapper stockMapper;
     private final MaterialMapper materialMapper;
+    private final WarehouseMapper warehouseMapper;
 
     @SaCheckPermission("inventory:stock:view")
     @GetMapping("/warning-count")
@@ -69,12 +72,18 @@ public class InvStockController {
         qw.orderByDesc(InvStock::getCreateTime);
         Page<InvStock> page = stockMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
-        // 批量查物料名，避免 N+1
+        // 批量查物料名和仓库名，避免 N+1
         if (!page.getRecords().isEmpty()) {
             List<Long> materialIds = page.getRecords().stream().map(InvStock::getMaterialId).distinct().toList();
             Map<Long, String> nameMap = materialMapper.selectBatchIds(materialIds).stream()
                     .collect(java.util.stream.Collectors.toMap(Material::getId, Material::getName, (a, b) -> a));
-            page.getRecords().forEach(s -> s.setMaterialName(nameMap.getOrDefault(s.getMaterialId(), "")));
+            List<Long> warehouseIds = page.getRecords().stream().map(InvStock::getWarehouseId).distinct().toList();
+            Map<Long, String> whNameMap = warehouseMapper.selectBatchIds(warehouseIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Warehouse::getId, Warehouse::getName, (a, b) -> a));
+            page.getRecords().forEach(s -> {
+                s.setMaterialName(nameMap.getOrDefault(s.getMaterialId(), ""));
+                s.setWarehouseName(whNameMap.getOrDefault(s.getWarehouseId(), ""));
+            });
         }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }

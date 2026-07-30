@@ -95,9 +95,21 @@ public class PurReceivingController {
             java.util.Map<String, Object> line = new java.util.HashMap<>();
             line.put("orderItemId", i.getOrderItemId());
             line.put("materialId", i.getMaterialId());
-            line.put("quantity", i.getQuantity());
+            line.put("quantity", i.getQuantity());   // 本次收货数量
             Material m = materialMapper.selectById(i.getMaterialId());
             line.put("materialName", m != null ? m.getName() : "");
+            line.put("materialCode", m != null ? m.getCode() : "");
+            line.put("unit", m != null ? m.getUnit() : "");
+            // 关联采购订单行信息
+            if (i.getOrderItemId() != null) {
+                PurOrderItem oi = orderItemMapper.selectById(i.getOrderItemId());
+                if (oi != null) {
+                    line.put("orderQuantity", oi.getQuantity());       // 订单行原始数量
+                    line.put("receivedQuantity", oi.getReceivedQty()); // 已收货总量
+                    line.put("price", oi.getPrice());
+                    line.put("amount", oi.getAmount());
+                }
+            }
             return line;
         }).toList());
         return ApiResponse.ok(result);

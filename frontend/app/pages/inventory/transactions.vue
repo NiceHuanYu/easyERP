@@ -18,9 +18,12 @@
         </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="searchForm.type" placeholder="请选择类型" clearable>
-            <el-option label="入库" value="入库" />
-            <el-option label="出库" value="出库" />
-            <el-option label="调拨" value="调拨" />
+            <el-option
+              v-for="t in typeOptions"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -57,7 +60,9 @@
         <el-table-column prop="materialName" label="物料名称" min-width="150" />
         <el-table-column prop="type" label="类型" width="120">
           <template #default="{ row }">
-            <el-tag size="small">{{ row.type }}</el-tag>
+            <el-tag :type="typeTagMap[row.type] || 'info'" size="small">
+              {{ dictStore.getDictLabel('inv_transaction_type', row.type) || row.type }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="quantity" label="数量" width="90" />
@@ -82,8 +87,11 @@
 import { Search, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../../composables/useApi'
+import { useDictStore } from '../../../stores/dict'
 
 definePageMeta({ middleware: 'auth' })
+
+const dictStore = useDictStore()
 
 // ── Types ──────────────────────────────────────────
 interface Transaction {
@@ -92,7 +100,7 @@ interface Transaction {
   materialCode: string
   materialName: string
   warehouse: string
-  type: '入库' | '出库' | '调拨'
+  type: string
   quantity: number
   direction: '+' | '-'
   refNo: string
@@ -108,20 +116,28 @@ const searchForm = reactive({
 })
 
 const warehouseOptions = ref<{ label: string; value: number }[]>([])
+const typeOptions = ref<{ label: string; value: string }[]>([])
 
-async function loadWarehouseOptions() {
+async function loadOptions() {
+  // 仓库
   try {
     const data = await api.page<{ id: number; name: string }>('/base/warehouses', 1, 1000)
     warehouseOptions.value = data.list.map((w) => ({ label: w.name, value: w.id }))
-  } catch {
-    // options load silently
-  }
+  } catch { /* ignore */ }
+  // 库存变动类型（从字典加载）
+  typeOptions.value = dictStore.getDictItems('inv_transaction_type')
+    .map(d => ({ label: d.label, value: d.value }))
 }
 
 const typeTagMap: Record<string, 'success' | 'danger' | 'warning'> = {
-  '入库': 'success',
-  '出库': 'danger',
-  '调拨': 'warning',
+  'PURCHASE_IN': 'success',
+  'FINISH_IN': 'success',
+  'PICKING_OUT': 'danger',
+  'SALES_OUT': 'danger',
+  'PICKING_RETURN': 'success',
+  'TRANSFER': 'warning',
+  'ADJUST': 'warning',
+  'SCRAP': 'danger',
 }
 
 // ── Data ───────────────────────────────────────────
@@ -176,8 +192,9 @@ function handleReset() {
 
 // ── Init ───────────────────────────────────────────
 watch([() => pagination.page, () => pagination.pageSize], () => { fetchData() })
-onMounted(() => {
-  loadWarehouseOptions()
+onMounted(async () => {
+  if (!dictStore.loaded) await dictStore.fetchAllDicts()
+  loadOptions()
   fetchData()
 })
 </script>

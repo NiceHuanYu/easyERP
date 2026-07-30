@@ -85,6 +85,7 @@ public class PurOrderController {
             line.put("price", i.getPrice());
             line.put("amount", i.getAmount());
             line.put("receivedQty", i.getReceivedQty());
+            line.put("receivedQuantity", i.getReceivedQty() != null ? i.getReceivedQty() : BigDecimal.ZERO);  // 前端期望字段名
             Material m = materialMapper.selectById(i.getMaterialId());
             line.put("materialName", m != null ? m.getName() : "");
             return line;

@@ -106,9 +106,10 @@
               <el-input-number
                 v-model="row.receivingQuantity"
                 :min="0"
-                :max="row.orderQuantity - row.receivedQuantity"
+                :max="isEdit ? undefined : Math.max(0, row.orderQuantity - row.receivedQuantity)"
                 :precision="0"
                 style="width: 140px"
+                :disabled="isEdit"
                 @change="recalcLine($index)"
               />
             </template>
@@ -248,16 +249,21 @@ async function onOrderChange(val: number | null) {
     const data = await api.get<any>(`/purchase/orders/${val}`)
     const lines = data.lines || (data.order && data.order.lines) || []
     if (lines.length > 0) {
-      form.lines = lines.map((l: any) => ({
-        orderItemId: l.id ?? 0,
-        materialId: l.materialId ?? 0,
-        materialName: l.materialName ?? '',
-        orderQuantity: l.quantity ?? 0,
-        receivedQuantity: l.receivedQuantity ?? 0,
-        receivingQuantity: (l.quantity ?? 0) - (l.receivedQuantity ?? 0),
-        price: l.price ?? 0,
-        subtotal: parseFloat((((l.quantity ?? 0) - (l.receivedQuantity ?? 0)) * (l.price ?? 0)).toFixed(2)),
-      }))
+      form.lines = lines
+        .filter((l: any) => (l.receivedQuantity ?? 0) < (l.quantity ?? 0))  // 只保留未收齐的行
+        .map((l: any) => ({
+          orderItemId: l.id ?? 0,
+          materialId: l.materialId ?? 0,
+          materialName: l.materialName ?? '',
+          orderQuantity: l.quantity ?? 0,
+          receivedQuantity: l.receivedQuantity ?? 0,
+          receivingQuantity: (l.quantity ?? 0) - (l.receivedQuantity ?? 0),
+          price: l.price ?? 0,
+          subtotal: parseFloat((((l.quantity ?? 0) - (l.receivedQuantity ?? 0)) * (l.price ?? 0)).toFixed(2)),
+        }))
+      if (form.lines.length === 0) {
+        ElMessage.info('该采购订单所有物料已收齐')
+      }
     } else {
       form.lines = []
     }
@@ -350,11 +356,11 @@ async function loadReceiving(id: string) {
         orderItemId: l.orderItemId ?? 0,
         materialId: l.materialId ?? 0,
         materialName: l.materialName ?? '',
-        orderQuantity: l.quantity ?? 0,
-        receivedQuantity: 0,
+        orderQuantity: l.orderQuantity ?? l.quantity ?? 0,
+        receivedQuantity: l.receivedQuantity ?? 0,
         receivingQuantity: l.quantity ?? 0,
-        price: 0,
-        subtotal: 0,
+        price: l.price ?? 0,
+        subtotal: l.amount ?? 0,
       }))
     }
   } catch {
