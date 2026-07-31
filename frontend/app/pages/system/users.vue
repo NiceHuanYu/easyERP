@@ -87,7 +87,7 @@ const loading = ref(false)
 const submitLoading = ref(false)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
-const editingId = ref<number | null>(null)
+const editingId = ref<number | string | null>(null)
 const formRef = ref<FormInstance>()
 
 const searchForm = reactive({ keyword: '' })
@@ -119,7 +119,7 @@ async function loadEmployees() {
 }
 
 
-async function loadUserRoles(userId: number): Promise<number[]> {
+async function loadUserRoles(userId: number | string): Promise<number[]> {
   try {
     const data = await api.get<any[]>('/system/users/' + userId + '/roles')
     return (data || []).map((v: any) => Number(v))
@@ -181,7 +181,7 @@ async function handleSubmit() {
       await api.put('/system/users/' + editingId.value, payload)
     } else {
       const res = await api.post<any>('/system/users', payload)
-      editingId.value = res?.id ? Number(res.id) : null
+      editingId.value = res?.id ? res.id : null
     }
     // Save roles
     if (editingId.value) {

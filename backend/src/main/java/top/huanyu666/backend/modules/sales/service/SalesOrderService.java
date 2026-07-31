@@ -126,19 +126,20 @@ public class SalesOrderService {
     }
 
     /**
-     * 关闭：APPROVED → CLOSED
+     * 关闭：APPROVED/SHIPPED → CLOSED
      */
     @Transactional
     public void close(Long id) {
         SalesOrder order = getOrder(id);
-        if (!DocumentStatus.APPROVED.eq(order.getStatus())) {
-            throw new BusinessException("只有已审核状态的订单才能关闭");
+        if (!DocumentStatus.APPROVED.eq(order.getStatus()) && !DocumentStatus.SHIPPED.eq(order.getStatus())) {
+            throw new BusinessException("只有已审核或已发货状态的订单才能关闭");
         }
         // 校验订单已全部发货
         List<SalesOrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<SalesOrderItem>().eq(SalesOrderItem::getOrderId, id));
         boolean allShipped = items.stream().allMatch(item ->
-                item.getShippedQty() != null && item.getShippedQty().compareTo(item.getQuantity()) >= 0);
+                item.getShippedQty() != null && item.getQuantity() != null
+                        && item.getShippedQty().compareTo(item.getQuantity()) >= 0);
         if (!allShipped) {
             throw new BusinessException("订单尚有未发货明细，无法关闭");
         }

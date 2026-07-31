@@ -182,6 +182,16 @@
                   </el-button>
                 </template>
               </el-popconfirm>
+              <el-popconfirm
+                title="确认关闭该订单？"
+                confirm-button-text="确认"
+                cancel-button-text="取消"
+                @confirm="handleClose(row)"
+              >
+                <template #reference>
+                  <el-button type="warning" size="small" link>关闭</el-button>
+                </template>
+              </el-popconfirm>
             </template>
 
             <template v-else-if="row.status === 'APPROVED'">
@@ -225,6 +235,16 @@
               >
                 生成发货单
               </el-button>
+              <el-popconfirm
+                title="确认关闭该订单？"
+                confirm-button-text="确认"
+                cancel-button-text="取消"
+                @confirm="handleClose(row)"
+              >
+                <template #reference>
+                  <el-button type="warning" size="small" link>关闭</el-button>
+                </template>
+              </el-popconfirm>
             </template>
 
             <template v-else-if="row.status === 'SHIPPED'">
@@ -299,6 +319,7 @@ const statusMap: Record<string, string> = {
   DRAFT: '草稿',
   SUBMITTED: '已提交',
   APPROVED: '已审核',
+  SHIPPED: '已发货',
   SHIPPED: '已发货',
   CLOSED: '已关闭',
 }

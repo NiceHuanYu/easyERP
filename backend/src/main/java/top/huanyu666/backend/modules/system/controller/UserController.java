@@ -63,6 +63,9 @@ public class UserController {
     @PostMapping
     @SaCheckPermission("system:user:create")
     public ApiResponse<SysUser> create(@RequestBody SysUser user) {
+        if (existsByUsername(user.getUsername())) {
+            return ApiResponse.error("用户名已存在");
+        }
         user.setPassword(BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
         userMapper.insert(user);
         return ApiResponse.ok(user);
@@ -71,6 +74,11 @@ public class UserController {
     @PutMapping("/{id}")
     @SaCheckPermission("system:user:edit")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody SysUser user) {
+        if (user.getUsername() != null && !user.getUsername().isBlank()) {
+            Long count = userMapper.selectCount(
+                    new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, user.getUsername()).ne(SysUser::getId, id));
+            if (count > 0) return ApiResponse.error("用户名已存在");
+        }
         // 如果传入了密码则加密，否则保持原密码不变
         if (user.getPassword() != null && !user.getPassword().isBlank()) {
             user.setPassword(BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
@@ -125,5 +133,10 @@ public class UserController {
             userRoleMapper.insert(ur);
         }
         return ApiResponse.ok();
+    }
+
+    private boolean existsByUsername(String username) {
+        return userMapper.selectCount(
+                new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username)) > 0;
     }
 }
