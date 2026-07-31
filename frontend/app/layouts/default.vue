@@ -70,6 +70,7 @@
           </template>
           <el-menu-item index="/inventory/stock">库存查询</el-menu-item>
           <el-menu-item index="/inventory/transactions">库存流水</el-menu-item>
+          <el-menu-item index="/inventory/transfers">库存调拨</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="/finance">
@@ -189,6 +190,7 @@ const menuTitleMap: Record<string, string> = {
   '/purchase/receivings': '采购收货',
   '/inventory/stock': '库存查询',
   '/inventory/transactions': '库存流水',
+  '/inventory/transfers': '库存调拨',
   '/finance/receivables': '应收账款',
   '/finance/payables': '应付账款',
   '/finance/payments': '收付款管理',

@@ -54,10 +54,10 @@ public class FinPayableController {
             qw.eq(FinPayable::getStatus, status);
         }
         if (startDate != null && !startDate.isBlank()) {
-            qw.ge(FinPayable::getDueDate, startDate);
+            qw.ge(FinPayable::getDueDate, java.time.LocalDate.parse(startDate));
         }
         if (endDate != null && !endDate.isBlank()) {
-            qw.le(FinPayable::getDueDate, endDate);
+            qw.le(FinPayable::getDueDate, java.time.LocalDate.parse(endDate));
         }
         qw.orderByDesc(FinPayable::getCreateTime);
         Page<FinPayable> page = payableMapper.selectPage(

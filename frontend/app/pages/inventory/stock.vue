@@ -63,41 +63,26 @@
     </el-card>
 
     <!-- Stock Detail Drawer -->
-    <el-drawer
-      v-model="drawerVisible"
-      title="库存明细"
-      size="600px"
-    >
+    <el-drawer v-model="drawerVisible" title="库存明细" size="500px">
       <template v-if="selectedMaterial">
-        <el-descriptions :column="2" border class="detail-desc">
-          <el-descriptions-item label="物料编码">{{ selectedMaterial.materialCode }}</el-descriptions-item>
+        <el-descriptions :column="2" border>
           <el-descriptions-item label="物料名称">{{ selectedMaterial.materialName }}</el-descriptions-item>
-          <el-descriptions-item label="规格">{{ selectedMaterial.spec }}</el-descriptions-item>
-          <el-descriptions-item label="单位">{{ selectedMaterial.unit }}</el-descriptions-item>
+          <el-descriptions-item label="仓库">{{ selectedMaterial.warehouseName }}</el-descriptions-item>
+          <el-descriptions-item label="库存数量">{{ selectedMaterial.quantity }}</el-descriptions-item>
+          <el-descriptions-item label="可用数量">{{ selectedMaterial.availableQty }}</el-descriptions-item>
+          <el-descriptions-item label="锁定数量">{{ selectedMaterial.lockedQty }}</el-descriptions-item>
+          <el-descriptions-item label="在途数量">{{ selectedMaterial.lockedQty }}</el-descriptions-item>
         </el-descriptions>
 
-        <el-divider content-position="left">各仓库存明细</el-divider>
-
-        <el-table :data="warehouseStockDetails" stripe border>
-          <el-table-column prop="warehouse" label="仓库" />
-          <el-table-column prop="quantity" label="库存数量" />
-          <el-table-column prop="availableQty" label="可用数量" />
-          <el-table-column prop="lockedQty" label="锁定数量" />
-          <el-table-column prop="lastUpdateTime" label="最后更新" width="170" />
-        </el-table>
-
         <el-divider content-position="left">最近流水</el-divider>
-
-        <el-timeline>
-          <el-timeline-item
-            v-for="log in recentTransactions"
-            :key="log.id"
-            :timestamp="log.time"
-            placement="top"
-          >
-            {{ log.description }}
-          </el-timeline-item>
-        </el-timeline>
+        <el-table :data="recentTransactions" stripe border size="small" max-height="300">
+          <el-table-column prop="createTime" label="时间" width="160" />
+          <el-table-column prop="type" label="类型" width="100" />
+          <el-table-column prop="quantity" label="数量" width="80" align="right" />
+          <el-table-column prop="currentStock" label="结存" width="80" align="right" />
+          <el-table-column prop="sourceNo" label="关联单号" min-width="130" />
+        </el-table>
+        <el-empty v-if="recentTransactions.length === 0" description="暂无流水记录" />
       </template>
     </el-drawer>
   </div>
@@ -115,28 +100,23 @@ definePageMeta({ middleware: 'auth' })
 
 // ── Types ──────────────────────────────────────────
 interface StockItem {
-  materialCode: string
+  id: number
   materialName: string
-  spec: string
-  unit: string
-  warehouse: string
+  warehouseName: string
+  materialId: number
+  warehouseId: number
   quantity: number
   availableQty: number
   lockedQty: number
-}
-
-interface WarehouseStockDetail {
-  warehouse: string
-  quantity: number
-  availableQty: number
-  lockedQty: number
-  lastUpdateTime: string
 }
 
 interface TransactionLog {
-  id: string
-  time: string
-  description: string
+  id: number
+  createTime: string
+  type: string
+  quantity: number
+  currentStock: number
+  sourceNo: string
 }
 
 // ── Search Form ────────────────────────────────────
@@ -191,36 +171,17 @@ async function fetchData() {
 // ── Drawer / Row Click ─────────────────────────────
 const drawerVisible = ref(false)
 const selectedMaterial = ref<StockItem | null>(null)
-const warehouseStockDetails = ref<WarehouseStockDetail[]>([])
 const recentTransactions = ref<TransactionLog[]>([])
 
 async function handleRowClick(row: StockItem) {
   selectedMaterial.value = row
 
-  // Fetch warehouse details for this material (all warehouses)
+  // Fetch recent transactions for this material+warehouse
   try {
-    const whResult = await api.page<StockItem>('/inventory/stock', 1, 50, {
-      materialId: row.materialCode,
+    const txnResult = await api.page<TransactionLog>('/inventory/transactions', 1, 10, {
+      materialId: row.materialId,
+      warehouseId: row.warehouseId,
     })
-    warehouseStockDetails.value = whResult.list.map((item) => ({
-      warehouse: item.warehouse,
-      quantity: item.quantity,
-      availableQty: item.availableQty,
-      lockedQty: item.lockedQty,
-      lastUpdateTime: new Date().toLocaleString('zh-CN', { hour12: false }),
-    }))
-  } catch {
-    warehouseStockDetails.value = []
-  }
-
-  // Fetch recent transactions for this material
-  try {
-    const txnResult = await api.page<{ id: string; time: string; description: string }>(
-      '/inventory/transactions',
-      1,
-      5,
-      { materialId: row.materialCode },
-    )
     recentTransactions.value = txnResult.list
   } catch {
     recentTransactions.value = []

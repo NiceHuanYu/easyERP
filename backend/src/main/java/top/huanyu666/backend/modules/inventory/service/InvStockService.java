@@ -115,6 +115,14 @@ public class InvStockService {
         return stock;
     }
 
+    /**
+     * 调拨：从 fromWarehouse 扣减，向 toWarehouse 增加
+     */
+    public void transfer(Long materialId, Long fromWarehouseId, Long toWarehouseId, BigDecimal qty, String sourceNo) {
+        deduct(materialId, fromWarehouseId, qty, sourceNo, "TRANSFER");
+        receive(materialId, toWarehouseId, qty, sourceNo, "TRANSFER");
+    }
+
     // ---- private helpers ----
 
     private void insertTransaction(Long materialId, Long warehouseId,

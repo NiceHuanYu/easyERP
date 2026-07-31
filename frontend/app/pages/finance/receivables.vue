@@ -299,9 +299,12 @@ const availablePayments = ref<Payment[]>([])
 const reconcileAmounts = reactive<Record<string, number>>({})
 const selectedPayments = ref<Payment[]>([])
 
-async function fetchAvailablePayments(_customerName: string) {
+async function fetchAvailablePayments(customerName: string) {
   try {
-    const result = await api.page<any>('/finance/payments', 1, 200, { type: 'RECEIVE', status: 'CONFIRMED' })
+    const query: Record<string, string | number> = { type: 'RECEIVE', status: 'CONFIRMED' }
+    const customer = customerOptions.value.find(c => c.label === customerName)
+    if (customer) query.counterpartyId = customer.value
+    const result = await api.page<any>('/finance/payments', 1, 200, query)
     availablePayments.value = result.list
       .filter((p: any) => (p.amount ?? 0) > (p.reconciledAmount ?? 0))
       .map((p: any) => ({

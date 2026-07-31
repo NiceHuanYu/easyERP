@@ -54,10 +54,10 @@ public class FinReceivableController {
             qw.eq(FinReceivable::getStatus, status);
         }
         if (startDate != null && !startDate.isBlank()) {
-            qw.ge(FinReceivable::getDueDate, startDate);
+            qw.ge(FinReceivable::getDueDate, java.time.LocalDate.parse(startDate));
         }
         if (endDate != null && !endDate.isBlank()) {
-            qw.le(FinReceivable::getDueDate, endDate);
+            qw.le(FinReceivable::getDueDate, java.time.LocalDate.parse(endDate));
         }
         qw.orderByDesc(FinReceivable::getCreateTime);
         Page<FinReceivable> page = receivableMapper.selectPage(

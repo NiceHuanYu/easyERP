@@ -16,6 +16,7 @@
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="min-width:140px">
             <el-option label="未核销" value="UNPAID" />
+            <el-option label="待收款" value="PENDING" />
             <el-option label="部分核销" value="PARTIALLY_PAID" />
             <el-option label="已核销" value="FULLY_PAID" />
           </el-select>
@@ -298,9 +299,13 @@ const availablePayments = ref<PaymentRecord[]>([])
 const reconcileAmounts = reactive<Record<string, number>>({})
 const selectedPayments = ref<PaymentRecord[]>([])
 
-async function fetchAvailablePayments(_supplierName: string) {
+async function fetchAvailablePayments(supplierName: string) {
   try {
-    const result = await api.page<any>('/finance/payments', 1, 200, { type: 'PAY', status: 'CONFIRMED' })
+    const query: Record<string, string | number> = { type: 'PAY', status: 'CONFIRMED' }
+    // Try to find supplier ID from the options
+    const supplier = supplierOptions.value.find(s => s.label === supplierName)
+    if (supplier) query.counterpartyId = supplier.value
+    const result = await api.page<any>('/finance/payments', 1, 200, query)
     availablePayments.value = result.list
       .filter((p: any) => (p.amount ?? 0) > (p.reconciledAmount ?? 0))
       .map((p: any) => ({

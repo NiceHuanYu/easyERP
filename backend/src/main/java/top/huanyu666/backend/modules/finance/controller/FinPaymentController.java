@@ -55,11 +55,13 @@ public class FinPaymentController {
     public ApiResponse<PageResult<FinPayment>> list(PageParam param,
             @RequestParam(required = false) String paymentNo,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long counterpartyId) {
         LambdaQueryWrapper<FinPayment> qw = new LambdaQueryWrapper<>();
         if (paymentNo != null && !paymentNo.isBlank()) qw.like(FinPayment::getPaymentNo, paymentNo);
         if (type != null && !type.isBlank()) qw.eq(FinPayment::getType, type);
         if (status != null && !status.isBlank()) qw.eq(FinPayment::getStatus, status);
+        if (counterpartyId != null) qw.eq(FinPayment::getCounterpartyId, counterpartyId);
         qw.orderByDesc(FinPayment::getCreateTime);
         Page<FinPayment> page = paymentMapper.selectPage(
                 new Page<>(param.getPage(), param.getSize()), qw);
