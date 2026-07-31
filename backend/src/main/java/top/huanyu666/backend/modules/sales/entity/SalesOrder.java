@@ -36,9 +36,8 @@ public class SalesOrder extends BaseEntity {
      */
     private LocalDate deliveryDate;
 
-    /**
-     * 订单总金额
-     */
+    private String customerPoNo;
+
     private BigDecimal totalAmount;
 
     /**

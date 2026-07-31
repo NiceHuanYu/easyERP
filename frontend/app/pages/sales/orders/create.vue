@@ -58,6 +58,13 @@
               />
             </el-form-item>
           </el-col>
+          <el-col :span="8">
+            <el-form-item label="客户采购订单号">
+              <el-input v-model="form.customerPoNo" placeholder="选填" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="备注" prop="remark">
               <el-input
@@ -250,6 +257,7 @@ const form = reactive<OrderForm>({
   customerId: null,
   orderDate: formatDate(new Date(), 'YYYY-MM-DD'),
   deliveryDate: '',
+  customerPoNo: '',
   remark: '',
   lines: [createEmptyLine()],
 })
@@ -330,6 +338,7 @@ async function loadOrder(id: string) {
     form.customerId = data.customerId
     form.orderDate = data.orderDate
     form.deliveryDate = data.deliveryDate
+    form.customerPoNo = data.customerPoNo || ''
     form.remark = data.remark || ''
     form.lines = data.lines.map((l) => ({ ...createEmptyLine(), ...l }))
   } catch (e: any) {

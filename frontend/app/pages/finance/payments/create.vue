@@ -317,7 +317,6 @@ function handleCounterpartyChange() {
     writeOffAmounts.value = []
     return
   }
-
   fetchOpenItems(form.counterparty).then(() => {
     writeOffAmounts.value = new Array(openItems.value.length).fill(0)
   })
