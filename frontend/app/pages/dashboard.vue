@@ -1,314 +1,157 @@
 <template>
   <div class="dashboard-page">
-    <!-- 统计卡片 -->
+    <!-- 4 统计卡片 -->
     <el-row :gutter="16" class="stat-row">
-      <el-col :span="6">
+      <el-col :span="6" v-for="card in statCards" :key="card.label">
         <el-card class="stat-card" shadow="never">
-          <div class="stat-card-inner" style="border-left-color: #409eff">
-            <div class="stat-icon" style="background: #ecf5ff; color: #409eff">
-              <el-icon :size="28"><DocumentChecked /></el-icon>
+          <div class="stat-card-inner" :style="{ borderLeftColor: card.color }">
+            <div class="stat-icon" :style="{ background: card.bg, color: card.color }">
+              <el-icon :size="26"><component :is="card.icon" /></el-icon>
             </div>
             <div class="stat-body">
-              <div class="stat-value">{{ stats.pendingOrders }}</div>
-              <div class="stat-label">待审核销售订单</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="never">
-          <div class="stat-card-inner" style="border-left-color: #e6a23c">
-            <div class="stat-icon" style="background: #fdf6ec; color: #e6a23c">
-              <el-icon :size="28"><Clock /></el-icon>
-            </div>
-            <div class="stat-body">
-              <div class="stat-value">{{ stats.pendingProductions }}</div>
-              <div class="stat-label">待处理生产工单</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="never">
-          <div class="stat-card-inner" style="border-left-color: #f56c6c">
-            <div class="stat-icon" style="background: #fef0f0; color: #f56c6c">
-              <el-icon :size="28"><Warning /></el-icon>
-            </div>
-            <div class="stat-body">
-              <div class="stat-value">{{ stats.inventoryAlerts }}</div>
-              <div class="stat-label">库存预警</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="never">
-          <div class="stat-card-inner" style="border-left-color: #67c23a">
-            <div class="stat-icon" style="background: #f0f9eb; color: #67c23a">
-              <el-icon :size="28"><Coin /></el-icon>
-            </div>
-            <div class="stat-body">
-              <div class="stat-value">{{ formatMoney(stats.totalARAP) }}</div>
-              <div class="stat-label">应收/应付总额</div>
+              <div class="stat-value">{{ card.value }}</div>
+              <div class="stat-label">{{ card.label }}</div>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 图表区 -->
+    <!-- 3 图表 -->
     <el-row :gutter="16" class="chart-row">
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>
-            <span class="chart-title">近30天销售额趋势</span>
-          </template>
+          <template #header><span class="card-title">近30天销售额趋势</span></template>
           <ClientChart class="chart" :option="salesTrendOption" autoresize />
         </el-card>
       </el-col>
-
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>
-            <span class="chart-title">库存分布（按仓库）</span>
-          </template>
-          <ClientChart class="chart" :option="inventoryDistOption" autoresize />
+          <template #header><span class="card-title">库存分布（按仓库）</span></template>
+          <ClientChart class="chart" :option="stockDistOption" autoresize />
+        </el-card>
+      </el-col>
+    </el-row>
+    <el-row :gutter="16" class="chart-row">
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header><span class="card-title">销售订单状态分布</span></template>
+          <ClientChart class="chart" :option="orderStatusOption" autoresize />
         </el-card>
       </el-col>
     </el-row>
 
     <!-- 快捷操作 -->
-    <el-card shadow="never" class="quick-actions-card">
-      <template #header>
-        <span class="chart-title">快捷操作</span>
-      </template>
+    <el-card shadow="never">
+      <template #header><span class="card-title">快捷操作</span></template>
       <div class="quick-actions">
-        <el-button type="primary" @click="navigateTo('/sales/orders/create')">
-          <el-icon><Plus /></el-icon>
-          新建销售订单
-        </el-button>
-        <el-button type="success" @click="navigateTo('/purchase/requisitions/create')">
-          <el-icon><Plus /></el-icon>
-          新建采购申请
-        </el-button>
+        <el-button v-permission="'sales:order:create'" type="primary" :icon="Plus" @click="router.push('/sales/orders/create')">新建销售订单</el-button>
+        <el-button v-permission="'purchase:order:create'" type="warning" :icon="Plus" @click="router.push('/purchase/requisitions/create')">新建采购申请</el-button>
+        <el-button v-permission="'production:order:create'" type="success" :icon="Plus" @click="router.push('/production/orders/create')">新建生产工单</el-button>
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { DocumentChecked, Clock, Warning, Coin, Plus } from '@element-plus/icons-vue'
+import { DocumentChecked, Clock, Warning, Goods, Plus } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, PieChart } from 'echarts/charts'
-import {
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-} from 'echarts/components'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import { api } from '../composables/useApi'
 
-// 注册 ECharts 组件
-use([
-  CanvasRenderer,
-  LineChart,
-  PieChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-])
+use([CanvasRenderer, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
 
 definePageMeta({ middleware: 'auth' })
+const router = useRouter()
 
-// ---- Stats (fetched from APIs, fallback to 0) ----
-const stats = reactive({
-  pendingOrders: 0,
-  pendingProductions: 0,
-  inventoryAlerts: 0,
-  totalARAP: 0,
-})
+interface StatCard { label: string; value: string; color: string; bg: string; icon: any }
+const statCards = ref<StatCard[]>([])
 
 async function fetchStats() {
-  // 待审核销售订单
-  try {
-    const orders = await api.page('/sales/orders', 1, 1, { status: 'SUBMITTED' })
-    stats.pendingOrders = orders.total
-  } catch { /* keep default */ }
+  const cards: StatCard[] = [
+    { label: '待审核销售订单', value: '...', color: '#409eff', bg: '#ecf5ff', icon: DocumentChecked },
+    { label: '待审核采购申请', value: '...', color: '#e6a23c', bg: '#fdf6ec', icon: Goods },
+    { label: '待处理生产工单', value: '...', color: '#f56c6c', bg: '#fef0f0', icon: Clock },
+    { label: '库存预警', value: '...', color: '#e040fb', bg: '#fce4ec', icon: Warning },
+  ]
+  statCards.value = cards
 
-  // 待处理生产工单
-  try {
-    const productions = await api.page('/production/orders', 1, 1, { status: 'DRAFT' })
-    stats.pendingProductions = productions.total
-  } catch { /* keep default */ }
-
-  // 库存预警（后端独立 endpoint）
-  try {
-    const count = await api.get<number>('/inventory/stock/warning-count')
-    stats.inventoryAlerts = count ?? 0
-  } catch { /* keep default */ }
-
-  // 应收+应付总额（取未核销金额汇总）
-  try {
-    const [ar, ap] = await Promise.all([
-      api.page('/finance/receivables', 1, 1000),
-      api.page('/finance/payables', 1, 1000),
-    ])
-    const arUnpaid = (ar.list || []).reduce((sum: number, item: any) =>
-      sum + ((item.receivableAmount || 0) - (item.receivedAmount || 0)), 0)
-    const apUnpaid = (ap.list || []).reduce((sum: number, item: any) =>
-      sum + ((item.payableAmount || 0) - (item.paidAmount || 0)), 0)
-    stats.totalARAP = arUnpaid + apUnpaid
-  } catch { /* keep default */ }
+  const [orders, reqs, prods, warn] = await Promise.allSettled([
+    api.page('/sales/orders', 1, 1, { status: 'SUBMITTED' }),
+    api.page('/purchase/requisitions', 1, 1, { status: 'SUBMITTED' }),
+    api.page('/production/orders', 1, 1, { status: 'RELEASED' }),
+    api.get<number>('/inventory/stock/warning-count'),
+  ])
+  if (orders.status === 'fulfilled') cards[0].value = String(orders.value.total)
+  if (reqs.status === 'fulfilled') cards[1].value = String(reqs.value.total)
+  if (prods.status === 'fulfilled') cards[2].value = String(prods.value.total)
+  if (warn.status === 'fulfilled') cards[3].value = String(warn.value ?? 0)
+  statCards.value = cards
 }
+
+// 销售额趋势
+const salesTrendData = reactive({ dates: [] as string[], amounts: [] as number[] })
+async function fetchSalesTrend() {
+  try {
+    const d = await api.get<{ dates: string[]; amounts: number[] }>('/dashboard/sales-trend')
+    salesTrendData.dates = (d.dates || []).map(s => s.slice(5))
+    salesTrendData.amounts = d.amounts || []
+  } catch { /* */ }
+}
+const salesTrendOption = computed(() => ({
+  tooltip: { trigger: 'axis' as const }, grid: { left: 50, right: 20, top: 20, bottom: 30 },
+  xAxis: { type: 'category' as const, data: salesTrendData.dates },
+  yAxis: { type: 'value' as const },
+  series: [{ type: 'line', smooth: true, data: salesTrendData.amounts, areaStyle: { color: 'rgba(64,158,255,0.15)' } }],
+}))
+
+// 库存分布
+const stockDistData = ref<{ name: string; value: number }[]>([])
+async function fetchStockDist() {
+  try {
+    const list = await api.get<{ warehouseId: number; quantity: number }[]>('/dashboard/stock-dist')
+    const wh = await api.page<{ id: number; name: string }>('/base/warehouses', 1, 100)
+    const nameMap = new Map(wh.list.map(w => [w.id, w.name]))
+    stockDistData.value = (list || []).map(s => ({ name: nameMap.get(s.warehouseId) || '仓库' + s.warehouseId, value: s.quantity }))
+  } catch { /* */ }
+}
+const stockDistOption = computed(() => ({
+  tooltip: { trigger: 'item' as const }, legend: { bottom: 0 },
+  series: [{ type: 'pie', radius: ['45%','75%'], center: ['50%','47%'], data: stockDistData.value, label: { show: true } }],
+}))
+
+// 订单状态分布
+const orderStatusData = ref<{ name: string; value: number }[]>([])
+const statusLabel: Record<string, string> = { DRAFT: '草稿', SUBMITTED: '已提交', APPROVED: '已审核', SHIPPED: '已发货', CLOSED: '已关闭' }
+async function fetchOrderStatus() {
+  try {
+    const list = await api.get<{ status: string; count: number }[]>('/dashboard/order-status-dist')
+    orderStatusData.value = (list || []).map(s => ({ name: statusLabel[s.status] || s.status, value: s.count }))
+  } catch { /* */ }
+}
+const orderStatusOption = computed(() => ({
+  tooltip: { trigger: 'item' as const }, legend: { bottom: 0 },
+  series: [{ type: 'pie', radius: '65%', center: ['50%','47%'], data: orderStatusData.value, label: { show: true, formatter: '{b}: {c}' } }],
+}))
 
 onMounted(() => {
-  fetchStats()
+  fetchStats(); fetchSalesTrend(); fetchStockDist(); fetchOrderStatus()
 })
-
-function formatMoney(value: number): string {
-  return '¥' + value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-// 近30天销售额趋势 — Mock
-const salesTrendOption = computed(() => ({
-  tooltip: { trigger: 'axis' as const },
-  grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-  xAxis: {
-    type: 'category' as const,
-    boundaryGap: false,
-    data: Array.from({ length: 30 }, (_, i) => `${i + 1}日`),
-  },
-  yAxis: {
-    type: 'value' as const,
-    axisLabel: { formatter: '¥{value}' },
-  },
-  series: [
-    {
-      name: '销售额',
-      type: 'line' as const,
-      smooth: true,
-      lineStyle: { color: '#409eff', width: 2 },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(64,158,255,0.25)' },
-            { offset: 1, color: 'rgba(64,158,255,0.02)' },
-          ],
-        },
-      },
-      data: [
-        42000, 38000, 51000, 46000, 53000, 48000, 56000, 49000, 61000, 55000,
-        44000, 52000, 58000, 47000, 50000, 54000, 62000, 57000, 45000, 59000,
-        63000, 48000, 51000, 55000, 60000, 52000, 49000, 56000, 58000, 53000,
-      ],
-    },
-  ],
-}))
-
-// 库存分布 — Mock
-const inventoryDistOption = computed(() => ({
-  tooltip: { trigger: 'item' as const, formatter: '{b}: {c} 件 ({d}%)' },
-  legend: { bottom: 0 },
-  series: [
-    {
-      name: '库存分布',
-      type: 'pie' as const,
-      radius: ['45%', '75%'],
-      center: ['50%', '47%'],
-      label: { show: true },
-      emphasis: {
-        label: { fontSize: 16, fontWeight: 'bold' },
-      },
-      data: [
-        { value: 3240, name: '原材料仓' },
-        { value: 1560, name: '半成品仓' },
-        { value: 2150, name: '成品仓' },
-        { value: 870, name: '包材仓' },
-        { value: 420, name: '备品备件仓' },
-      ],
-    },
-  ],
-}))
 </script>
 
 <style scoped>
-.dashboard-page {
-  max-width: 1400px;
-}
-
-.stat-row {
-  margin-bottom: 16px;
-}
-
-.stat-card {
-  border-radius: 6px;
-}
-
-.stat-card-inner {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  border-left: 3px solid;
-  padding-left: 12px;
-}
-
-.stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.stat-body {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #303133;
-  line-height: 1.2;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: #909399;
-  margin-top: 4px;
-}
-
-.chart-row {
-  margin-bottom: 16px;
-}
-
-.chart-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.chart {
-  height: 340px;
-}
-
-.quick-actions-card {
-  margin-bottom: 0;
-}
-
-.quick-actions {
-  display: flex;
-  gap: 12px;
-}
+.dashboard-page { max-width: 1400px; }
+.stat-row { margin-bottom: 16px; }
+.stat-card { border-radius: 6px; }
+.stat-card-inner { display: flex; align-items: center; gap: 14px; border-left: 3px solid; padding-left: 12px; }
+.stat-icon { width: 50px; height: 50px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stat-body { flex: 1; }
+.stat-value { font-size: 24px; font-weight: 700; color: #303133; line-height: 1.2; }
+.stat-label { font-size: 13px; color: #909399; margin-top: 2px; }
+.chart-row { margin-bottom: 16px; }
+.card-title { font-size: 15px; font-weight: 600; }
+.chart { height: 300px; }
+.quick-actions { display: flex; gap: 12px; }
 </style>

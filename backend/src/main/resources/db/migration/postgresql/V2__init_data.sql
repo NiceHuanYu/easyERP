@@ -1,5 +1,5 @@
 -- =====================================================
--- V3__init_data.sql — 初始化：角色 / 权限 / 字典
+-- V2__init_data.sql (PostgreSQL) — 角色 / 权限 / 字典（合并自 V3+V4）
 -- 管理员用户由 DataInitializer 在启动时创建
 -- =====================================================
 
@@ -79,7 +79,7 @@ INSERT INTO t_sys_permission (id, parent_id, name, code, type, path, sort, statu
 (31, 3, '销售订单', 'sales:order:view', 1, '/sales/orders', 1, 1, NOW(), NOW()),
 (32, 3, '发货管理', 'delivery:order:view', 1, '/sales/deliveries', 2, 1, NOW(), NOW());
 
--- 销售管理按钮
+-- 销售管理按钮（合并 V4：确认发货 324）
 INSERT INTO t_sys_permission (id, parent_id, name, code, type, sort, status, create_time, update_time) VALUES
 (311, 31, '创建订单', 'sales:order:create', 2, 1, 1, NOW(), NOW()),
 (312, 31, '编辑订单', 'sales:order:edit', 2, 2, 1, NOW(), NOW()),
@@ -88,7 +88,8 @@ INSERT INTO t_sys_permission (id, parent_id, name, code, type, sort, status, cre
 (315, 31, '审核订单', 'sales:order:approve', 2, 5, 1, NOW(), NOW()),
 (321, 32, '创建发货', 'delivery:order:create', 2, 1, 1, NOW(), NOW()),
 (322, 32, '编辑发货', 'delivery:order:edit', 2, 2, 1, NOW(), NOW()),
-(323, 32, '删除发货', 'delivery:order:delete', 2, 3, 1, NOW(), NOW());
+(323, 32, '删除发货', 'delivery:order:delete', 2, 3, 1, NOW(), NOW()),
+(324, 32, '确认发货', 'delivery:order:approve', 2, 4, 1, NOW(), NOW());
 
 -- 生产管理子菜单
 INSERT INTO t_sys_permission (id, parent_id, name, code, type, path, sort, status, create_time, update_time) VALUES
@@ -96,13 +97,15 @@ INSERT INTO t_sys_permission (id, parent_id, name, code, type, path, sort, statu
 (42, 4, '领料管理', 'production:order:view', 1, '/production/pickings', 2, 1, NOW(), NOW()),
 (43, 4, '完工入库', 'production:order:view', 1, '/production/finishings', 3, 1, NOW(), NOW());
 
--- 生产管理按钮
+-- 生产管理按钮（合并 V4：确认领料 421、确认完工入库 431）
 INSERT INTO t_sys_permission (id, parent_id, name, code, type, sort, status, create_time, update_time) VALUES
 (411, 41, '创建工单', 'production:order:create', 2, 1, 1, NOW(), NOW()),
 (412, 41, '编辑工单', 'production:order:edit', 2, 2, 1, NOW(), NOW()),
 (413, 41, '删除工单', 'production:order:delete', 2, 3, 1, NOW(), NOW()),
 (414, 41, '下达工单', 'production:order:release', 2, 4, 1, NOW(), NOW()),
-(415, 41, '完工', 'production:order:finish', 2, 5, 1, NOW(), NOW());
+(415, 41, '完工', 'production:order:finish', 2, 5, 1, NOW(), NOW()),
+(421, 42, '确认领料', 'production:picking:confirm', 2, 1, 1, NOW(), NOW()),
+(431, 43, '确认完工入库','production:finish:confirm', 2, 1, 1, NOW(), NOW());
 
 -- 采购管理子菜单
 INSERT INTO t_sys_permission (id, parent_id, name, code, type, path, sort, status, create_time, update_time) VALUES
@@ -141,27 +144,28 @@ INSERT INTO t_sys_role_permission (id, role_id, permission_id)
 SELECT ROW_NUMBER() OVER (ORDER BY id) + 1000, 1, id
 FROM t_sys_permission WHERE status = 1;
 
--- ==================== 各角色模块权限 ====================
--- sales 角色：销售+发货
+-- ==================== 各角色模块权限（合并 V4 补充权限） ====================
+-- sales 角色：销售+发货（含 delivery:order:approve）
 INSERT INTO t_sys_role_permission (id, role_id, permission_id)
 SELECT ROW_NUMBER() OVER (ORDER BY id) + 2000, 2, id FROM t_sys_permission
 WHERE code IN ('sales:order:view','sales:order:create','sales:order:edit','sales:order:delete','sales:order:submit','sales:order:approve',
-               'delivery:order:view','delivery:order:create','delivery:order:edit','delivery:order:delete');
+               'delivery:order:view','delivery:order:create','delivery:order:edit','delivery:order:delete','delivery:order:approve');
 
 -- purchase 角色：采购
 INSERT INTO t_sys_role_permission (id, role_id, permission_id)
 SELECT ROW_NUMBER() OVER (ORDER BY id) + 3000, 3, id FROM t_sys_permission
 WHERE code IN ('purchase:order:view','purchase:order:create','purchase:order:edit','purchase:order:delete','purchase:order:approve');
 
--- warehouse 角色：库存+发货确认+收货确认
+-- warehouse 角色：库存+发货确认+收货确认（含 delivery:order:approve）
 INSERT INTO t_sys_role_permission (id, role_id, permission_id)
 SELECT ROW_NUMBER() OVER (ORDER BY id) + 4000, 4, id FROM t_sys_permission
 WHERE code IN ('inventory:stock:view','delivery:order:view','delivery:order:approve','purchase:order:view','purchase:order:approve');
 
--- production 角色：生产
+-- production 角色：生产（含 picking:confirm、finish:confirm）
 INSERT INTO t_sys_role_permission (id, role_id, permission_id)
 SELECT ROW_NUMBER() OVER (ORDER BY id) + 5000, 5, id FROM t_sys_permission
-WHERE code IN ('production:order:view','production:order:create','production:order:edit','production:order:delete','production:order:release','production:order:finish');
+WHERE code IN ('production:order:view','production:order:create','production:order:edit','production:order:delete','production:order:release','production:order:finish',
+               'production:picking:confirm','production:finish:confirm');
 
 -- quality 角色：查看生产+库存（质检员）
 INSERT INTO t_sys_role_permission (id, role_id, permission_id)
