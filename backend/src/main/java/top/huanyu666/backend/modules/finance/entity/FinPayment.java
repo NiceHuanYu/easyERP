@@ -24,7 +24,7 @@ public class FinPayment extends BaseEntity {
 
     private BigDecimal amount;
 
-    private String bankAccount;
+    private Long companyAccountId;
 
     private LocalDate paymentDate;
 
@@ -36,4 +36,14 @@ public class FinPayment extends BaseEntity {
 
     @com.baomidou.mybatisplus.annotation.TableField(exist = false)
     private String counterpartyName;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String companyAccountName;
+
+    /** 对方银行信息（从 customer/supplier 关联查询） */
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String counterpartyBankName;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String counterpartyBankAccount;
 }

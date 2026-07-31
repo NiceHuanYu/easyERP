@@ -70,8 +70,19 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="银行账户" prop="bankAccount">
-              <el-input v-model="form.bankAccount" placeholder="请输入银行账户" />
+            <el-form-item label="公司账户" prop="companyAccountId">
+              <el-select
+                v-model="form.companyAccountId"
+                placeholder="请选择公司账户"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="a in accountOptions"
+                  :key="a.value"
+                  :label="a.label"
+                  :value="a.value"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -189,7 +200,7 @@ const form = reactive({
   counterparty: null as string | null,
   amount: 0,
   date: new Date().toISOString().slice(0, 10),
-  bankAccount: '',
+  companyAccountId: null as string | null,
   remark: '',
 })
 
@@ -201,7 +212,7 @@ const formRules: FormRules = {
     { type: 'number', min: 0.01, message: '金额必须大于0', trigger: 'blur' },
   ],
   date: [{ required: true, message: '请选择日期', trigger: 'change' }],
-  bankAccount: [{ required: true, message: '请选择银行账户', trigger: 'change' }],
+  companyAccountId: [{ required: true, message: '请选择公司账户', trigger: 'change' }],
 }
 
 // ── Counterparty Options ───────────────────────────
@@ -233,6 +244,19 @@ async function fetchSupplierOptions() {
 }
 
 const counterpartyOptions = ref<{ label: string; value: string }[]>([])
+
+// ── Company Account Options ────────────────────────
+const accountOptions = ref<{ label: string; value: string }[]>([])
+
+async function fetchAccountOptions() {
+  try {
+    const result = await api.get<any[]>('/base/company-accounts/all', { accountType: form.type })
+    accountOptions.value = (result || []).map((a: any) => ({
+      label: `${a.bankName || ''} ${a.accountNo || ''} (${a.accountName || ''})`,
+      value: String(a.id),
+    }))
+  } catch { accountOptions.value = [] }
+}
 
 function loadCounterpartyOptions() {
   counterpartyOptions.value = form.type === 'RECEIVE' ? customerOptions.value : supplierOptions.value
@@ -301,6 +325,7 @@ function handleCounterpartyChange() {
 
 // ── Init ───────────────────────────────────────────
 onMounted(() => {
+  fetchAccountOptions()
   fetchCustomerOptions()
   fetchSupplierOptions()
 })
@@ -332,9 +357,9 @@ async function doSubmit(status: '草稿' | '已确认') {
     const payload = {
       type: form.type,
       counterpartyId: form.counterparty,
+      companyAccountId: form.companyAccountId,
       amount: form.amount,
       paymentDate: form.date,
-      bankAccount: form.bankAccount,
       remark: form.remark,
       status: status === '已确认' ? 'CONFIRMED' : 'DRAFT',
     }

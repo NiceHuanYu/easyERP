@@ -38,8 +38,5 @@ public class Customer extends BaseEntity {
      */
     private String address;
 
-    /**
-     * 状态
-     */
     private Integer status;
 }

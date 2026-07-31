@@ -70,7 +70,7 @@
           <el-descriptions-item label="往来单位">{{ viewRow.counterpartyName || '—' }}</el-descriptions-item>
           <el-descriptions-item label="日期">{{ viewRow.paymentDate }}</el-descriptions-item>
           <el-descriptions-item label="金额">¥{{ (viewRow.amount ?? 0).toLocaleString() }}</el-descriptions-item>
-          <el-descriptions-item label="银行账户">{{ viewRow.bankAccount || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="银行账户">{{ viewRow.companyAccountName || viewRow.bankAccount || '—' }}</el-descriptions-item>
           <el-descriptions-item label="状态">{{ viewRow.status === 'DRAFT' || viewRow.status === '草稿' ? '草稿' : viewRow.status === 'CONFIRMED' || viewRow.status === '已确认' ? '已确认' : viewRow.status }}</el-descriptions-item>
           <el-descriptions-item label="备注" :span="2">{{ viewRow.remark || '—' }}</el-descriptions-item>
         </el-descriptions>

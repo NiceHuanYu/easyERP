@@ -80,6 +80,7 @@
           <el-menu-item index="/finance/receivables">应收账款</el-menu-item>
           <el-menu-item index="/finance/payables">应付账款</el-menu-item>
           <el-menu-item index="/finance/payments">收付款管理</el-menu-item>
+          <el-menu-item index="/finance/bank-accounts">银行账户</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="/system">
@@ -177,6 +178,7 @@ const menuTitleMap: Record<string, string> = {
   '/base-data/suppliers': '供应商管理',
   '/base-data/warehouses': '仓库管理',
   '/base-data/employees': '员工管理',
+  '/base-data/company-accounts': '公司账户',
   '/sales/orders': '销售订单',
   '/sales/deliveries': '销售发货',
   '/production/orders': '生产工单',
@@ -190,6 +192,8 @@ const menuTitleMap: Record<string, string> = {
   '/finance/receivables': '应收账款',
   '/finance/payables': '应付账款',
   '/finance/payments': '收付款管理',
+  '/base-data/company-accounts': '银行账户',
+  '/finance/bank-accounts': '银行账户',
   '/system/users': '用户管理',
   '/system/roles': '角色管理',
   '/system/dicts': '字典管理',

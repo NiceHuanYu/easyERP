@@ -13,8 +13,12 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.base.entity.Customer;
 import top.huanyu666.backend.modules.base.entity.Supplier;
+import top.huanyu666.backend.modules.base.entity.CompanyAccount;
+import top.huanyu666.backend.modules.base.entity.CounterpartyAccount;
 import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
 import top.huanyu666.backend.modules.base.mapper.SupplierMapper;
+import top.huanyu666.backend.modules.base.mapper.CompanyAccountMapper;
+import top.huanyu666.backend.modules.base.mapper.CounterpartyAccountMapper;
 import top.huanyu666.backend.modules.finance.entity.FinPayment;
 import top.huanyu666.backend.modules.finance.entity.FinPaymentItem;
 import top.huanyu666.backend.modules.finance.mapper.FinPaymentItemMapper;
@@ -43,6 +47,8 @@ public class FinPaymentController {
     private final FinPayableService payableService;
     private final CustomerMapper customerMapper;
     private final SupplierMapper supplierMapper;
+    private final CompanyAccountMapper companyAccountMapper;
+    private final CounterpartyAccountMapper counterpartyAccountMapper;
 
     @SaCheckPermission("finance:order:view")
     @GetMapping
@@ -75,6 +81,20 @@ public class FinPaymentController {
                 String name = customerMap.get(p.getCounterpartyId());
                 if (name == null) name = supplierMap.get(p.getCounterpartyId());
                 p.setCounterpartyName(name != null ? name : "");
+            }
+        }
+        // 填充公司账户名称
+        java.util.Set<Long> accIds = new java.util.HashSet<>();
+        for (FinPayment p : page.getRecords()) {
+            if (p.getCompanyAccountId() != null) accIds.add(p.getCompanyAccountId());
+        }
+        java.util.Map<Long, CompanyAccount> accMap = accIds.isEmpty() ? java.util.Collections.emptyMap()
+                : companyAccountMapper.selectBatchIds(new java.util.ArrayList<>(accIds)).stream()
+                        .collect(java.util.stream.Collectors.toMap(CompanyAccount::getId, a -> a, (a, b) -> a));
+        for (FinPayment p : page.getRecords()) {
+            if (p.getCompanyAccountId() != null) {
+                CompanyAccount a = accMap.get(p.getCompanyAccountId());
+                p.setCompanyAccountName(a != null ? a.getBankName() + " " + a.getAccountNo() : "");
             }
         }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
@@ -111,11 +131,31 @@ public class FinPaymentController {
         if (payment.getCounterpartyId() != null) {
             if ("RECEIVE".equals(payment.getType())) {
                 Customer c = customerMapper.selectById(payment.getCounterpartyId());
-                payment.setCounterpartyName(c != null ? c.getName() : "");
+                if (c != null) {
+                    payment.setCounterpartyName(c.getName());
+                }
             } else {
                 Supplier s = supplierMapper.selectById(payment.getCounterpartyId());
-                payment.setCounterpartyName(s != null ? s.getName() : "");
+                if (s != null) {
+                    payment.setCounterpartyName(s.getName());
+                }
             }
+            // 从 t_counterparty_account 读取对方银行账户列表
+            String ownerType = "RECEIVE".equals(payment.getType()) ? "CUSTOMER" : "SUPPLIER";
+            List<CounterpartyAccount> cpas = counterpartyAccountMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CounterpartyAccount>()
+                            .eq(CounterpartyAccount::getOwnerType, ownerType)
+                            .eq(CounterpartyAccount::getOwnerId, payment.getCounterpartyId())
+                            .eq(CounterpartyAccount::getStatus, 1));
+            if (!cpas.isEmpty()) {
+                payment.setCounterpartyBankName(cpas.get(0).getBankName());
+                payment.setCounterpartyBankAccount(cpas.get(0).getAccountNo());
+            }
+        }
+        // 填充公司账户名称
+        if (payment.getCompanyAccountId() != null) {
+            CompanyAccount a = companyAccountMapper.selectById(payment.getCompanyAccountId());
+            if (a != null) payment.setCompanyAccountName(a.getBankName() + " " + a.getAccountNo());
         }
         List<FinPaymentItem> items = paymentItemMapper.selectList(
                 new LambdaQueryWrapper<FinPaymentItem>().eq(FinPaymentItem::getPaymentId, id));
