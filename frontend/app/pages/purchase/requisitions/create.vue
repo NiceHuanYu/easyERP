@@ -64,7 +64,7 @@
         <template #header>
           <div class="section-header">
             <span class="section-title">申请明细</span>
-            <el-button type="primary" size="small" :icon="Plus" @click="addLine">
+            <el-button v-if="!isReadonly" type="primary" size="small" :icon="Plus" @click="addLine">
               添加行
             </el-button>
           </div>
@@ -81,7 +81,8 @@
                 placeholder="请选择物料"
                 filterable
                 style="width: 100%"
-                @change="(val: number | null) => onMaterialChange($index, val)"
+                :disabled="isReadonly"
+                @change="(val: string | null) => onMaterialChange($index, val)"
               >
                 <el-option
                   v-for="m in materialOptions"
@@ -116,6 +117,7 @@
                 v-model="row.quantity"
                 :min="0"
                 :precision="0"
+                :disabled="isReadonly"
                 style="width: 100%"
               />
             </template>
@@ -127,7 +129,7 @@
                 size="small"
                 :icon="Delete"
                 circle
-                :disabled="form.lines.length <= 1"
+                :disabled="form.lines.length <= 1 || isReadonly"
                 @click="removeLine($index)"
               />
             </template>
@@ -154,10 +156,13 @@
       </el-card>
 
       <!-- 操作按钮 -->
-      <div class="form-actions">
+      <div v-if="!isReadonly" class="form-actions">
         <el-button @click="router.back()">取消</el-button>
         <el-button type="primary" @click="handleSaveDraft">保存草稿</el-button>
         <el-button type="success" @click="handleSubmit">提交</el-button>
+      </div>
+      <div v-else class="form-actions">
+        <el-button @click="router.back()">返回</el-button>
       </div>
     </el-form>
   </div>
@@ -178,20 +183,21 @@ const authStore = useAuthStore()
 
 // ==================== 编辑/新增模式 ====================
 const isEdit = computed(() => !!route.query.id)
+const isReadonly = computed(() => isEdit.value)
 
 // ==================== 选项数据（从 API 加载） ====================
-const employeeOptions = ref<{ label: string; value: number }[]>([])
+const employeeOptions = ref<{ label: string; value: string }[]>([])
 
 async function fetchEmployeeOptions() {
   try {
     const result = await api.page<{ id: number; name: string }>(
       '/base/employees', 1, 1000,
     )
-    employeeOptions.value = result.list.map((e) => ({ label: e.name, value: e.id }))
+    employeeOptions.value = result.list.map((e) => ({ label: e.name, value: String(e.id) }))
   } catch { /* ignore */ }
 }
 
-const materialOptions = ref<{ label: string; value: number; spec: string; unit: string }[]>([])
+const materialOptions = ref<{ label: string; value: string; spec: string; unit: string }[]>([])
 
 async function fetchMaterialOptions() {
   try {
@@ -200,16 +206,16 @@ async function fetchMaterialOptions() {
     )
     materialOptions.value = result.list.map((m) => ({
       label: m.name,
-      value: m.id,
+      value: String(m.id),
       spec: m.spec ?? '',
-      unit: '',
+      unit: m.unit ?? '',
     }))
   } catch { /* ignore */ }
 }
 
 // ==================== 表单数据 ====================
 interface RequisitionLine {
-  materialId: number | null
+  materialId: string | null
   materialName: string
   spec: string
   unit: string
@@ -219,7 +225,7 @@ interface RequisitionLine {
 interface RequisitionForm {
   reqNo: string
   reqDate: string
-  applicantId: number | null
+  applicantId: string | null
   remark: string
   lines: RequisitionLine[]
 }
@@ -284,13 +290,13 @@ function removeLine(index: number) {
   form.lines.splice(index, 1)
 }
 
-function onMaterialChange(index: number, val: number | null) {
+function onMaterialChange(index: number, val: string | null) {
   const line = form.lines[index]
   if (val) {
     const mat = materialOptions.value.find((m) => m.value === val)
     line.materialName = mat?.label ?? ''
-    line.spec = (mat as any)?.spec ?? ''
-    line.unit = (mat as any)?.unit ?? ''
+    line.spec = mat?.spec ?? ''
+    line.unit = mat?.unit ?? ''
   } else {
     line.materialName = ''
     line.spec = ''
@@ -304,11 +310,11 @@ async function loadRequisition(id: string) {
     const data = await api.get<any>(`/purchase/requisitions/${id}`)
     form.reqNo = data.reqNo ?? ''
     form.reqDate = data.reqDate ?? formatDate(new Date(), 'YYYY-MM-DD')
-    form.applicantId = data.applicantId ?? null
+    form.applicantId = data.applicantId ? String(data.applicantId) : null
     form.remark = data.remark ?? ''
     form.lines = (data.lines && data.lines.length > 0)
       ? data.lines.map((l: any) => ({
-          materialId: l.materialId ?? null,
+          materialId: l.materialId ? String(l.materialId) : null,
           materialName: l.materialName ?? '',
           spec: l.spec ?? '',
           unit: l.unit ?? '',

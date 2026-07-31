@@ -13,6 +13,8 @@ import top.huanyu666.backend.common.model.PageParam;
 import top.huanyu666.backend.common.model.PageResult;
 import top.huanyu666.backend.modules.purchase.entity.*;
 import top.huanyu666.backend.modules.purchase.mapper.*;
+import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,6 +35,7 @@ public class PurRequisitionController {
     private final PurRequisitionItemMapper requisitionItemMapper;
     private final PurOrderMapper orderMapper;
     private final PurOrderItemMapper orderItemMapper;
+    private final MaterialMapper materialMapper;
 
     // ==================== 基础 CRUD ====================
 
@@ -67,9 +70,23 @@ public class PurRequisitionController {
         result.put("remark", req.getRemark());
         result.put("applicantId", req.getApplicantId());
         result.put("reqDate", req.getReqDate() != null ? req.getReqDate().toString() : "");
+        // 批量查物料信息用于填充名称/规格/单位
+        java.util.Map<Long, Material> matMap = java.util.Collections.emptyMap();
+        if (!items.isEmpty()) {
+            List<Long> mIds = items.stream().map(PurRequisitionItem::getMaterialId).filter(mid -> mid != null).distinct().toList();
+            if (!mIds.isEmpty()) {
+                matMap = materialMapper.selectBatchIds(mIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(Material::getId, m -> m, (a, b) -> a));
+            }
+        }
+        final java.util.Map<Long, Material> finalMatMap = matMap;
         result.put("lines", items.stream().map(i -> {
+            Material m = finalMatMap.get(i.getMaterialId());
             java.util.Map<String, Object> line = new java.util.HashMap<>();
             line.put("materialId", i.getMaterialId());
+            line.put("materialName", m != null ? m.getName() : "");
+            line.put("spec", m != null ? m.getSpec() : "");
+            line.put("unit", m != null ? m.getUnit() : "");
             line.put("quantity", i.getQuantity());
             line.put("orderedQty", i.getOrderedQty());
             return line;
