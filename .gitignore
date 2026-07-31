@@ -6,3 +6,6 @@
 # 注：Nuxt 项目相关的 node_modules、.nuxt、.env 等已由 /frontend/.gitignore 管理
 # AI Agent
 .reasonix
+
+# Docker
+.env

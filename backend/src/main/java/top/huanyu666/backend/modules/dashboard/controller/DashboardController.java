@@ -7,16 +7,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import top.huanyu666.backend.common.model.ApiResponse;
-import top.huanyu666.backend.modules.finance.entity.FinPayable;
-import top.huanyu666.backend.modules.finance.entity.FinReceivable;
-import top.huanyu666.backend.modules.finance.mapper.FinPayableMapper;
-import top.huanyu666.backend.modules.finance.mapper.FinReceivableMapper;
 import top.huanyu666.backend.modules.inventory.entity.InvStock;
 import top.huanyu666.backend.modules.inventory.mapper.InvStockMapper;
 import top.huanyu666.backend.modules.sales.entity.SalesOrder;
 import top.huanyu666.backend.modules.sales.mapper.SalesOrderMapper;
-import top.huanyu666.backend.modules.purchase.entity.PurOrder;
-import top.huanyu666.backend.modules.purchase.mapper.PurOrderMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,36 +23,7 @@ import java.util.stream.Collectors;
 public class DashboardController {
 
     private final SalesOrderMapper salesOrderMapper;
-    private final PurOrderMapper purOrderMapper;
     private final InvStockMapper invStockMapper;
-    private final FinReceivableMapper receivableMapper;
-    private final FinPayableMapper payableMapper;
-
-    @SaCheckLogin
-    @GetMapping("/sales-this-month")
-    public ApiResponse<Map<String, Object>> salesThisMonth() {
-        LocalDate now = LocalDate.now();
-        LambdaQueryWrapper<SalesOrder> qw = new LambdaQueryWrapper<>();
-        qw.between(SalesOrder::getOrderDate, now.withDayOfMonth(1), now);
-        List<SalesOrder> list = salesOrderMapper.selectList(qw);
-        BigDecimal total = list.stream()
-                .map(o -> o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return ApiResponse.ok(Map.of("amount", total));
-    }
-
-    @SaCheckLogin
-    @GetMapping("/purchase-this-month")
-    public ApiResponse<Map<String, Object>> purchaseThisMonth() {
-        LocalDate now = LocalDate.now();
-        LambdaQueryWrapper<PurOrder> qw = new LambdaQueryWrapper<>();
-        qw.between(PurOrder::getOrderDate, now.withDayOfMonth(1), now);
-        List<PurOrder> list = purOrderMapper.selectList(qw);
-        BigDecimal total = list.stream()
-                .map(o -> o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return ApiResponse.ok(Map.of("amount", total));
-    }
 
     @SaCheckLogin
     @GetMapping("/sales-trend")
@@ -101,7 +66,6 @@ public class DashboardController {
     @GetMapping("/stock-dist")
     public ApiResponse<List<Map<String, Object>>> stockDist() {
         List<InvStock> all = invStockMapper.selectList(null);
-        // 按仓库ID汇总
         Map<Long, BigDecimal> whMap = new LinkedHashMap<>();
         for (InvStock s : all) {
             whMap.merge(s.getWarehouseId(), s.getQuantity() != null ? s.getQuantity() : BigDecimal.ZERO, BigDecimal::add);

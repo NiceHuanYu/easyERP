@@ -1,6 +1,5 @@
-.mvn/
 target/
+*.log
 .git/
 .idea/
 *.iml
-node_modules/
