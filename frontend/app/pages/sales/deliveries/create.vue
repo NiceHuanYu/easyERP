@@ -98,6 +98,7 @@
           <el-table-column label="本次发货数量" width="160" align="center">
             <template #default="{ row, $index }">
               <el-input-number
+                v-if="!isEdit"
                 v-model="row.deliveryQuantity"
                 :min="0"
                 :max="row.deliverableQuantity"
@@ -105,6 +106,7 @@
                 style="width: 140px"
                 @change="recalcLine($index)"
               />
+              <span v-else>{{ row.deliveryQuantity ?? 0 }}</span>
             </template>
           </el-table-column>
           <el-table-column label="单价" width="120" align="right">
@@ -309,8 +311,8 @@ async function handleSubmit() {
       await api.put(`/sales/deliveries/${route.query.id}`, form)
       deliveryId = route.query.id as string
     } else {
-      const created = await api.post<{ id: number }>('/sales/deliveries', form)
-      deliveryId = created.id
+      const created = await api.post<{ id: number | string }>('/sales/deliveries', form)
+      deliveryId = String(created.id)
     }
     await api.post(`/sales/deliveries/${deliveryId}/confirm`)
     ElMessage.success('发货单提交成功')
@@ -342,8 +344,6 @@ onMounted(async () => {
       form.deliveryDate = data.deliveryDate
       form.remark = data.remark || ''
       if (data.orderId) {
-        await onOrderChange(data.orderId)
-        // Overwrite lines with saved delivery quantities
         form.lines = data.lines
       }
     } catch (e: any) {

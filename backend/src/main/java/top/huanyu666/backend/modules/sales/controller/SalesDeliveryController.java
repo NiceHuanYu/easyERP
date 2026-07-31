@@ -19,6 +19,8 @@ import top.huanyu666.backend.modules.sales.entity.*;
 import top.huanyu666.backend.modules.sales.mapper.*;
 import top.huanyu666.backend.modules.base.entity.Customer;
 import top.huanyu666.backend.modules.base.mapper.CustomerMapper;
+import top.huanyu666.backend.modules.base.entity.Material;
+import top.huanyu666.backend.modules.base.mapper.MaterialMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -44,6 +46,7 @@ public class SalesDeliveryController {
     private final InvStockService invStockService;
     private final FinReceivableService finReceivableService;
     private final CustomerMapper customerMapper;
+    private final MaterialMapper materialMapper;
 
     /**
      * 分页列表
@@ -96,9 +99,43 @@ public class SalesDeliveryController {
         if (delivery == null) throw new BusinessException("发货单不存在");
         List<SalesDeliveryItem> items = deliveryItemMapper.selectList(
                 new LambdaQueryWrapper<SalesDeliveryItem>().eq(SalesDeliveryItem::getDeliveryId, id));
+        List<Map<String, Object>> lines = new ArrayList<>();
+        if (delivery.getOrderId() != null) {
+            SalesOrder order = orderMapper.selectById(delivery.getOrderId());
+            List<SalesOrderItem> orderItems = orderItemMapper.selectList(
+                    new LambdaQueryWrapper<SalesOrderItem>().eq(SalesOrderItem::getOrderId, delivery.getOrderId()));
+            Map<Long, SalesOrderItem> orderItemMap = orderItems.stream()
+                    .collect(java.util.stream.Collectors.toMap(SalesOrderItem::getId, o -> o, (a, b) -> a));
+            for (SalesDeliveryItem item : items) {
+                Map<String, Object> line = new HashMap<>();
+                line.put("id", item.getId());
+                line.put("orderItemId", item.getOrderItemId());
+                line.put("materialId", item.getMaterialId());
+                line.put("deliveryQuantity", item.getQuantity());
+                SalesOrderItem oi = orderItemMap.get(item.getOrderItemId());
+                line.put("orderQuantity", oi != null ? oi.getQuantity() : BigDecimal.ZERO);
+                BigDecimal shipped = oi != null && oi.getShippedQty() != null ? oi.getShippedQty() : BigDecimal.ZERO;
+                line.put("deliverableQuantity", oi != null ? oi.getQuantity().subtract(shipped) : BigDecimal.ZERO);
+                line.put("price", oi != null ? oi.getPrice() : BigDecimal.ZERO);
+                line.put("subtotal", (item.getQuantity() != null && oi != null && oi.getPrice() != null)
+                        ? item.getQuantity().multiply(oi.getPrice()) : BigDecimal.ZERO);
+                if (item.getMaterialId() != null) {
+                    Material m = materialMapper.selectById(item.getMaterialId());
+                    line.put("materialName", m != null ? m.getName() : "");
+                    line.put("unit", m != null ? m.getUnit() : "");
+                }
+                lines.add(line);
+            }
+        }
         Map<String, Object> result = new HashMap<>();
-        result.put("delivery", delivery);
-        result.put("items", items);
+        result.put("id", delivery.getId());
+        result.put("deliveryNo", delivery.getDeliveryNo());
+        result.put("orderId", delivery.getOrderId());
+        result.put("warehouseId", delivery.getWarehouseId());
+        result.put("deliveryDate", delivery.getDeliveryDate() != null ? delivery.getDeliveryDate().toString() : "");
+        result.put("status", delivery.getStatus());
+        result.put("remark", delivery.getRemark() != null ? delivery.getRemark() : "");
+        result.put("lines", lines);
         return ApiResponse.ok(result);
     }
 
