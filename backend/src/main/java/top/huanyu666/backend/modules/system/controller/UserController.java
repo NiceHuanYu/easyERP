@@ -124,9 +124,10 @@ public class UserController {
     /** 设置用户角色 */
     @PutMapping("/{id}/roles")
     @SaCheckPermission("system:user:edit")
-    public ApiResponse<Void> setUserRoles(@PathVariable Long id, @RequestBody List<Long> roleIds) {
+    public ApiResponse<Void> setUserRoles(@PathVariable Long id, @RequestBody java.util.List<Object> rawRoleIds) {
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
-        for (Long roleId : roleIds) {
+        for (Object raw : rawRoleIds) {
+            Long roleId = Long.valueOf(raw.toString());
             SysUserRole ur = new SysUserRole();
             ur.setUserId(id);
             ur.setRoleId(roleId);

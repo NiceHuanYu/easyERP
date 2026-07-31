@@ -275,13 +275,13 @@ async function doSave(status: 'DRAFT' | 'RELEASED') {
   const payload = { ...form, status }
 
   try {
-    const id = route.query.id as string | undefined
-    let savedId: number
+    const id = (route.query.id as string) || undefined
+    let savedId: number | string
     if (id) {
       await api.put(`/production/orders/${id}`, payload)
-      savedId = Number(id)
+      savedId = id
     } else {
-      const result = await api.post<{ id: number }>('/production/orders', payload)
+      const result = await api.post<{ id: number | string }>('/production/orders', payload)
       savedId = result.id
     }
     if (status === 'RELEASED') {

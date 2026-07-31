@@ -91,14 +91,14 @@ const editingId = ref<number | string | null>(null)
 const formRef = ref<FormInstance>()
 
 const searchForm = reactive({ keyword: '' })
-const form = reactive({ username: '', password: '', nickname: '', roleIds: [] as number[], employeeId: null as string | null, status: 1 })
+const form = reactive({ username: '', password: '', nickname: '', roleIds: [] as string[], employeeId: null as string | null, status: 1 })
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 const tableData = ref<any[]>([])
-const roleOptions = ref<{ label: string; value: number }[]>([])
+const roleOptions = ref<{ label: string; value: string }[]>([])
 
 const rules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur', validator: (_rule: any, value: string, cb: any) => { if (isEdit.value && !value) cb(); else if (!value) cb(new Error('请输入密码')); else cb(); } }],
   nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
 }
 
@@ -107,7 +107,7 @@ const dialogTitle = computed(() => isEdit.value ? '编辑用户' : '新增用户
 async function loadRoles() {
   try {
     const data = await api.get<any[]>('/system/roles')
-    roleOptions.value = (data || []).map((r: any) => ({ label: r.name, value: Number(r.id) }))
+    roleOptions.value = (data || []).map((r: any) => ({ label: r.name, value: String(r.id) }))
   } catch { /* ignore */ }
 }
 const employeeOptions = ref<{ label: string; value: string }[]>([])
@@ -119,10 +119,10 @@ async function loadEmployees() {
 }
 
 
-async function loadUserRoles(userId: number | string): Promise<number[]> {
+async function loadUserRoles(userId: number | string): Promise<string[]> {
   try {
     const data = await api.get<any[]>('/system/users/' + userId + '/roles')
-    return (data || []).map((v: any) => Number(v))
+    return (data || []).map((v: any) => String(v))
   } catch { return [] }
 }
 
