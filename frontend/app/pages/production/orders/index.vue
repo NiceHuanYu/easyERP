@@ -25,7 +25,7 @@
             placeholder="请选择产品"
             clearable
             filterable
-            style="width: 200px"
+            style="min-width: 200px"
           >
             <el-option
               v-for="m in materialOptions"
@@ -40,7 +40,7 @@
             v-model="searchForm.status"
             placeholder="请选择状态"
             clearable
-            style="width: 160px"
+            style="min-width: 160px"
           >
             <el-option label="待排产" value="DRAFT" />
             <el-option label="已下达" value="RELEASED" />
@@ -89,8 +89,8 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="50" align="center" />
-        <el-table-column prop="orderNo" label="工单号" width="160" />
-        <el-table-column prop="salesOrderNo" label="销售订单号" width="160">
+        <el-table-column prop="orderNo" label="工单号" min-width="160" />
+        <el-table-column prop="salesOrderNo" label="销售订单号" min-width="160">
           <template #default="{ row }">
             <el-link
               v-if="row.salesOrderId"
@@ -103,11 +103,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="materialName" label="产品名称" min-width="180" />
-        <el-table-column prop="planQuantity" label="计划数量" width="110" align="right" />
-        <el-table-column prop="finishQuantity" label="已完工数量" width="120" align="right" />
-        <el-table-column prop="startDate" label="计划开始" width="120" />
-        <el-table-column prop="endDate" label="计划结束" width="120" />
-        <el-table-column prop="status" label="状态" width="110" align="center">
+        <el-table-column prop="planQuantity" label="计划数量" min-width="110" align="right" />
+        <el-table-column prop="finishQuantity" label="已完工数量" min-width="120" align="right" />
+        <el-table-column prop="startDate" label="计划开始" min-width="120" />
+        <el-table-column prop="endDate" label="计划结束" min-width="120" />
+        <el-table-column prop="status" label="状态" min-width="110" align="center">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">
               {{ statusLabel(row.status) }}

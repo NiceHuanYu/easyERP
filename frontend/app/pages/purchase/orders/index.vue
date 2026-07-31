@@ -16,7 +16,7 @@
             v-model="searchForm.supplierId"
             placeholder="请选择供应商"
             clearable
-            style="width: 200px"
+            style="min-width: 200px"
           >
             <el-option
               v-for="s in supplierOptions"
@@ -31,7 +31,7 @@
             v-model="searchForm.status"
             placeholder="请选择状态"
             clearable
-            style="width: 140px"
+            style="min-width: 140px"
           >
             <el-option label="草稿" value="DRAFT" />
             <el-option label="已下达" value="APPROVED" />
@@ -77,15 +77,15 @@
         stripe
         style="width: 100%; margin-top: 12px"
       >
-        <el-table-column prop="orderNo" label="采购单号" width="160" />
-        <el-table-column prop="supplierName" label="供应商" width="200" />
-        <el-table-column prop="orderDate" label="采购日期" width="120" />
-        <el-table-column prop="totalAmount" label="金额" width="140" align="right">
+        <el-table-column prop="orderNo" label="采购单号" min-width="160" />
+        <el-table-column prop="supplierName" label="供应商" min-width="200" />
+        <el-table-column prop="orderDate" label="采购日期" min-width="120" />
+        <el-table-column prop="totalAmount" label="金额" min-width="140" align="right">
           <template #default="{ row }">
             {{ formatMoney(row.totalAmount) }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="status" label="状态" min-width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">
               {{ statusLabel(row.status) }}

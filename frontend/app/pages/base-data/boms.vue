@@ -35,22 +35,22 @@
           新增BOM
         </el-button>
       </div>
-      <el-table :data="tableData" v-loading="loading" border stripe>
-        <el-table-column prop="bomNo" label="BOM编号" width="150" />
-        <el-table-column label="成品物料" width="180">
+      <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%">
+        <el-table-column prop="bomNo" label="BOM编号" min-width="150" />
+        <el-table-column label="成品物料" min-width="160">
           <template #default="{ row }">
             {{ getMaterialName(row.productMaterialId) }}
           </template>
         </el-table-column>
-        <el-table-column prop="version" label="版本号" width="100" />
-        <el-table-column prop="status" label="状态" width="80">
+        <el-table-column prop="version" label="版本号" min-width="90" />
+        <el-table-column prop="status" label="状态" min-width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :icon="View" @click="handleView(row)">
               查看详情

@@ -16,18 +16,18 @@
       <div class="table-toolbar">
         <el-button type="primary" :icon="Plus" @click="handleAdd">新增用户</el-button>
       </div>
-      <el-table :data="tableData" v-loading="loading" border stripe>
-        <el-table-column prop="username" label="用户名" width="120" />
-        <el-table-column prop="nickname" label="昵称" width="120" />
-        <el-table-column prop="employeeName" label="关联员工" width="120" />
-        <el-table-column prop="status" label="状态" width="80">
+      <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%">
+        <el-table-column prop="username" label="用户名" min-width="120" />
+        <el-table-column prop="nickname" label="昵称" min-width="120" />
+        <el-table-column prop="employeeName" label="关联员工" min-width="120" />
+        <el-table-column prop="status" label="状态" min-width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="170" />
+        <el-table-column prop="createTime" label="创建时间" min-width="170" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">编辑</el-button>

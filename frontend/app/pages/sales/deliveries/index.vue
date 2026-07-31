@@ -75,17 +75,17 @@
         stripe
         style="width: 100%; margin-top: 12px"
       >
-        <el-table-column prop="deliveryNo" label="发货单号" width="160" />
-        <el-table-column prop="orderNo" label="销售订单号" width="160">
+        <el-table-column prop="deliveryNo" label="发货单号" min-width="150" />
+        <el-table-column prop="orderNo" label="销售订单号" min-width="150">
           <template #default="{ row }">
             <el-link type="primary" @click="router.push(`/sales/orders/${row.orderId}`)">
               {{ row.orderNo }}
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="customerName" label="客户" width="180" />
-        <el-table-column prop="deliveryDate" label="发货日期" width="120" />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="customerName" label="客户" min-width="150" />
+        <el-table-column prop="deliveryDate" label="发货日期" min-width="110" />
+        <el-table-column prop="status" label="状态" min-width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 'DRAFT' ? 'info' : 'success'" size="small">
               {{ row.status === 'DRAFT' ? '草稿' : '已发货' }}

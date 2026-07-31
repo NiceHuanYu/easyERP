@@ -37,25 +37,25 @@
           新增物料
         </el-button>
       </div>
-      <el-table :data="tableData" v-loading="loading" border stripe>
-        <el-table-column prop="code" label="物料编码" width="120" />
-        <el-table-column prop="name" label="名称" width="150" />
-        <el-table-column prop="spec" label="规格" width="150" />
-        <el-table-column prop="unit" label="单位" width="80" />
-        <el-table-column prop="category" label="分类" width="100">
+      <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%">
+        <el-table-column prop="code" label="物料编码" min-width="120" />
+        <el-table-column prop="name" label="名称" min-width="150" />
+        <el-table-column prop="spec" label="规格" min-width="120" />
+        <el-table-column prop="unit" label="单位" min-width="80" />
+        <el-table-column prop="category" label="分类" min-width="90">
           <template #default="{ row }">
             {{ categoryMap[row.category] ?? row.category }}
           </template>
         </el-table-column>
-        <el-table-column prop="safetyStock" label="安全库存" width="100" align="right" />
-        <el-table-column prop="status" label="状态" width="80">
+        <el-table-column prop="safetyStock" label="安全库存" min-width="100" align="right" />
+        <el-table-column prop="status" label="状态" min-width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :icon="Edit" v-permission="'base-data:material:edit'" @click="handleEdit(row)">
               编辑

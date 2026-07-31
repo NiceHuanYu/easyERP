@@ -34,10 +34,10 @@
           新增员工
         </el-button>
       </div>
-      <el-table :data="tableData" v-loading="loading" border stripe>
-        <el-table-column prop="code" label="员工编码" width="120" />
-        <el-table-column prop="name" label="姓名" width="100" />
-        <el-table-column label="性别" width="70">
+              <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%">
+        <el-table-column prop="code" label="员工编码" min-width="110" />
+        <el-table-column prop="name" label="姓名" min-width="90" />
+        <el-table-column label="性别" min-width="60">
           <template #default="{ row }">
             {{ row.gender === 1 ? '男' : '女' }}
           </template>

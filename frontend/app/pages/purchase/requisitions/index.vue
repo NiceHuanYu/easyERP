@@ -16,7 +16,7 @@
             v-model="searchForm.applicantId"
             placeholder="请选择申请人"
             clearable
-            style="width: 180px"
+            style="min-width: 180px"
           >
             <el-option
               v-for="e in employeeOptions"
@@ -31,7 +31,7 @@
             v-model="searchForm.status"
             placeholder="请选择状态"
             clearable
-            style="width: 140px"
+            style="min-width: 140px"
           >
             <el-option label="草稿" value="DRAFT" />
             <el-option label="已提交" value="SUBMITTED" />
@@ -78,8 +78,8 @@
         stripe
         style="width: 100%; margin-top: 12px"
       >
-        <el-table-column prop="requisitionNo" label="申请单号" width="160" />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="requisitionNo" label="申请单号" min-width="160" />
+        <el-table-column prop="status" label="状态" min-width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small">
               {{ statusLabel(row.status) }}
