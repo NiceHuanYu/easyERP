@@ -4,7 +4,7 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="供应商">
-          <el-select v-model="searchForm.supplierId" placeholder="请选择供应商" clearable filterable>
+          <el-select v-model="searchForm.supplierId" placeholder="请选择供应商" clearable filterable style="min-width:140px">
             <el-option
               v-for="s in supplierOptions"
               :key="s.value"
@@ -14,7 +14,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="min-width:140px">
             <el-option label="未核销" value="UNPAID" />
             <el-option label="部分核销" value="PARTIALLY_PAID" />
             <el-option label="已核销" value="FULLY_PAID" />
@@ -380,6 +380,7 @@ function handleReset() {
   searchForm.status = ''
   searchForm.dateRange = null
   pagination.page = 1
+  fetchData()
 }
 
 watch([() => pagination.page, () => pagination.pageSize], () => {

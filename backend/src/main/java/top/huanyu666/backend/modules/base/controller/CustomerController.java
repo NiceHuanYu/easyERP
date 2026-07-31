@@ -26,11 +26,17 @@ public class CustomerController extends BaseBizController<Customer, CustomerMapp
     @SaCheckPermission("base-data:customer:view")
     @GetMapping
     public ApiResponse<PageResult<Customer>> list(PageParam param,
-                                                   @RequestParam(required = false) String keyword) {
+                                                   @RequestParam(required = false) String keyword,
+                                                   @RequestParam(required = false) String code,
+                                                   @RequestParam(required = false) String name,
+                                                   @RequestParam(required = false) Integer status) {
         LambdaQueryWrapper<Customer> w = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
             w.and(q -> q.like(Customer::getName, keyword).or().like(Customer::getCode, keyword));
         }
+        if (StringUtils.hasText(code)) w.like(Customer::getCode, code);
+        if (StringUtils.hasText(name)) w.like(Customer::getName, name);
+        if (status != null) w.eq(Customer::getStatus, status);
         w.orderByDesc(Customer::getCreateTime);
         Page<Customer> page = customerMapper.selectPage(new Page<>(param.getPage(), param.getSize()), w);
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));

@@ -43,13 +43,21 @@ public class FinPayableController {
     @GetMapping
     public ApiResponse<PageResult<FinPayable>> list(PageParam param,
                                                      @RequestParam(required = false) Long supplierId,
-                                                     @RequestParam(required = false) String status) {
+                                                     @RequestParam(required = false) String status,
+                                                     @RequestParam(required = false) String startDate,
+                                                     @RequestParam(required = false) String endDate) {
         LambdaQueryWrapper<FinPayable> qw = new LambdaQueryWrapper<>();
         if (supplierId != null) {
             qw.eq(FinPayable::getSupplierId, supplierId);
         }
         if (status != null) {
             qw.eq(FinPayable::getStatus, status);
+        }
+        if (startDate != null && !startDate.isBlank()) {
+            qw.ge(FinPayable::getDueDate, startDate);
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            qw.le(FinPayable::getDueDate, endDate);
         }
         qw.orderByDesc(FinPayable::getCreateTime);
         Page<FinPayable> page = payableMapper.selectPage(

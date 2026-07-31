@@ -4,10 +4,10 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="物料编码">
-          <el-input v-model="searchForm.materialId" placeholder="请输入物料编码" clearable />
+          <el-input v-model="searchForm.materialId" placeholder="请输入物料编码" clearable style="min-width:140px" />
         </el-form-item>
         <el-form-item label="仓库">
-          <el-select v-model="searchForm.warehouseId" placeholder="请选择仓库" clearable>
+          <el-select v-model="searchForm.warehouseId" placeholder="请选择仓库" clearable style="min-width:140px">
             <el-option
               v-for="wh in warehouseOptions"
               :key="wh.value"
@@ -31,7 +31,7 @@
       <template #header>
         <div class="card-header">
           <span>库存列表</span>
-          <el-button type="success" :icon="Download" @click="handleExport">导出</el-button>
+          <el-button v-permission="'inventory:stock:export'" type="success" :icon="Download" @click="handleExport">导出</el-button>
         </div>
       </template>
 
@@ -107,6 +107,9 @@
 import { Search, RefreshLeft, Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../../composables/useApi'
+import { useAuthStore } from '../../../stores/auth'
+
+const authStore = useAuthStore()
 
 definePageMeta({ middleware: 'auth' })
 
@@ -240,9 +243,23 @@ function handleReset() {
   fetchData()
 }
 
-function handleExport() {
-  // In production this would call an API endpoint
-  ElMessage.success('导出成功，文件下载中...')
+async function handleExport() {
+  const query: Record<string, string | number | undefined> = {}
+  if (searchForm.materialId) query.materialId = searchForm.materialId
+  if (searchForm.warehouseId) query.warehouseId = searchForm.warehouseId
+  try {
+    const blob = await $fetch<Blob>(`/api/v1/inventory/stock/export`, {
+      method: 'GET',
+      query,
+      headers: { Authorization: `Bearer ${authStore.token}` },
+      responseType: 'blob',
+    })
+    const url = URL.createObjectURL(blob as Blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'inventory_stock.csv'; a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('已导出')
+  } catch { ElMessage.error('导出失败') }
 }
 
 // ── Init ───────────────────────────────────────────

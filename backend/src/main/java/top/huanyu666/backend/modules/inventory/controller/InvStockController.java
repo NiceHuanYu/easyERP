@@ -87,4 +87,27 @@ public class InvStockController {
         }
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));
     }
+
+    @SaCheckPermission("inventory:stock:export")
+    @GetMapping("/export")
+    public void export(@RequestParam(required = false) Long materialId,
+                       @RequestParam(required = false) Long warehouseId,
+                       jakarta.servlet.http.HttpServletResponse response) throws Exception {
+        LambdaQueryWrapper<InvStock> qw = new LambdaQueryWrapper<>();
+        if (materialId != null) qw.eq(InvStock::getMaterialId, materialId);
+        if (warehouseId != null) qw.eq(InvStock::getWarehouseId, warehouseId);
+        List<InvStock> list = stockMapper.selectList(qw);
+        response.setContentType("text/csv;charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment;filename=inventory_stock.csv");
+        java.io.PrintWriter w = response.getWriter();
+        w.println("物料名称,仓库,库存数量,可用数量,锁定数量");
+        for (InvStock s : list) {
+            Material m = materialMapper.selectById(s.getMaterialId());
+            String whName = "";
+            if (s.getWarehouseId() != null) { Warehouse wh = warehouseMapper.selectById(s.getWarehouseId()); whName = wh != null ? wh.getName() : ""; }
+            w.printf("\"%s\",\"%s\",%.2f,%.2f,%.2f\n",
+                    m != null ? m.getName() : "", whName, s.getQuantity(), s.getAvailableQty(), s.getLockedQty());
+        }
+        w.flush();
+    }
 }

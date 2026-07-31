@@ -3,10 +3,10 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="收付款单号">
-          <el-input v-model="searchForm.paymentNo" placeholder="请输入单号" clearable />
+          <el-input v-model="searchForm.paymentNo" placeholder="请输入单号" clearable style="min-width:140px" />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="searchForm.type" placeholder="请选择类型" clearable>
+          <el-select v-model="searchForm.type" placeholder="请选择类型" clearable style="min-width:140px">
             <el-option label="收款" value="RECEIVE" />
             <el-option label="付款" value="PAY" />
           </el-select>

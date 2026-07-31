@@ -32,6 +32,7 @@
         <el-descriptions-item label="状态"><el-tag v-if="order" :type="statusTagType(order.status)" size="small">{{ statusLabel(order.status) }}</el-tag></el-descriptions-item>
         <el-descriptions-item label="订单日期">{{ order?.orderDate }}</el-descriptions-item>
         <el-descriptions-item label="交货日期">{{ order?.deliveryDate }}</el-descriptions-item>
+        <el-descriptions-item label="客户采购订单号">{{ order?.customerPoNo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="金额总计"><span class="amount-text">{{ order ? formatMoney(order.totalAmount) : '' }}</span></el-descriptions-item>
         <el-descriptions-item label="备注" :span="3">{{ order?.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
@@ -88,7 +89,7 @@ function statusTagType(s: string): 'info' | 'warning' | 'success' | 'default' {
 }
 
 interface OrderLine { materialId: number; materialName: string; quantity: number; unit: string; price: number; amount: number }
-interface SalesOrder { id: number; orderNo: string; customerId: number; orderDate: string; deliveryDate: string; totalAmount: number; status: string; remark: string; lines: OrderLine[] }
+interface SalesOrder { id: number; orderNo: string; customerId: number; orderDate: string; deliveryDate: string; customerPoNo: string; totalAmount: number; status: string; remark: string; lines: OrderLine[] }
 interface Delivery { id: number; deliveryNo: string; deliveryDate: string; warehouseName: string; status: string }
 
 const order = ref<SalesOrder | null>(null)

@@ -19,7 +19,7 @@
           <span class="section-title">订单信息</span>
         </template>
         <el-row :gutter="20">
-          <el-col :span="8">
+          <el-col :span="12">
             <el-form-item label="客户" prop="customerId">
               <el-select
                 v-model="form.customerId"
@@ -27,16 +27,18 @@
                 filterable
                 style="width: 100%"
               >
-                <el-option
-                  v-for="c in customerOptions"
-                  :key="c.value"
-                  :label="c.label"
-                  :value="c.value"
-                />
+                <el-option v-for="c in customerOptions" :key="c.value" :label="c.label" :value="c.value" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="12">
+            <el-form-item label="客户采购订单号">
+              <el-input v-model="form.customerPoNo" placeholder="选填" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
             <el-form-item label="订单日期" prop="orderDate">
               <el-date-picker
                 v-model="form.orderDate"
@@ -47,7 +49,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="12">
             <el-form-item label="交货日期" prop="deliveryDate">
               <el-date-picker
                 v-model="form.deliveryDate"
@@ -56,11 +58,6 @@
                 value-format="YYYY-MM-DD"
                 style="width: 100%"
               />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="客户采购订单号">
-              <el-input v-model="form.customerPoNo" placeholder="选填" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -338,6 +335,7 @@ async function loadOrder(id: string) {
     form.customerId = data.customerId
     form.orderDate = data.orderDate
     form.deliveryDate = data.deliveryDate
+    form.customerPoNo = data.customerPoNo || ''
     form.customerPoNo = data.customerPoNo || ''
     form.remark = data.remark || ''
     form.lines = data.lines.map((l) => ({ ...createEmptyLine(), ...l }))

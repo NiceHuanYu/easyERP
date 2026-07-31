@@ -43,13 +43,21 @@ public class FinReceivableController {
     @GetMapping
     public ApiResponse<PageResult<FinReceivable>> list(PageParam param,
                                                         @RequestParam(required = false) Long customerId,
-                                                        @RequestParam(required = false) String status) {
+                                                        @RequestParam(required = false) String status,
+                                                        @RequestParam(required = false) String startDate,
+                                                        @RequestParam(required = false) String endDate) {
         LambdaQueryWrapper<FinReceivable> qw = new LambdaQueryWrapper<>();
         if (customerId != null) {
             qw.eq(FinReceivable::getCustomerId, customerId);
         }
         if (status != null) {
             qw.eq(FinReceivable::getStatus, status);
+        }
+        if (startDate != null && !startDate.isBlank()) {
+            qw.ge(FinReceivable::getDueDate, startDate);
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            qw.le(FinReceivable::getDueDate, endDate);
         }
         qw.orderByDesc(FinReceivable::getCreateTime);
         Page<FinReceivable> page = receivableMapper.selectPage(

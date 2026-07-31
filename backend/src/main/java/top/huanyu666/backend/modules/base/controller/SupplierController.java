@@ -26,11 +26,17 @@ public class SupplierController extends BaseBizController<Supplier, SupplierMapp
     @SaCheckPermission("base-data:supplier:view")
     @GetMapping
     public ApiResponse<PageResult<Supplier>> list(PageParam param,
-                                                   @RequestParam(required = false) String keyword) {
+                                                   @RequestParam(required = false) String keyword,
+                                                   @RequestParam(required = false) String code,
+                                                   @RequestParam(required = false) String name,
+                                                   @RequestParam(required = false) Integer status) {
         LambdaQueryWrapper<Supplier> w = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
             w.and(q -> q.like(Supplier::getName, keyword).or().like(Supplier::getCode, keyword));
         }
+        if (StringUtils.hasText(code)) w.like(Supplier::getCode, code);
+        if (StringUtils.hasText(name)) w.like(Supplier::getName, name);
+        if (status != null) w.eq(Supplier::getStatus, status);
         w.orderByDesc(Supplier::getCreateTime);
         Page<Supplier> page = supplierMapper.selectPage(new Page<>(param.getPage(), param.getSize()), w);
         return ApiResponse.ok(new PageResult<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords()));

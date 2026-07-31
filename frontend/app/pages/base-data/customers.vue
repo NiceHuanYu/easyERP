@@ -4,13 +4,13 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="客户编码">
-          <el-input v-model="searchForm.code" placeholder="请输入客户编码" clearable />
+          <el-input v-model="searchForm.code" placeholder="请输入客户编码" clearable style="min-width:140px" />
         </el-form-item>
         <el-form-item label="客户名称">
-          <el-input v-model="searchForm.name" placeholder="请输入客户名称" clearable />
+          <el-input v-model="searchForm.name" placeholder="请输入客户名称" clearable style="min-width:140px" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="min-width:140px">
             <el-option label="启用" :value="1" />
             <el-option label="禁用" :value="0" />
           </el-select>
