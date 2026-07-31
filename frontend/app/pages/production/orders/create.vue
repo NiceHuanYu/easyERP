@@ -316,8 +316,8 @@ async function loadOrder(id: string) {
 
 // ==================== 从销售订单预填 ====================
 function prefillFromSalesOrder(orderId: string) {
-  form.salesOrderId = Number(orderId)
-  onSalesOrderChange(form.salesOrderId)
+  form.salesOrderId = orderId
+  onSalesOrderChange(orderId)
 }
 
 // ==================== 初始化 ====================

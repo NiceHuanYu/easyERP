@@ -322,8 +322,8 @@ async function handleSubmit() {
 
 // ==================== 预填逻辑 ====================
 function prefillFromOrder(orderId: string) {
-  form.orderId = Number(orderId)
-  onOrderChange(form.orderId)
+  form.orderId = orderId
+  onOrderChange(orderId)
 }
 
 // ==================== 初始化 ====================

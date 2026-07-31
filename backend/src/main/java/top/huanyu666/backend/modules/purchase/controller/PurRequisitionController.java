@@ -81,7 +81,9 @@ public class PurRequisitionController {
     @PostMapping
     public ApiResponse<PurRequisition> create(@RequestBody java.util.Map<String, Object> body) {
         PurRequisition requisition = mapToRequisition(body);
-        requisition.setStatus("DRAFT");
+        if (requisition.getStatus() == null || requisition.getStatus().isBlank()) {
+            requisition.setStatus("DRAFT");
+        }
         if (requisition.getRequisitionNo() == null || requisition.getRequisitionNo().isBlank()) {
             requisition.setRequisitionNo(CodeGenerator.generate("PR", () -> {
                 PurRequisition last = requisitionMapper.selectOne(
