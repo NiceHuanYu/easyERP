@@ -21,7 +21,7 @@ public class CompanyAccountController {
     private final CompanyAccountMapper mapper;
 
     @GetMapping
-    @SaCheckPermission("base-data:company-account:view")
+    @SaCheckPermission("finance:bank-account:view")
     public ApiResponse<PageResult<CompanyAccount>> list(PageParam param,
                                                          @RequestParam(required = false) String keyword) {
         LambdaQueryWrapper<CompanyAccount> qw = new LambdaQueryWrapper<>();
@@ -36,20 +36,20 @@ public class CompanyAccountController {
     }
 
     @GetMapping("/{id}")
-    @SaCheckPermission("base-data:company-account:view")
+    @SaCheckPermission("finance:bank-account:view")
     public ApiResponse<CompanyAccount> getById(@PathVariable Long id) {
         return ApiResponse.ok(mapper.selectById(id));
     }
 
     @PostMapping
-    @SaCheckPermission("base-data:company-account:create")
+    @SaCheckPermission("finance:bank-account:create")
     public ApiResponse<CompanyAccount> create(@RequestBody CompanyAccount account) {
         mapper.insert(account);
         return ApiResponse.ok(account);
     }
 
     @PutMapping("/{id}")
-    @SaCheckPermission("base-data:company-account:edit")
+    @SaCheckPermission("finance:bank-account:edit")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody CompanyAccount account) {
         account.setId(id);
         mapper.updateById(account);
@@ -57,7 +57,7 @@ public class CompanyAccountController {
     }
 
     @DeleteMapping("/{id}")
-    @SaCheckPermission("base-data:company-account:delete")
+    @SaCheckPermission("finance:bank-account:delete")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         mapper.deleteById(id);
         return ApiResponse.ok();
@@ -65,7 +65,7 @@ public class CompanyAccountController {
 
     /** 全部（下拉框用） */
     @GetMapping("/all")
-    @SaCheckPermission("base-data:company-account:view")
+    @SaCheckPermission("finance:bank-account:view")
     public ApiResponse<List<CompanyAccount>> all(
             @RequestParam(required = false) String accountType) {
         LambdaQueryWrapper<CompanyAccount> qw = new LambdaQueryWrapper<>();

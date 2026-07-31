@@ -27,7 +27,7 @@ public class CounterpartyAccountController {
     private final SupplierMapper supplierMapper;
 
     @GetMapping
-    @SaCheckPermission("base-data:company-account:view")
+    @SaCheckPermission("finance:bank-account:view")
     public ApiResponse<PageResult<CounterpartyAccount>> list(PageParam param,
             @RequestParam(required = false) String ownerType,
             @RequestParam(required = false) String keyword) {
@@ -54,7 +54,7 @@ public class CounterpartyAccountController {
     }
 
     @GetMapping("/by-owner")
-    @SaCheckPermission("base-data:company-account:view")
+    @SaCheckPermission("finance:bank-account:view")
     public ApiResponse<List<CounterpartyAccount>> byOwner(
             @RequestParam String ownerType, @RequestParam Long ownerId) {
         List<CounterpartyAccount> list = mapper.selectList(
@@ -67,14 +67,14 @@ public class CounterpartyAccountController {
     }
 
     @PostMapping
-    @SaCheckPermission("base-data:company-account:create")
+    @SaCheckPermission("finance:bank-account:create")
     public ApiResponse<CounterpartyAccount> create(@RequestBody CounterpartyAccount account) {
         mapper.insert(account);
         return ApiResponse.ok(account);
     }
 
     @PutMapping("/{id}")
-    @SaCheckPermission("base-data:company-account:edit")
+    @SaCheckPermission("finance:bank-account:edit")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody CounterpartyAccount account) {
         account.setId(id);
         mapper.updateById(account);
@@ -82,7 +82,7 @@ public class CounterpartyAccountController {
     }
 
     @DeleteMapping("/{id}")
-    @SaCheckPermission("base-data:company-account:delete")
+    @SaCheckPermission("finance:bank-account:delete")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         mapper.deleteById(id);
         return ApiResponse.ok();

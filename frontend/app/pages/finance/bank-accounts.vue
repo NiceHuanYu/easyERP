@@ -21,7 +21,7 @@
 
     <el-card shadow="never" class="table-card">
       <div class="table-toolbar">
-        <el-button type="primary" :icon="Plus" v-permission="'base-data:company-account:create'" @click="handleAdd">新增</el-button>
+        <el-button type="primary" :icon="Plus" v-permission="'finance:bank-account:create'" @click="handleAdd">新增</el-button>
       </div>
       <el-table :data="tableData" v-loading="loading" border stripe style="width:100%">
         <el-table-column prop="name" label="名称" min-width="150" v-if="accountSource !== 'company'" />
@@ -40,8 +40,8 @@
         </el-table-column>
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" :icon="Edit" v-permission="'base-data:company-account:edit'" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="danger" :icon="Delete" v-permission="'base-data:company-account:delete'" @click="handleDelete(row)">删除</el-button>
+            <el-button link type="primary" :icon="Edit" v-permission="'finance:bank-account:edit'" @click="handleEdit(row)">编辑</el-button>
+            <el-button link type="danger" :icon="Delete" v-permission="'finance:bank-account:delete'" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
